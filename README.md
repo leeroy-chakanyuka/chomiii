@@ -38,7 +38,7 @@ The consequences in practice:
 
 ## Configuration contract
 
-The database engine is selected by Spring profile — **nothing is configured from `.env` files**, and Spring Boot does not read any `.env` file automatically:
+The database engine is selected by Spring profile. Spring Boot does not read `.env` files automatically; set backend variables in the shell or deployment environment. Vite can load `VITE_`-prefixed frontend variables from `frontend/.env`.
 
 | File | Role |
 | --- | --- |
@@ -55,7 +55,7 @@ $env:CHOMIII_DB_PASSWORD = "<your-local-password>"
 # optional: $env:CHOMIII_DB_URL = "<a JDBC URL other than the default in application-local.yml>"
 ```
 
-⚠️ **No real credentials ever live in files.** `.env.example` documents placeholders only — see below — and production values belong to the deployment's secret store, never a file in this repository.
+**Never commit real credentials.** `.env.example` documents placeholders only; production values belong in the deployment's secret store.
 
 ## Health endpoint
 

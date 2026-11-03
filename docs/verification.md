@@ -33,6 +33,7 @@ Both engines have been exercised locally. The PostgreSQL Testcontainers suite st
 
 | Check | Status | Evidence |
 | --- | --- | --- |
+| `npm ci` | ✅ PASS | npm's debug log records exit 0 after installing 273 packages; the terminal wrapper reached its timeout as the command completed. `npm ls --depth=0` passed afterwards. |
 | `npm run test` (Vitest unit) | ✅ Observed | **7/7 tests passed** |
 | `npm run lint` | ✅ Observed | Passed |
 | `npm run typecheck` | ✅ Observed | Passed |

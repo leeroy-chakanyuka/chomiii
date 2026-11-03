@@ -12,14 +12,14 @@ Please give maintainers a reasonable window to respond and ship a fix before any
 
 ## Supported versions
 
-Chomiii has no released versions yet (backend `0.1.0-SNAPSHOT`, frontend `0.1.0`, milestone M0). Only the latest state of the repository is effectively supported. There is no CI or hosted deployment yet; fixes are applied to the repository source.
+Chomiii has no released versions yet (backend `0.1.0-SNAPSHOT`, frontend `0.1.0`, milestone M0). Only the latest state of the repository is effectively supported. CI is configured but currently blocked, and there is no hosted deployment yet.
 
 ## Security expectations for contributors
 
 The [engineering contract](AGENTS.md) applies to every change:
 
 - **Never commit** credentials, API keys, tokens, personal data, or production environment files. [`.gitignore`](.gitignore) excludes `.env*` except the placeholder-only `.env.example`; keep it that way. `.env.example` documents the contract; nothing loads it automatically.
-- **Do not log secrets.** Log statements must never include credentials or tokens. The exception handler deliberately exposes no internal details in error responses while logging the full cause server-side.
+- **Do not log secrets.** Log statements must never include credentials or tokens. The exception handler returns a generic error and logs the exception type without its message or stack trace.
 - **Treat external data and tool results as untrusted**, especially once agents, memory, and file access arrive in later milestones.
 - **Least privilege** for every credential, and appropriate authorization for consequential external actions.
 
