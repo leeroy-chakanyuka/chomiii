@@ -1,0 +1,5 @@
+# CI profile, activated by the Testcontainers-based integration tests
+# (BackendDatabaseIT via @ActiveProfiles("ci")). No datasource properties are
+# set here on purpose: the PostgreSQL connection details are supplied by the
+# @ServiceConnection test container, and any spring.datasource value defined
+# here would take precedence over the container.

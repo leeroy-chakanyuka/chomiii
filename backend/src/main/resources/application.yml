@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: chomiii
+  # MySQL locally, PostgreSQL in CI and production. The active profile is
+  # never implied by secrets: local is the working default, prod is chosen
+  # explicitly. Datasource configuration lives only in the profile files.
+  profiles:
+    default: local
+  flyway:
+    locations: classpath:db/migration

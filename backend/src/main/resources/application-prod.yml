@@ -1,0 +1,7 @@
+spring:
+  datasource:
+    # Production PostgreSQL. The URL is explicitly required from the
+    # environment without a default, as are the credentials.
+    url: ${CHOMIII_DB_URL}
+    username: ${CHOMIII_DB_USER}
+    password: ${CHOMIII_DB_PASSWORD}

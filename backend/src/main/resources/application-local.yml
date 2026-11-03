@@ -1,0 +1,8 @@
+spring:
+  datasource:
+    # Local MySQL. Only the URL is defaulted; credentials always come from
+    # the environment (see .env.example at the repository root) and no
+    # credentials are ever stored in source.
+    url: ${CHOMIII_DB_URL:jdbc:mysql://localhost:3306/chomiii}
+    username: ${CHOMIII_DB_USER}
+    password: ${CHOMIII_DB_PASSWORD}

@@ -1,0 +1,251 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Least privilege by default; every job re-grants only what it needs.
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: Secret scanning (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      # gitleaks-action scans pushed/PR commits; it needs full history
+      # (per gitleaks-action v3 usage documentation).
+      - name: Check out repository with full history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+      - name: Scan for committed secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  backend:
+    name: Backend (Java 21 unit + PostgreSQL Testcontainers/Flyway + JaCoCo + dependency scan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      # Git on Windows cannot record the executable bit; make sure the
+      # Maven wrapper is executable on Linux (idempotent if already so).
+      - name: Ensure Maven wrapper is executable
+        run: chmod +x ./mvnw
+      - name: Set up Java 21 with Maven cache
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Run unit tests and Failsafe ITs (PostgreSQL Testcontainers + Flyway) with JaCoCo report
+        run: ./mvnw --batch-mode verify
+      - name: Upload JaCoCo coverage report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: backend-jacoco-report
+          path: backend/target/site/jacoco
+          if-no-files-found: warn
+      # No NVD API key configured yet; the scan runs unwrapped from the NVD
+      # (slower first run). failBuildOnCVSS=7 fails on high/critical findings.
+      - name: Scan backend dependencies for known vulnerabilities (OWASP dependency-check)
+        run: ./mvnw --batch-mode org.owasp:dependency-check-maven:13.0.0:check -DfailBuildOnCVSS=7
+
+  backend-mysql:
+    name: Backend (Java 21 integration suite on real MySQL 8, dialect parity)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'true'
+          # Ensure root is reachable from the runner host (127.0.0.1); the
+          # mysql image entrypoint defaults to '%', this makes it explicit.
+          MYSQL_ROOT_HOST: '%'
+          MYSQL_DATABASE: chomiii_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      # Git on Windows cannot record the executable bit; make sure the
+      # Maven wrapper is executable on Linux (idempotent if already so).
+      - name: Ensure Maven wrapper is executable
+        run: chmod +x ./mvnw
+      - name: Set up Java 21 with Maven cache
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      # Runner-isolated ephemeral service: test-only credentials (root with an
+      # empty password) are passed as CI-only environment variables against the
+      # fresh chomiii_ci database so every run starts empty.
+      - name: Run the MySQL integration suite (Failsafe ITs) against the fresh database
+        run: |
+          CHOMIII_DB_URL=jdbc:mysql://127.0.0.1:3306/chomiii_ci \
+          CHOMIII_DB_USER=root \
+          CHOMIII_DB_PASSWORD= \
+          ./mvnw --batch-mode -Plocal-mysql verify
+
+  frontend:
+    name: Frontend (Node 22 lint/typecheck/test/build + npm audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Set up Node 22 with npm cache
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Build
+        run: npm run build
+      # Threshold is high: the 12 known moderate minimatch findings do NOT fail
+      # this gate, but they also mean the dependency tree is not "clean".
+      - name: Audit dependencies (fail on high or above)
+        run: npm audit --audit-level=high
+
+  e2e:
+    name: E2E (real PostgreSQL service + Java backend + frontend + Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    needs: [backend, frontend]
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: chomiii
+          POSTGRES_USER: chomiii
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U chomiii -d chomiii"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      # Git on Windows cannot record the executable bit; make sure the
+      # Maven wrapper is executable on Linux (idempotent if already so).
+      - name: Ensure Maven wrapper is executable
+        working-directory: backend
+        run: chmod +x ./mvnw
+      - name: Set up Java 21 with Maven cache
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Set up Node 22 with npm cache
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      # `package` runs Surefire unit tests but not the Failsafe ITs (bound to
+      # the later integration-test/verify phases); the ITs run in the backend
+      # and backend-mysql jobs.
+      - name: Build backend jar (with Surefire unit tests, no Failsafe ITs)
+        working-directory: backend
+        run: ./mvnw --batch-mode package
+      - name: Install pinned frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Install Playwright Chromium with system dependencies
+        working-directory: frontend
+        run: npm exec playwright install --with-deps chromium
+      # Runner-isolated ephemeral service: prod profile is pointed at the real
+      # PostgreSQL via CI-only env (username set, password explicitly empty).
+      - name: Start Java backend against real PostgreSQL (prod profile)
+        working-directory: backend
+        run: |
+          SPRING_PROFILES_ACTIVE=prod \
+          CHOMIII_DB_URL=jdbc:postgresql://127.0.0.1:5432/chomiii \
+          CHOMIII_DB_USER=chomiii \
+          CHOMIII_DB_PASSWORD= \
+          nohup java -jar target/chomiii-backend-0.1.0-SNAPSHOT.jar > "${{ runner.temp }}/chomiii-backend.log" 2>&1 &
+          echo $! > "${{ runner.temp }}/chomiii-backend.pid"
+          sleep 2
+          kill -0 "$(cat "${{ runner.temp }}/chomiii-backend.pid")"
+      - name: Wait for backend readiness through the HTTP contract
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8080/api/health | grep -q '"status":"UP"'; then
+              echo "Backend is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend did not become ready in time; backend log follows"
+          cat "${{ runner.temp }}/chomiii-backend.log"
+          exit 1
+      - name: Run standalone browser smoke suite (Playwright)
+        working-directory: frontend
+        run: npm run test:browser
+      - name: Run frontend-to-backend integration suite (Playwright)
+        working-directory: frontend
+        run: BACKEND_URL=http://127.0.0.1:8080 npm run test:browser:integration
+      - name: Upload failure diagnostics (Playwright traces + backend log)
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-failure-diagnostics
+          path: |
+            frontend/test-results
+            ${{ runner.temp }}/chomiii-backend.log
+          if-no-files-found: ignore
+      # Do not leave the backend JVM running; services are ephemeral by job.
+      - name: Stop backend process
+        if: always()
+        run: kill "$(cat "${{ runner.temp }}/chomiii-backend.pid")" || true
