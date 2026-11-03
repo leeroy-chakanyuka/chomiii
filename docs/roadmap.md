@@ -28,10 +28,10 @@ Prove the engineering discipline on a minimal vertical slice before any AI work:
 | M0-1 | Architecture proves test-first: backend unit/MVC tests green | ✅ Observed (23 tests after the database-strategy changes) |
 | M0-2 | TDD red→green cycle demonstrably executed for the health endpoint | ✅ Observed (red 404, then green) |
 | M0-3 | Frontend unit tests, lint, typecheck, build green; standalone Playwright suite green | ✅ Observed (7/7, lint/typecheck/build passed; 4 browser tests) |
-| M0-4 | Database verification on both engines (local MySQL suite; PostgreSQL in CI) | ✅ Local MySQL verified; 🔶 PostgreSQL CI path defined but not yet executed |
-| M0-5 | Frontend↔backend browser integration green | ✅ Local browser-to-backend test passed with real MySQL; PostgreSQL CI path not yet executed |
+| M0-4 | Database verification on both engines (local MySQL suite; PostgreSQL in CI) | ✅ MySQL suite and PostgreSQL migration smoke test passed locally; 🔶 PostgreSQL Testcontainers CI blocked |
+| M0-5 | Frontend↔backend browser integration green | ✅ Browser-to-backend tests passed locally against both MySQL and PostgreSQL; CI blocked |
 | M0-6 | Dependency audits (frontend high gate; backend OWASP scan in CI) | ⚠️ Frontend high threshold met; 12 moderate minimatch findings remain. Backend scan configured in CI, not yet executed |
-| M0-7 | Public hosted repository, pushed history, and **CI green on it** | 🔶 Public repository created; initial push and CI verification pending |
+| M0-7 | Public hosted repository, pushed history, and **CI green on it** | 🔶 Public repository created and pushed; GitHub Actions blocked by an account billing issue |
 
 ## M1 — Chat
 

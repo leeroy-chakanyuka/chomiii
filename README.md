@@ -141,9 +141,9 @@ npm run test:browser:integration   # real frontend↔backend browser test — re
 
 The dev server proxies `/api` to the backend, so development needs no CORS. See [frontend/README.md](frontend/README.md) for the backend-URL configuration contract.
 
-## Continuous integration (defined — no run yet)
+## Continuous integration
 
-The CI workflow lives in [.github/workflows/ci.yml](.github/workflows/ci.yml): secret scanning, backend unit + PostgreSQL Testcontainers/Flyway with JaCoCo and an OWASP dependency scan, a real MySQL 8 job for migration-dialect parity, frontend lint/typecheck/unit/build/audit, and an E2E job that boots the jar against real PostgreSQL under the `prod` profile and runs both Playwright suites. See [docs/verification.md](docs/verification.md) for observed results.
+The CI workflow lives in [.github/workflows/ci.yml](.github/workflows/ci.yml): secret scanning, backend unit + PostgreSQL Testcontainers/Flyway with JaCoCo and an OWASP dependency scan, a real MySQL 8 job for migration-dialect parity, frontend lint/typecheck/unit/build/audit, and an E2E job that boots the jar against real PostgreSQL under the `prod` profile and runs both Playwright suites. The first run was blocked by an account billing issue before any job started; see [docs/verification.md](docs/verification.md).
 
 ## Roadmap
 

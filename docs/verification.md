@@ -24,9 +24,10 @@ Environment: **local Windows machine, 2026-11-03, M0**.
 | TDD red→green for safe error logging | ✅ Observed | `ApiExceptionHandlerTest` failed when a dummy sensitive message appeared in logs; it passed after the handler stopped logging exception messages and stack traces. |
 | Backend unit/MVC tests | ✅ PASS | **23 tests passed** with `.\mvnw.cmd test` after the database and error-logging changes |
 | Local MySQL + Flyway integration: `.\mvnw.cmd -Plocal-mysql verify` | ✅ PASS | **2 integration tests passed** against a newly created, isolated MySQL 8.0 database; Flyway applied migration V1. The temporary database was removed afterwards. |
-| PostgreSQL Testcontainers suite: `./mvnw verify` | 🔶 **BLOCKED locally** | Needs Docker (absent); this is the CI-shaped check — to be proven in CI or on a Docker-capable machine |
+| PostgreSQL production-profile smoke test | ✅ PASS | A temporary PostgreSQL 16.15 instance ran without Docker. The application started with the `prod` profile and Flyway applied V1 successfully; the server and test data were removed afterwards. |
+| PostgreSQL Testcontainers suite: `./mvnw verify` | 🔶 **BLOCKED** | Needs Docker (absent locally); the first CI attempt could not start because GitHub reported an account billing issue. |
 
-MySQL has been verified locally. PostgreSQL still needs a successful CI run.
+Both engines have been exercised locally. The PostgreSQL Testcontainers suite still needs a successful CI run.
 
 ## Frontend
 
@@ -37,8 +38,8 @@ MySQL has been verified locally. PostgreSQL still needs a successful CI run.
 | `npm run typecheck` | ✅ Observed | Passed |
 | `npm run build` | ✅ Observed | Passed |
 | `npm run test:browser` (standalone Playwright) | ✅ Observed | **4 tests passed** |
-| `npm run test:browser:integration` | ✅ PASS | **1 browser test passed** against the real Java backend connected to the temporary MySQL database |
-| `npm run ci` (full battery) | 🔶 **NOT RUN** | Depends on the integration suite |
+| `npm run test:browser:integration` | ✅ PASS | **1 browser test passed for each engine**, against the real Java backend connected to temporary MySQL and PostgreSQL databases in separate runs. |
+| `npm run ci` (full battery) | 🔶 **NOT RUN** | Its component checks were run separately rather than as one command. |
 
 ## Dependency audits
 
@@ -54,10 +55,10 @@ MySQL has been verified locally. PostgreSQL still needs a successful CI run.
 | Item | Status |
 | --- | --- |
 | Hosted Git repository | ✅ Created and confirmed public: [leeroy-chakanyuka/chomiii](https://github.com/leeroy-chakanyuka/chomiii) |
-| Push to any remote | ❌ Never performed |
-| CI pipeline (PostgreSQL Testcontainers, MySQL integration path, browser E2E) | ❌ **Not started** |
+| Push | ✅ Initial commit `9bbf163cda89fc249b6533ecfa299ed64b9c439b` pushed to `main` |
+| CI pipeline | ❌ **BLOCKED** — [run 41718011204](https://github.com/leeroy-chakanyuka/chomiii/actions/runs/41718011204) failed before any job started. GitHub reported: "The job was not started because your account is locked due to a billing issue." |
 | Tagged release | ❌ None |
 
 ## Honest summary
 
-Green and observed: backend unit/MVC tests, MySQL integration and Flyway migration, the real browser-to-backend path, frontend checks, and the `npm audit` high-severity gate. PostgreSQL, backend vulnerability scanning, and hosted CI remain unverified.
+Green and observed: backend unit/MVC tests, MySQL integration, Flyway migrations on both database engines, the browser-to-backend path on both engines, frontend checks, and the `npm audit` high-severity gate. PostgreSQL Testcontainers, backend vulnerability scanning, and hosted CI remain unverified until the GitHub billing blocker is resolved.
