@@ -5,7 +5,7 @@ M0 established the foundation. M1 has a locally verified Gemini chat path;
 its Docker startup remains unverified on the machine used for this milestone.
 M1.1 has measured the latency bottleneck without meeting its speed target;
 M1.5 product/context scope is delivered in PR #2, with full-suite verification still outstanding; see [M1.5 closure](m1.5-closure.md).
-M2 memory is under active development in draft PR #3; M2.5 (workflow skills) and M3 (authorized actions) remain planned;
+M2 memory is under active development in review PR #3; M2.5 (workflow skills) and M3 (authorized actions) remain planned;
 real autonomous action is not currently implemented.
 
 ```mermaid
@@ -88,7 +88,7 @@ are in [agent-architecture-plan.md](agent-architecture-plan.md).
 
 ## M2 — Memory
 
-**Current M2 draft:** [PR #3](https://github.com/leeroy-chakanyuka/chomiii/pull/3)
+**Current M2 review:** [PR #3](https://github.com/leeroy-chakanyuka/chomiii/pull/3)
 implements a bounded, explicit save/list/correct/delete/clear UI and SQL store,
 plus relevant lower-trust context. The [research decision](m2-research.md)
 rejects Beacon as a consumer memory backend for now and adopts a small Spring

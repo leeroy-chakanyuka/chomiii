@@ -1,6 +1,6 @@
 # M2: owner-scoped personal memory — implementation notes
 
-This file describes **draft PR #3**. The present Chomiii product is still a single-browser-session chat app; M2 does not add cross-device identity or real-world tools.
+This file describes **PR #3 (under review, not merged)**. The present Chomiii product is still a single-browser-session chat app; M2 does not add cross-device identity or real-world tools.
 
 ```mermaid
 flowchart LR

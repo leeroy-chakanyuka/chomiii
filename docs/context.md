@@ -9,7 +9,7 @@
 | Stable runtime identity (`SYSTEM.md`) | Trusted application resource | Loaded at app startup | Remains stable/versioned |
 | Current user turn | User role, not system rules | Sent to provider | Same |
 | Recent complete conversation history | Owner-scoped role-tagged data | Selected by `ContextWindow` | Improved token-aware selection |
-| Personal preferences, commitments, facts | Constrained/consented user data | **Draft M2:** explicit owner-scoped memories and bounded lexical recall | M2 release hardening |
+| Personal preferences, commitments, facts | Constrained/consented user data | **M2 PR #3:** explicit owner-scoped memories and bounded lexical recall | M2 release hardening |
 | Notes, files, web results, app records | Untrusted source data | **Not implemented** | M2/M4 retrieval |
 | Task state, action results, deadline changes | Verified backend state | **Not implemented** | M3/M5 |
 | Date/time and app capabilities | Typed runtime context | **Not implemented** | Added only when needed |
@@ -81,7 +81,7 @@ inject these data types into M1.5. See the [evaluation scenarios](design/experie
 
 **Acceptance for M1.5:** documented context boundaries, short trusted identity, deterministic current-message/history separation, focused tests, and no extra pre-stream inference. M2 and M2.5 are plans, not features already available.
 
-## M2 implementation note (draft PR #3, not merged)
+## M2 implementation note (PR #3, not merged)
 
 The proposed memory service stores only user-explicit entries and performs
 bounded, owner-scoped lexical selection on normal chat turns. The selected

@@ -1,6 +1,6 @@
 # M2 research decision — personal memory for everyday users
 
-**Date:** 2026-11-04. **Status:** evaluated public architecture and API documentation; implementation in draft PR #3 is a local first slice, not production release approval.
+**Date:** 2026-11-04. **Status:** evaluated public architecture and API documentation; implementation in PR #3 (under review) is a local first slice, not production release approval.
 
 ## Product grounding
 

@@ -118,7 +118,7 @@ assistant, not the underlying implementation.
 See [product-vision.md](product-vision.md) and [agent-landscape.md](agent-landscape.md)
 for everyday-user requirements and the design lessons we intend to adopt.
 
-## M2 proposed implementation (draft PR #3)
+## M2 implementation under review (PR #3)
 
 [Memory research](m2-research.md) selects a small native service rather
 than Beacon/third-party memory infrastructure. The owner-scoped

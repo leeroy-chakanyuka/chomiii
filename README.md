@@ -28,11 +28,11 @@ tasks or long-term personal memory. Anonymous conversations belong to one browse
 between devices, and losing the cookie loses access to them. See
 [docs/roadmap.md](docs/roadmap.md) for later milestones.
 
-## M2 draft: personal memories
+## M2 review PR: personal memories
 
-[Draft PR #3](https://github.com/leeroy-chakanyuka/chomiii/pull/3) introduces
+[PR #3](https://github.com/leeroy-chakanyuka/chomiii/pull/3) introduces
 a **Memories** panel where people can deliberately save, inspect, edit and
-delete preferences or commitments. The proposed backend stores owner-scoped
+delete preferences or commitments. The PR's backend stores owner-scoped
 records in the existing database and selects up to three relevant memories
 for future chats without another inference request. The chat screen has a
 **Use saved memories** checkbox to opt out of using saved facts.
@@ -46,7 +46,7 @@ details. Deleting a memory does not delete similar facts previously typed in
 chat messages or copies already supplied to a model provider.
 
 Read [M2 research](docs/m2-research.md), [design and limitations](docs/m2-design.md)
-and [draft verification](docs/verification.md) before treating M2 as complete.
+and [verification](docs/verification.md) before treating M2 as complete.
 
 ## Product direction and context (M1.5)
 

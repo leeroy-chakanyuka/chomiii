@@ -108,7 +108,7 @@ Then run `./mvnw test` and the frontend lint/typecheck/Vitest/build/Playwright
 checks, including `PostStreamRefresh.test.tsx` for concurrent independent
 post-stream refreshes. Do not claim these checks passed without actual output.
 
-## M2 draft memory tests
+## M2 PR #3 memory tests
 
 Backend focused (no live model):
 

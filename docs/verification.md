@@ -282,7 +282,7 @@ M1.5 Java loader isolated smoke check (2026-11-04): Java 21 compilation and seve
 
 M1.5 context-window isolated smoke check (2026-11-04): Java 21 compiled a recreated copy of the fetched `ContextWindow.java` plus a minimal `ChatProvider` type stub; **six assertions passed** (message budget, selection order, user role, oversized request rejection and interrupted-text exclusion). This is **not** repository Maven/JUnit execution.
 
-## M2 draft PR #3 — research and implementation status (2026-11-04)
+## M2 PR #3 under review — research and implementation status (2026-11-04)
 
 - **Research completed:** compared Agent Beacon, Mem0, Letta, Muse, OpenClaw
   and OWASP memory/prompt-injection boundaries. The adopted first slice is
@@ -302,7 +302,7 @@ M1.5 context-window isolated smoke check (2026-11-04): Java 21 compiled a recrea
   multi-database migration, full UI or latency benchmarks.
 - **GitHub CI:** account billing prevents runner allocation. Do not
   treat the workflow status as compiled/tested evidence.
-- **M2 is not certified complete.** This is a draft PR for review and further
+- **M2 is not certified complete.** This is an unmerged PR for review and further
   verification, not a release or merge instruction.
 
 M2 PR #3 review follow-up: memory context length and its single additional message now count against the original 16,000-character/20-message chat budget. This is a static source review fix, **not a verified test run**.

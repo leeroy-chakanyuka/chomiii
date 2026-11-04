@@ -67,7 +67,7 @@ The configured list does not guarantee a model is available to every key.
 When Google rejects a selected model, the backend returns an error rather
 than switching models.
 
-## M2 draft: explicit personal memory endpoints
+## M2 review PR: explicit personal memory endpoints
 
 A person must choose to save a memory in the UI; the assistant does not
 automatically extract or persist facts from chats. The browser-session
@@ -90,7 +90,7 @@ Chat normally retrieves up to three relevant saved memories (bounded
 total context), added as *user-role context*, not as instructions.
 Set `X-Chomiii-Use-Memory: false` on a chat-stream request to skip
 memory retrieval for that turn. This is controlled by a visible checkbox
-in the proposed frontend. The backend performs lexical relevance checks;
+in the PR frontend. The backend performs lexical relevance checks;
 it does not promise semantic search or successful recall of every fact.
 
 **Privacy:** relevant saved memory content is sent to the configured Gemini

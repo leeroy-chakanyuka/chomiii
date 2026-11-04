@@ -1,6 +1,6 @@
 # Memory and user context policy (M2 design contract)
 
-**Status: implementation proposed in draft PR #3; not verified or merged.**
+**Status: implementation under review in PR #3; not verified or merged.**
 The M1 conversation history remains distinct from the proposed M2
 `personal_memories` store. See [M2 research](../m2-research.md) and
 [design](../m2-design.md).
