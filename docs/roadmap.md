@@ -4,7 +4,7 @@ Status of each milestone is checked against [verification.md](verification.md).
 M0 established the foundation. M1 has a locally verified Gemini chat path;
 its Docker startup remains unverified on the machine used for this milestone.
 M1.1 has measured the latency bottleneck without meeting its speed target;
-M1.5 has a proposed general-purpose product/context foundation in PR #2.
+M1.5 product/context scope is delivered in PR #2, with full-suite verification still outstanding; see [M1.5 closure](m1.5-closure.md).
 M2 (memory), M2.5 (workflow skills), and M3 (authorized actions) are planned;
 real autonomous action is not currently implemented.
 
@@ -70,7 +70,7 @@ before hosting.
 
 Measure browser time to first visible token, provider first-token latency, and completion with p50/p95 statistics. The existing [benchmark](perf/README.md) recorded a 15.14-second median first *visible* reply in five browser requests; most measured API waiting time occurred while opening the Gemini stream (7.91–21.83 seconds), whereas the initial database transaction took 9–28 ms. Direct provider calls were also highly variable. This implicates the provider path during those samples but does **not** prove all application overhead is irrelevant. The <=2-second first-visible-token goal remains unmet. Do not invent speedups from prompt changes; compare matched requests, models and load conditions.
 
-## M1.5 — Product foundations and context (proposed in PR #2)
+## M1.5 — Product foundations and context (scope delivered; tests pending)
 
 First answer [what we are building and who it is for](product-vision.md).
 Chomiii is an everyday personal assistant, not a coding-specific agent. Keep
