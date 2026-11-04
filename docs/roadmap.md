@@ -3,19 +3,22 @@
 Status of each milestone is checked against [verification.md](verification.md).
 M0 established the foundation. M1 has a locally verified Gemini chat path;
 its Docker startup remains unverified on the machine used for this milestone.
-M1.1, M1.5, M2–M8 are plans, not implemented behavior.
+M1.1 has measured the latency bottleneck without meeting its speed target;
+M1.5 product/context scope is delivered in PR #2, with full-suite verification still outstanding; see [M1.5 closure](m1.5-closure.md).
+M2 (memory), M2.5 (workflow skills), and M3 (authorized actions) are planned;
+real autonomous action is not currently implemented.
 
 ```mermaid
 flowchart TD
     M0["M0 Foundation<br/>public repo · architecture · TDD · CI"]
-    M1["M1 Chat<br/>Gemini first · BYOK · hosted streaming chat"]
+    M1["M1 Chat<br/>Gemini first · BYOK · local streaming chat"]
     M2["M2 Memory<br/>user-scoped persistence"]
-    M3["M3 Agent<br/>tools · bounded loop · permissions"]
+    M3["M3 Actions<br/>everyday tools · approvals · bounded loop"]
     M4["M4 Integrations<br/>Gmail · Calendar · search · MCP"]
     M5["M5 Durable autonomy<br/>tasks · scheduling · retries"]
     M6["M6 South African workflows<br/>rand · transport · WhatsApp"]
     M7["M7 Consumer maturity<br/>onboarding · privacy · cost · ops"]
-    M0 --> M1 --> M11["M1.1 Performance"] --> M15["M1.5 Identity and skills"] --> M2 --> M3 --> M4 --> M45["M4.5 Providers"] --> M5 --> M55["M5.5 Headless agents"] --> M6 --> M65["M6.5 Voice"] --> M7 --> M8["M8 Optional infrastructure"]
+    M0 --> M1 --> M11["M1.1 Performance"] --> M15["M1.5 Product and context"] --> M2 --> M25["M2.5 Workflow skills"] --> M3 --> M4 --> M45["M4.5 Providers"] --> M5 --> M55["M5.5 Headless agents"] --> M6 --> M65["M6.5 Voice"] --> M7 --> M8["M8 Optional infrastructure"]
 ```
 
 ## M0 — Foundation
@@ -63,32 +66,63 @@ criterion and are outside the local M1 scope. Authentication, abuse
 prevention for a public service, and privacy operations need reassessment
 before hosting.
 
-## M1.1 — Performance and observability (planned)
+## M1.1 — Performance and observability (partially implemented; speed target unmet)
 
-Measure browser time to first visible token, provider first-token latency, and end-to-end completion with p50/p95 statistics. Compare direct Gemini Developer API requests against the existing Spring Boot/SSE path using equivalent models and prompts. Optimize only measured bottlenecks, preserve session isolation and streaming cancellation, and document observed results. Target <=2 seconds to first visible token under normal conditions; this is a target, not a guarantee. No Docker dependency.
+Measure browser time to first visible token, provider first-token latency, and completion with p50/p95 statistics. The existing [benchmark](perf/README.md) recorded a 15.14-second median first *visible* reply in five browser requests; most measured API waiting time occurred while opening the Gemini stream (7.91–21.83 seconds), whereas the initial database transaction took 9–28 ms. Direct provider calls were also highly variable. This implicates the provider path during those samples but does **not** prove all application overhead is irrelevant. The <=2-second first-visible-token goal remains unmet. Do not invent speedups from prompt changes; compare matched requests, models and load conditions.
 
-## M1.5 — Identity, prompting, and skills (planned)
+## M1.5 — Product foundations and context (scope delivered; tests pending)
 
-Define a stable CHOMIII runtime identity distinct from the repository's OpenCode engineering AGENTS.md. Introduce tested, versioned system-prompt assembly, explicit instruction precedence, and progressively loaded declarative skills. Keep skills non-executable until the permissioned tool runtime in M3. Prevent user/retrieved text from overriding trusted instructions. Preserve the existing ChatProvider boundary.
+First answer [what we are building and who it is for](product-vision.md).
+Chomiii is an everyday personal assistant, not a coding-specific agent. Keep
+a concise versioned identity ([SYSTEM.md](../backend/src/main/resources/agent/SYSTEM.md)) and define the [context contract](context.md):
+trusted identity, current user turn, bounded owner-scoped recent history, and
+clear separation from personal memory. No automatic generic skill selection,
+unnecessary provider calls, or promises of capabilities we do not have.
+
+**Acceptance:** a simple general-purpose identity, product jobs and success
+measures, an inspectable context path, tests for instruction separation and
+limits, and an honest description of what exists, and a ranked everyday-use-case backlog.
+Source-derived design lessons
+are recorded in [agent-landscape.md](agent-landscape.md); the target boundaries
+are in [agent-architecture-plan.md](agent-architecture-plan.md).
 
 ## M2 — Memory
 
-Give each user persistent, trustworthy memory. **Agent Beacon is the preferred candidate and is evaluated first** (consumer memory ownership, privacy posture, export/deletion guarantees, licensing, cloud-vs-local data flow), with the other [references](references.md) assessed on the same lenses; document the outcome and its trade-offs.
+Give each person user-scoped, trustworthy personal memory and relevant context. Evaluate **Agent Beacon first as a candidate**, not an automatic adoption: its coding-agent telemetry and learned-skill focus may not fit ordinary consumer memory. Compare with [references](references.md) using consent, provenance, privacy, export/deletion, owner isolation, data flow, and latency; document the result.
 
 - **User-scoped persistent memory**: memory always belongs to a named user, isolated at the data layer, never shared silently between accounts.
 - Remember / retrieve / correct / delete paths, each tested end-to-end including the browser; deletion actually deletes.
 - **Provenance and consent**: every memory records where it came from and what the user approved; users can inspect and delete it.
 - **Acceptance:** memory CRUD with user scoping, provenance, and consent covered by tests on both engines and in the browser; deletion propagated to connected stores where providers are used.
+- **Consumer scenario:** "my usual groceries" is recalled only when saved or approved, updated when corrected, and honestly unknown when never supplied. This enables future workflows but does not purchase anything in M2.
 
-## M3 — Agent
+## M2.5 — Task-specific skills and workflows
 
-From chat to acting: a minimal agent that is fully testable without a real LLM.
+Introduce a skill or structured workflow **only when it demonstrably improves a
+real everyday task**, such as appointment preparation, organizing a budget or
+coordinating a personal plan. Standard writing, summarization and basic
+reasoning remain normal model abilities, not compulsory `/skill` commands.
 
-- **Tool registry and tool calls**: a small set of typed tools with documented schemas.
+- Progressively load a relevant workflow definition or reference material,
+  avoiding a large permanent system prompt or a second model call by default.
+- Keep skills declarative; no skill grants access to a user's private data or
+  authorizes an external action.
+- **Acceptance:** real-user task scenarios, bounded context size, measurable
+  utility versus plain chat, and tests ensuring untrusted material cannot
+  modify higher-priority instructions.
+
+## M3 — First real actions
+
+From chat to useful, permissioned everyday actions: a minimal agent runtime
+fully testable with a fake model. Start with a small ordinary task such as
+creating a reminder or managing a personal to-do—not a coding tool.
+
+- **Tool registry and tool calls**: a small set of typed, everyday tools with documented schemas.
 - **Bounded loop**: planner loop capped in steps, wall-clock **timeout**, and a deterministic stop.
 - **Permissions and approval**: every tool behind a server-side least-privilege check; consequential external actions require explicit user approval.
 - **Trace**: each run traced (steps, tool calls, approvals) so behavior is auditable.
 - **Acceptance:** deterministic fake-LLM tests for the whole loop; no tool executes without its permission check; timeout and bounded-turn behavior covered by tests; traces inspectable.
+- **Consumer scenario:** prepare and authorize a simple reminder/task action end-to-end. Compound email/calendar/grocery workflows are an integration-era goal, not the first M3 slice.
 
 ## M4 — Integrations
 

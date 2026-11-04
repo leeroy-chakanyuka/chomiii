@@ -53,12 +53,17 @@ restart, pending assistant messages become interrupted and conversation claims
 are cleared. M1 assumes one backend instance. It does not replay an
 interrupted stream.
 
-`ContextWindow` chooses the newest 20 complete turns within 16,000 Java
-string characters, including the current user message. It preserves message
+`ContextWindow` chooses at most 20 messages (including the current user message)
+within 16,000 Java string characters, prioritizing the newest complete history. It preserves message
 order and role and excludes failed or interrupted assistant messages. It reads
-only the owner-checked conversation. The fixed instruction says Chomi has no
-tools, live browsing, or long-term memory. User text cannot become a system
-instruction. There is no semantic retrieval or agent execution in M1.
+only the owner-checked conversation. The M1.5 prompt layer loads only the
+short versioned `agent/SYSTEM.md` from the Java classpath at startup. User
+text stays in the user role, never in the trusted system instruction. No
+skill registry, classification model, retrieval or long-term memory is active.
+
+This remains a character-based, single-conversation context selector, not a
+token-aware personal memory engine. See [context.md](context.md) for the exact
+current limits and the plans for future context sources.
 
 ## Browser sessions and credentials
 
@@ -100,3 +105,15 @@ for local M1 verification and production, while portable SQL keeps the M0
 MySQL development path usable. Docker Compose defines the three local
 services, but Docker was not installed on the verification machine. No
 container startup result is claimed in [verification.md](verification.md).
+
+## Target evolution (proposal, not implemented)
+
+The current diagram above shows M1. The future design in
+[agent-architecture-plan.md](agent-architecture-plan.md) places one Java agent
+runtime between the interface and separate services for context, consented
+memory, inference, permitted tools and durable tasks. A tool must be authorized
+by the backend rather than by prompt wording. The user sees a simple personal
+assistant, not the underlying implementation.
+
+See [product-vision.md](product-vision.md) and [agent-landscape.md](agent-landscape.md)
+for everyday-user requirements and the design lessons we intend to adopt.

@@ -187,10 +187,11 @@ export function useChat() {
         },
       })
       if (streamError) setError(streamError)
-      const loaded = await openConversation(conversationId)
+      // Both refreshes are independent. Do not serialize network round trips after streaming.
+      const [loaded, refreshed] = await Promise.all([openConversation(conversationId), conversations()])
       setMessages(loaded.messages)
       setStreamed('')
-      setHistory(await conversations())
+      setHistory(refreshed)
     } catch (cause) {
       setError(errorText(cause).includes('aborted') || (cause instanceof DOMException && cause.name === 'AbortError')
         ? 'Generation stopped.' : errorText(cause))

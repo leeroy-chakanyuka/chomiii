@@ -22,10 +22,28 @@ flowchart LR
     API -->|"request-scoped user key"| Gemini["Google Gemini API"]
 ```
 
-Chomiii does not yet include accounts, tools, autonomous agents, or long-term
-memory. Anonymous conversations belong to one browser cookie. They do not sync
+Chomiii has a **small, versioned general-purpose runtime identity**. It does
+not yet include accounts, executable tools, autonomous action loops, background
+tasks or long-term personal memory. Anonymous conversations belong to one browser cookie. They do not sync
 between devices, and losing the cookie loses access to them. See
 [docs/roadmap.md](docs/roadmap.md) for later milestones.
+
+## Product direction and context (M1.5)
+
+Chomiii is a **general-purpose personal assistant for everyday people**, not a
+coding agent. The first goal is a fast, straightforward chat experience; personal
+memory, task-specific workflows and real actions arrive in later milestones.
+
+Java loads the compact, trusted [SYSTEM.md](backend/src/main/resources/agent/SYSTEM.md)
+once at application startup. It does not load skills or run a classification
+model before a normal chat response. The [context strategy](docs/context.md)
+describes how the current message and owner-scoped conversation history are
+assembled, and what richer context must wait for user-controlled memory.
+
+Read the [product vision](docs/product-vision.md), [target architecture](docs/agent-architecture-plan.md),
+[lessons from other agents](docs/agent-landscape.md), and
+[revised roadmap](docs/roadmap.md). These distinguish **implemented behavior**
+from the future agent design.
 
 ## Start on Windows
 

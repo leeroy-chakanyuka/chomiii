@@ -1,6 +1,7 @@
 package com.chomiii.chat;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.chomiii.provider.ChatProvider;
 import java.util.List;
@@ -34,5 +35,27 @@ class ContextWindowTest {
                 new ChatProvider.Message(ChatProvider.Role.USER, "recent"),
                 new ChatProvider.Message(ChatProvider.Role.ASSISTANT, "newest"),
                 new ChatProvider.Message(ChatProvider.Role.USER, "today"));
+    }
+
+    @Test
+    void rejectsOversizedCurrentRequestWithoutTruncatingUserMeaning() {
+        assertThatThrownBy(() -> ContextWindow.select(List.of(), "too-long", 20, 4))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("context limit");
+    }
+
+    @Test
+    void ignoresInterruptedMessagesInsteadOfFeedingPartialAssistantClaimsBack() {
+        var history = List.of(
+                new ContextWindow.Turn("user", "I can only attend Friday", "complete"),
+                new ContextWindow.Turn("assistant", "Friday works", "complete"),
+                new ContextWindow.Turn("user", "Cancel that?", "complete"),
+                new ContextWindow.Turn("assistant", "Yes I canceled it", "interrupted"));
+        assertThat(ContextWindow.select(history, "What is still planned?", 20, 200))
+                .containsExactly(
+                        new ChatProvider.Message(ChatProvider.Role.USER, "I can only attend Friday"),
+                        new ChatProvider.Message(ChatProvider.Role.ASSISTANT, "Friday works"),
+                        new ChatProvider.Message(ChatProvider.Role.USER, "Cancel that?"),
+                        new ChatProvider.Message(ChatProvider.Role.USER, "What is still planned?"));
     }
 }

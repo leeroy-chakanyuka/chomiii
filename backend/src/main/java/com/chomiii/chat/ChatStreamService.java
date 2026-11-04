@@ -1,5 +1,6 @@
 package com.chomiii.chat;
 
+import com.chomiii.agent.AgentInstructions;
 import com.chomiii.provider.ChatProvider;
 import com.chomiii.provider.ProviderCatalog;
 import com.chomiii.provider.ProviderFailure;
@@ -24,8 +25,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Service
 public class ChatStreamService {
     private static final Logger log = LoggerFactory.getLogger(ChatStreamService.class);
-    private static final String SYSTEM_INSTRUCTION = "You are Chomiii, also called Chomi, a helpful general-purpose assistant. "
-            + "Be warm, clear, and honest. Admit uncertainty. You have no tools, live browsing, or long-term memory.";
+    private static final AgentInstructions AGENT_INSTRUCTIONS = new AgentInstructions();
     private static final int MAX_REPLY_CHARS = 16_000;
     private final ChatTurnStore store;
     private final ConversationRepository conversations;
@@ -65,7 +65,7 @@ public class ChatStreamService {
             throw exception;
         }
         long storeReadyNanos = System.nanoTime();
-        ChatProvider.ChatInput input = new ChatProvider.ChatInput(request.model(), SYSTEM_INSTRUCTION,
+        ChatProvider.ChatInput input = new ChatProvider.ChatInput(request.model(), AGENT_INSTRUCTIONS.systemPrompt(),
                 ContextWindow.select(pending.history(), request.content().strip(), 20, 16_000));
         long contextReadyNanos = System.nanoTime();
         var emitter = new SseEmitter(130_000L);

@@ -1,12 +1,12 @@
 # References
 
-Study candidates for Chomiii's milestones. These are **study resources, not dependencies or commitments**: candidates are weighed against Chomiii's constraints when the relevant milestone approaches, and outcomes are documented. **Agent Beacon is the preferred candidate for M2 and is evaluated first.**
+Study candidates for Chomiii's milestones. These are **study resources, not dependencies or commitments**. Chomiii is a personal assistant for everyday people, *not* a coding agent. See the separate [comparative architecture lessons](agent-landscape.md) and [product vision](product-vision.md). **Agent Beacon will be evaluated first for M2, but its coding-agent focus means adoption is not assumed.**
 
-## The nine required references
+## Existing technical and engineering references
 
 1. **[Pstack](https://github.com/cursor/plugins/tree/main/pstack)** — community plugin of rigorous agentic engineering playbooks and skills (routing, `/tdd`, verification skills such as blast-radius and benchmark checklists). Read from **M1 onward**: its TDD cadence and verification-before-merge habits are a reference for how Chomiii applies its own [AGENTS.md](../AGENTS.md) discipline to real features. Not an M0 prerequisite, and no Pstack work is happening now.
 
-2. **[Agent Beacon](https://github.com/Asymptote-Labs/agent-beacon)** (Asymptote Labs; [beacon.sh](https://beacon.sh/)) — open-source (MIT) cross-harness telemetry and memory layer for coding agents: sessions captured into a normalized, local-first trace, distillation of reviewed lessons into skills, served back via MCP or Agent Skills. Local JSONL is the default, with optional cloud/SIEM forwarding and explicit privacy modes (Standard vs Metadata-only). **Preferred M2 candidate, evaluated first** — its memory-ownership model, privacy posture, retention/redaction controls, export/deletion guarantees, licensing, and cloud-vs-local data flow are the direct comparison point for M2's user-scoped memory design.
+2. **[Agent Beacon](https://github.com/Asymptote-Labs/agent-beacon)** (Asymptote Labs; [beacon.sh](https://beacon.sh/)) — open-source (MIT) cross-harness telemetry and memory layer for coding agents: sessions captured into a normalized, local-first trace, distillation of reviewed lessons into skills, served back via MCP or Agent Skills. Local JSONL is the default, with optional cloud/SIEM forwarding and explicit privacy modes (Standard vs Metadata-only). **M2 evaluation candidate, not an assumed fit for consumer memory** — its memory-ownership model, privacy posture, retention/redaction controls, export/deletion guarantees, licensing, and cloud-vs-local data flow are the direct comparison point for M2's user-scoped memory design.
 
 3. **[Spring AI](https://github.com/spring-projects/spring-ai)** ([docs](https://docs.spring.io/spring-ai/reference/)) — the Spring ecosystem's AI framework: portable model-client abstractions (chat, streaming, tool calling), prompt/advisor patterns, and Spring-native configuration. The natural library bridge for Gemini integration inside a conventional Spring Boot backend; fits M1's "provider behind an internal port" requirement.
 
@@ -31,3 +31,13 @@ Study candidates for Chomiii's milestones. These are **study resources, not depe
 - **Maintenance honesty:** what the library does well vs what Chomiii should own itself; no candidate is adopted unless it earns its dependency.
 
 Inclusion here does not mean a project has been selected or adopted.
+
+## Product-oriented references
+
+The [agent landscape](agent-landscape.md) examines [Meta Muse](https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/),
+[OpenAI dots](https://openai.com/index/introducing-dots/),
+[open-source Muse](https://github.com/wlsdks/muse-agent),
+[OpenDot](https://github.com/thinkwee/OpenDot),
+[OpenClaw](https://github.com/openclaw/openclaw), and
+[Letta](https://github.com/letta-ai/letta). It records what Chomiii aspires
+to learn from each, and what it explicitly postpones. They are not dependencies.
