@@ -279,3 +279,5 @@ Green and observed: backend unit/MVC tests, MySQL integration, Flyway migrations
   Full Maven/frontend suites remain outstanding. See [M1.5 completion review](m1.5-closure.md) for exact scope and verification debt.
 
 M1.5 Java loader isolated smoke check (2026-11-04): Java 21 compilation and seven assertions passed on a recreated copy of the fetched `AgentInstructions.java` and `SYSTEM.md` source. This **does not** exercise the Maven/JUnit integration, the production classpath, or the frontend. Do not mark full CI or release gates green based on this result.
+
+M1.5 context-window isolated smoke check (2026-11-04): Java 21 compiled a recreated copy of the fetched `ContextWindow.java` plus a minimal `ChatProvider` type stub; **six assertions passed** (message budget, selection order, user role, oversized request rejection and interrupted-text exclusion). This is **not** repository Maven/JUnit execution.
