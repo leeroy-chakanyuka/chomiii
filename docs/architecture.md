@@ -53,8 +53,8 @@ restart, pending assistant messages become interrupted and conversation claims
 are cleared. M1 assumes one backend instance. It does not replay an
 interrupted stream.
 
-`ContextWindow` chooses the newest 20 complete turns within 16,000 Java
-string characters, including the current user message. It preserves message
+`ContextWindow` chooses at most 20 messages (including the current user message)
+within 16,000 Java string characters, prioritizing the newest complete history. It preserves message
 order and role and excludes failed or interrupted assistant messages. It reads
 only the owner-checked conversation. The M1.5 prompt layer loads only the
 short versioned `agent/SYSTEM.md` from the Java classpath at startup. User

@@ -260,7 +260,7 @@ Both engines have been exercised locally. The PostgreSQL Testcontainers suite st
 Green and observed: backend unit/MVC tests, MySQL integration, Flyway migrations on both database engines, the browser-to-backend path on both engines, frontend checks, and the `npm audit` high-severity gate. PostgreSQL Testcontainers, backend vulnerability scanning, and hosted CI remain unverified until the GitHub billing blocker is resolved.
 
 
-## M1.5 proposed PR: everyday-assistant identity and context (2026-11-04)
+## M1.5 implementation and design closure: everyday-assistant identity and context (2026-11-04)
 
 - **Implemented in branch:** short, cached classpath `SYSTEM.md` for a
   general-purpose assistant, separate from user messages. Removed the
@@ -276,4 +276,6 @@ Green and observed: backend unit/MVC tests, MySQL integration, Flyway migrations
   streaming, **not Gemini first-token latency**; no speedup is claimed.
 - **CI blocker:** GitHub Actions has refused to assign runners due to the
   account billing issue. This is not evidence that tests ran or failed.
-  Restore CI billing access or run tests locally before merge.
+  Full Maven/frontend suites remain outstanding. See [M1.5 completion review](m1.5-closure.md) for exact scope and verification debt.
+
+M1.5 Java loader isolated smoke check (2026-11-04): Java 21 compilation and seven assertions passed on a recreated copy of the fetched `AgentInstructions.java` and `SYSTEM.md` source. This **does not** exercise the Maven/JUnit integration, the production classpath, or the frontend. Do not mark full CI or release gates green based on this result.

@@ -81,7 +81,8 @@ unnecessary provider calls, or promises of capabilities we do not have.
 
 **Acceptance:** a simple general-purpose identity, product jobs and success
 measures, an inspectable context path, tests for instruction separation and
-limits, and an honest description of what exists. Source-derived design lessons
+limits, and an honest description of what exists, and a ranked everyday-use-case backlog.
+Source-derived design lessons
 are recorded in [agent-landscape.md](agent-landscape.md); the target boundaries
 are in [agent-architecture-plan.md](agent-architecture-plan.md).
 

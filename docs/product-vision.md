@@ -79,4 +79,28 @@ A coding-agent-first experience, generic `SKILL.md` for things a model already h
 - Which first authorized action actually saves time: reminders, tasks, calendar, or another workflow?
 - How do we design beyond English and high-bandwidth desktop users?
 
-**Success for M1.5:** a clear, testable product definition, a small identity, a context contract, and a ranked first-use-case backlog. Not a complete agent.
+## Ranked everyday-use-case backlog (hypotheses, not validated demand)
+
+Rank these by how quickly we can provide everyday value while building toward the
+multi-service personal agent. The ranking is a **product hypothesis** to test with
+people, not user-study evidence or a promise that later capabilities exist today.
+
+| Rank | Everyday need | Smallest useful outcome | Earliest milestone |
+| --- | --- | --- | --- |
+| **1** | "Help me sort out my week" | Understand several constraints and propose a practical schedule in the current chat | M1.5 baseline |
+| **2** | "Remember what I told you" | User-approved commitments, people and preferences retrievable in later conversations, with correction and deletion | M2 |
+| **3** | "Help me manage recurring chores" | Useful, domain-specific planning workflow with clear follow-ups and bounded context | M2.5 |
+| **4** | "Actually create that reminder" | A typed, permission-checked task/reminder action with a real success/failure receipt | M3 |
+| **5** | "Tell the right people and update my plans" | Coordinated, approved email and calendar operations; truthful partial-progress reporting | M4 |
+| **6** | "Check my usual grocery basket" | Memory plus current inventory/catalog, transparent basket and checkout approval where supported | M4+ |
+| **7** | "Keep working while I'm away" | A restart-safe, cancellable, approved ongoing task that reports status | M5 |
+
+**Research next:** Ask ordinary mobile-first users which of ranks 1–4
+they would actually return for, which permissions they trust, what worries
+them about memory, and where technical setup prevents adoption. Reorder the
+backlog only using actual evidence rather than our enthusiasm for complex agents.
+
+**Success for M1.5:** a clear testable product definition, compact identity,
+explicit context contract, ranked backlog and honest acceptance report in
+[docs/m1.5-closure.md](m1.5-closure.md). M1.5 does **not** deliver external
+actions or personal cross-session memory.
