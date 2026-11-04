@@ -1,6 +1,9 @@
 package com.chomiii.chat;
 
 import com.chomiii.agent.AgentInstructions;
+import com.chomiii.memory.MemoryService;
+import java.util.ArrayList;
+import org.springframework.dao.DataAccessException;
 import com.chomiii.provider.ChatProvider;
 import com.chomiii.provider.ProviderCatalog;
 import com.chomiii.provider.ProviderFailure;
@@ -29,16 +32,18 @@ public class ChatStreamService {
     private static final int MAX_REPLY_CHARS = 16_000;
     private final ChatTurnStore store;
     private final ConversationRepository conversations;
+    private final MemoryService memories;
     private final ProviderCatalog catalog;
     private final List<ChatProvider> providers;
     private final ExecutorService executor;
     private final Semaphore slots = new Semaphore(8);
     private final ConcurrentHashMap<UUID, Active> active = new ConcurrentHashMap<>();
 
-    public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, ProviderCatalog catalog,
-            List<ChatProvider> providers, ExecutorService chatExecutor) {
+    public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
+            ProviderCatalog catalog, List<ChatProvider> providers, ExecutorService chatExecutor) {
         this.store = store;
         this.conversations = conversations;
+        this.memories = memories;
         this.catalog = catalog;
         this.providers = List.copyOf(providers);
         this.executor = chatExecutor;
@@ -65,8 +70,17 @@ public class ChatStreamService {
             throw exception;
         }
         long storeReadyNanos = System.nanoTime();
-        ChatProvider.ChatInput input = new ChatProvider.ChatInput(request.model(), AGENT_INSTRUCTIONS.systemPrompt(),
+        List<ChatProvider.Message> messages = new ArrayList<>(
                 ContextWindow.select(pending.history(), request.content().strip(), 20, 16_000));
+        // Saved memories are lower-trust, owner-filtered context, never new system instructions.
+        // Missing or unavailable memory must not prevent a normal chat reply.
+        String memoryContext = memories.forChat(owner, request.content());
+        if (!memoryContext.isBlank()) {
+            messages.add(messages.size() - 1,
+                    new ChatProvider.Message(ChatProvider.Role.USER, memoryContext));
+        }
+        ChatProvider.ChatInput input = new ChatProvider.ChatInput(request.model(),
+                AGENT_INSTRUCTIONS.systemPrompt(), List.copyOf(messages));
         long contextReadyNanos = System.nanoTime();
         var emitter = new SseEmitter(130_000L);
         var generation = new Active(owner, conversation);
