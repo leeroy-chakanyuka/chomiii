@@ -6,6 +6,7 @@ import com.chomiii.provider.ProviderFailure;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,12 +15,15 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Service
 public class ChatStreamService {
+    private static final Logger log = LoggerFactory.getLogger(ChatStreamService.class);
     private static final String SYSTEM_INSTRUCTION = "You are Chomi, a helpful general-purpose assistant. "
             + "Answer honestly. You have no tools, live browsing, or long-term memory.";
     private static final int MAX_REPLY_CHARS = 16_000;
@@ -52,6 +56,7 @@ public class ChatStreamService {
         if (!slots.tryAcquire()) {
             throw new ChatApiException(HttpStatus.TOO_MANY_REQUESTS, "Too many generations are in progress.");
         }
+        long requestStartedNanos = System.nanoTime();
         ChatTurnStore.Pending pending;
         try {
             pending = store.begin(conversation, owner, request.requestId(), request.content().strip());
@@ -59,8 +64,10 @@ public class ChatStreamService {
             slots.release();
             throw exception;
         }
+        long storeReadyNanos = System.nanoTime();
         ChatProvider.ChatInput input = new ChatProvider.ChatInput(request.model(), SYSTEM_INSTRUCTION,
                 ContextWindow.select(pending.history(), request.content().strip(), 20, 16_000));
+        long contextReadyNanos = System.nanoTime();
         var emitter = new SseEmitter(130_000L);
         var generation = new Active(owner, conversation);
         active.put(request.requestId(), generation);
@@ -69,7 +76,8 @@ public class ChatStreamService {
         emitter.onTimeout(generation::cancelUnlessFinished);
         try {
             executor.execute(() -> run(request.requestId(), pending.assistantId(), owner, conversation,
-                    provider, input, key, generation, emitter));
+                    provider, input, key, generation, emitter, requestStartedNanos, storeReadyNanos,
+                    contextReadyNanos));
         } catch (RuntimeException exception) {
             active.remove(request.requestId(), generation);
             slots.release();
@@ -99,8 +107,11 @@ public class ChatStreamService {
     }
 
     private void run(UUID requestId, UUID assistantId, String owner, UUID conversation, ChatProvider provider,
-            ChatProvider.ChatInput input, String key, Active generation, SseEmitter emitter) {
+            ChatProvider.ChatInput input, String key, Active generation, SseEmitter emitter,
+            long requestStartedNanos, long storeReadyNanos, long contextReadyNanos) {
         StringBuilder response = new StringBuilder();
+        long[] firstDeltaNanos = {0L};
+        String outcome = "failed";
         try {
             send(emitter, "start", Map.of("requestId", requestId.toString(), "messageId", assistantId.toString()));
             try (ChatProvider.Generation providerStream = provider.open(input, key)) {
@@ -115,6 +126,9 @@ public class ChatStreamService {
                     if (response.length() + chunk.length() > MAX_REPLY_CHARS) {
                         throw new ChatApiException(HttpStatus.BAD_GATEWAY, "Gemini returned too much text.");
                     }
+                    if (firstDeltaNanos[0] == 0L) {
+                        firstDeltaNanos[0] = System.nanoTime();
+                    }
                     response.append(chunk);
                     send(emitter, "delta", Map.of("text", chunk));
                 };
@@ -125,6 +139,7 @@ public class ChatStreamService {
             }
             store.finish(conversation, owner, requestId, assistantId, response.toString(), "complete");
             generation.finished.set(true);
+            outcome = "complete";
             send(emitter, "complete", Map.of("messageId", assistantId.toString(), "status", "complete"));
         } catch (RuntimeException exception) {
             if (generation.finished.get()) {
@@ -132,6 +147,7 @@ public class ChatStreamService {
             }
             boolean interrupted = generation.cancelled.get() || exception instanceof CancellationException
                     || exception instanceof ProviderFailure failure && failure.code() == ProviderFailure.Code.CANCELLED;
+            outcome = interrupted ? "interrupted" : "failed";
             String code = interrupted ? "INTERRUPTED" : exception instanceof ProviderFailure failure
                     ? failure.code().name() : exception instanceof ChatApiException ? "OUTPUT_LIMIT" : "UNAVAILABLE";
             String message = interrupted ? "Generation stopped." : exception instanceof ProviderFailure failure
@@ -151,10 +167,21 @@ public class ChatStreamService {
                 generation.cancelUnlessFinished();
             }
         } finally {
+            long completedNanos = System.nanoTime();
+            log.info("chat_latency provider={} model={} outcome={} store_ms={} context_ms={} first_delta_ms={} total_ms={}",
+                    provider.id(), input.model(), outcome,
+                    elapsedMillis(requestStartedNanos, storeReadyNanos),
+                    elapsedMillis(storeReadyNanos, contextReadyNanos),
+                    firstDeltaNanos[0] == 0L ? -1 : elapsedMillis(requestStartedNanos, firstDeltaNanos[0]),
+                    elapsedMillis(requestStartedNanos, completedNanos));
             active.remove(requestId, generation);
             slots.release();
             emitter.complete();
         }
+    }
+
+    private static long elapsedMillis(long startNanos, long endNanos) {
+        return TimeUnit.NANOSECONDS.toMillis(endNanos - startNanos);
     }
 
     private static void send(SseEmitter emitter, String event, Object payload) {
