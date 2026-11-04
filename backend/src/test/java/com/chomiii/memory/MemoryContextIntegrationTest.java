@@ -23,6 +23,40 @@ import static org.mockito.ArgumentMatchers.anyString;
 
 class MemoryContextIntegrationTest {
     @Test
+    void explicitOptOutDoesNotQueryOrSendPersonalMemory() throws Exception {
+        ChatTurnStore store = mock(ChatTurnStore.class);
+        when(store.begin(any(), anyString(), any(), anyString()))
+                .thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
+        MemoryService memories = mock(MemoryService.class);
+        var seen = new AtomicReference<ChatProvider.ChatInput>();
+        var generated = new CountDownLatch(1);
+        ChatProvider provider = new ChatProvider() {
+            @Override public String id() { return "gemini"; }
+            @Override public Generation open(ChatInput input, String key) {
+                seen.set(input);
+                return new Generation() {
+                    @Override public void stream(Consumer<String> delta) {
+                        delta.accept("No memory"); generated.countDown();
+                    }
+                    @Override public void close() {}
+                };
+            }
+        };
+        try (var executor = Executors.newSingleThreadExecutor()) {
+            var chat = new ChatStreamService(store, mock(ConversationRepository.class), memories,
+                    new ProviderCatalog(List.of("gemini-3.5-flash-lite")), List.of(provider), executor);
+            chat.start(UUID.randomUUID(), "owner", new ChatStreamController.MessageRequest(
+                    UUID.randomUUID(), "gemini", "gemini-3.5-flash-lite", "What are my groceries?"),
+                    "test-key", false);
+            assertThat(generated.await(10, TimeUnit.SECONDS)).isTrue();
+            assertThat(seen.get().messages()).containsExactly(
+                    new ChatProvider.Message(ChatProvider.Role.USER, "What are my groceries?"));
+            org.mockito.Mockito.verify(memories, org.mockito.Mockito.never())
+                    .forChat(anyString(), anyString());
+        }
+    }
+
+    @Test
     void insertsApprovedMemoryAsUserContextNotTrustedSystemText() throws Exception {
         ChatTurnStore store = mock(ChatTurnStore.class);
         when(store.begin(any(), anyString(), any(), anyString()))

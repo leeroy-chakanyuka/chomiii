@@ -65,6 +65,19 @@ class MemoryServiceTest {
     }
 
     @Test
+    void correctedMemoryIsReadByExactOwnerAndId() {
+        MemoryRepository repo = mock(MemoryRepository.class);
+        MemoryService service = new MemoryService(repo);
+        UUID id = UUID.randomUUID();
+        PersonalMemory corrected = new PersonalMemory(id, "New favorite groceries", "user_explicit",
+                Instant.now(), Instant.now());
+        when(repo.update("owner", id, "New favorite groceries")).thenReturn(true);
+        when(repo.find("owner", id)).thenReturn(java.util.Optional.of(corrected));
+        assertThat(service.replace("owner", id, "  New favorite groceries ")).isEqualTo(corrected);
+        verify(repo).find("owner", id);
+    }
+
+    @Test
     void deletingARecordUsesOwnerAndExactId() {
         MemoryRepository repo = mock(MemoryRepository.class);
         MemoryService service = new MemoryService(repo);
