@@ -1,6 +1,9 @@
 package com.chomiii.agent;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.io.InputStream;
 
 import org.junit.jupiter.api.Test;
 
@@ -35,6 +38,19 @@ class AgentInstructionsTest {
         String prompt = instructions.forMessage(injection);
         assertThat(prompt).doesNotContain(injection);
         assertThat(prompt).contains("no tools");
+    }
+
+    @Test
+    void failsClosedWhenTrustedIdentityIsMissing() {
+        ClassLoader withoutIdentity = new ClassLoader(AgentInstructions.class.getClassLoader()) {
+            @Override
+            public InputStream getResourceAsStream(String name) {
+                if ("agent/SYSTEM.md".equals(name)) return null;
+                return super.getResourceAsStream(name);
+            }
+        };
+        assertThatThrownBy(() -> new AgentInstructions(withoutIdentity))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("Missing agent resource");
     }
 
     @Test

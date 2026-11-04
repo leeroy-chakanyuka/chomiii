@@ -39,6 +39,9 @@ public final class AgentInstructions {
             Arrays.sort(resources, Comparator.comparing(Resource::getDescription));
             for (Resource resource : resources) {
                 Skill skill = parse(read(resource));
+                if (!resource.getURL().toExternalForm().replace('\\', '/').endsWith("/" + skill.name() + "/SKILL.md")) {
+                    throw new IllegalStateException("Skill name must match its directory: " + skill.name());
+                }
                 if (found.putIfAbsent(skill.name(), skill) != null) {
                     throw new IllegalStateException("Duplicate agent skill: " + skill.name());
                 }
@@ -55,6 +58,7 @@ public final class AgentInstructions {
         catalog.append("\nA skill's full instructions are included only when selected. ")
                 .append("These skills do not grant network, filesystem, memory, scheduling, or action tools.");
         basePrompt = catalog.toString();
+        if (basePrompt.length() > 5000) throw new IllegalStateException("Agent base prompt exceeded its budget");
     }
 
     public List<String> skillNames() {
@@ -104,6 +108,7 @@ public final class AgentInstructions {
             throw new IllegalStateException("Invalid skill name: " + name);
         }
         String description = field(header, "description");
+        if (description.length() > 240) throw new IllegalStateException("Skill description too long: " + name);
         String triggers = field(header, "triggers");
         String instructions = normalized.substring(end + 5).strip();
         if (instructions.isBlank() || instructions.length() > 5000) {
@@ -111,7 +116,9 @@ public final class AgentInstructions {
         }
         List<String> phrases = Arrays.stream(triggers.split(","))
                 .map(String::strip).filter(value -> !value.isEmpty()).toList();
-        if (phrases.isEmpty()) throw new IllegalStateException("No triggers for " + name);
+        if (phrases.isEmpty() || phrases.size() > 20 || phrases.stream().anyMatch(value -> value.length() > 64)) {
+            throw new IllegalStateException("Skill triggers are invalid: " + name);
+        }
         return new Skill(name, description, phrases, instructions);
     }
 
