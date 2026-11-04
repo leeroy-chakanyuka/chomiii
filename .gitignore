@@ -8,6 +8,7 @@
 # Build output and dependencies
 backend/target/
 frontend/node_modules/
+tools/launcher/node_modules/
 frontend/dist/
 frontend/coverage/
 frontend/playwright-report/

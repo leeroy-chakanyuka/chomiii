@@ -3,6 +3,9 @@ package com.chomiii.provider.gemini;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.chomiii.provider.ChatProvider;
 import com.chomiii.provider.ProviderFailure;
 import com.sun.net.httpserver.HttpServer;
@@ -27,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.slf4j.LoggerFactory;
 
 class GeminiProviderTest {
     private HttpServer server;
@@ -283,6 +287,24 @@ class GeminiProviderTest {
         assertThat(bodiesByKey).hasSize(2);
         assertThat(bodiesByKey.get("first-key")).contains("first-message").doesNotContain("second-message");
         assertThat(bodiesByKey.get("second-key")).contains("second-message").doesNotContain("first-message");
+    }
+
+    @Test
+    void timingLogsExcludeCredentialsAndConversationText() {
+        Logger logger = (Logger) LoggerFactory.getLogger(GeminiProvider.class);
+        ListAppender<ILoggingEvent> captured = new ListAppender<>();
+        captured.start();
+        logger.addAppender(captured);
+        try {
+            stream(provider(), "private-test-key", "private-user-message");
+            assertThat(captured.list).anySatisfy(event -> assertThat(event.getFormattedMessage())
+                    .contains("gemini_timing", "first_text_ms="));
+            assertThat(captured.list).allSatisfy(event -> assertThat(event.getFormattedMessage())
+                    .doesNotContain("private-test-key", "private-user-message"));
+        } finally {
+            logger.detachAppender(captured);
+            captured.stop();
+        }
     }
 
     private void stream(GeminiProvider provider, String key, String message) {

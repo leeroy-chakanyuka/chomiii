@@ -32,6 +32,11 @@ test key and `CHOMIII_RUN_GEMINI_SMOKE=true`, then run
 `.\mvnw.cmd -Dtest=GeminiLiveTest test`. It makes one provider request.
 The normal unit suite skips the live test.
 
+To verify the Windows launcher against an isolated local database, run
+`npm ci` in `tools/launcher`, then `node smoke.mjs` from that directory. The
+test starts two app instances sequentially and reopens a test conversation
+after restart. It never touches your normal Chomiii database.
+
 | Command | Runs | Proves | Needs |
 | --- | --- | --- | --- |
 | `.\mvnw.cmd test` | Unit + MVC-slice tests (Surefire; `*IT` classes excluded) | Behavior of services, controllers via MockMvc, the error contract, config — **no database required** | JDK 21 only |

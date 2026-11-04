@@ -1,0 +1,93 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "prompt": "2+2 single-digit answer",
+  "generation": "SDK default; fixed system instruction; no prior turns",
+  "targetSamplesPerSide": 5,
+  "warmupsPerSide": 1,
+  "failures": [],
+  "app": {
+    "count": 5,
+    "ttftMs": {
+      "p50": 13673.8,
+      "p95": 21938.7,
+      "min": 7948.2,
+      "max": 21938.7
+    },
+    "completeMs": {
+      "p50": 13701.2,
+      "p95": 21962.3,
+      "min": 7981.3,
+      "max": 21962.3
+    },
+    "createMs": {
+      "p50": 24.9,
+      "p95": 84.3,
+      "min": 16.4,
+      "max": 84.3
+    },
+    "samples": [
+      {
+        "createMs": 24.9,
+        "ttftMs": 13673.8,
+        "completeMs": 13701.2
+      },
+      {
+        "createMs": 54.4,
+        "ttftMs": 14438.1,
+        "completeMs": 14471.3
+      },
+      {
+        "createMs": 20,
+        "ttftMs": 7948.2,
+        "completeMs": 7981.3
+      },
+      {
+        "createMs": 84.3,
+        "ttftMs": 21938.7,
+        "completeMs": 21962.3
+      },
+      {
+        "createMs": 16.4,
+        "ttftMs": 13358.7,
+        "completeMs": 13387.8
+      }
+    ]
+  },
+  "direct": {
+    "count": 5,
+    "ttftMs": {
+      "p50": 18877.3,
+      "p95": 21627.9,
+      "min": 10488.8,
+      "max": 21627.9
+    },
+    "completeMs": {
+      "p50": 18878.6,
+      "p95": 21629.3,
+      "min": 10493.9,
+      "max": 21629.3
+    },
+    "samples": [
+      {
+        "ttftMs": 10488.8,
+        "completeMs": 10493.9
+      },
+      {
+        "ttftMs": 14927.3,
+        "completeMs": 14974
+      },
+      {
+        "ttftMs": 21627.9,
+        "completeMs": 21629.3
+      },
+      {
+        "ttftMs": 20785.5,
+        "completeMs": 20786.2
+      },
+      {
+        "ttftMs": 18877.3,
+        "completeMs": 18878.6
+      }
+    ]
+  }
+}

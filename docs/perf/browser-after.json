@@ -1,0 +1,32 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "count": 5,
+  "warmups": 1,
+  "failures": 0,
+  "p50Ms": 15141.3,
+  "p95Ms": 17434.2,
+  "minMs": 10105.7,
+  "maxMs": 17434.2,
+  "samples": [
+    {
+      "firstVisibleMs": 10105.7,
+      "completeMs": 10074.4
+    },
+    {
+      "firstVisibleMs": 12108.6,
+      "completeMs": 12050
+    },
+    {
+      "firstVisibleMs": 15141.3,
+      "completeMs": 14998
+    },
+    {
+      "firstVisibleMs": 16558,
+      "completeMs": 16560.3
+    },
+    {
+      "firstVisibleMs": 17434.2,
+      "completeMs": 17099.7
+    }
+  ]
+}

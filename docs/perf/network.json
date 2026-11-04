@@ -1,0 +1,12 @@
+{
+  "operation": "authenticated Gemini model list, pageSize=1",
+  "samples": [
+    { "headersMs": 1082.7, "totalMs": 1095.2 },
+    { "headersMs": 682.3, "totalMs": 688.3 },
+    { "headersMs": 536.4, "totalMs": 538.4 },
+    { "headersMs": 594.8, "totalMs": 596.5 },
+    { "headersMs": 523.7, "totalMs": 531.2 }
+  ],
+  "p50Ms": 596.5,
+  "p95Ms": 1095.2
+}
