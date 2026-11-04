@@ -304,3 +304,5 @@ M1.5 context-window isolated smoke check (2026-11-04): Java 21 compiled a recrea
   treat the workflow status as compiled/tested evidence.
 - **M2 is not certified complete.** This is a draft PR for review and further
   verification, not a release or merge instruction.
+
+M2 PR #3 review follow-up: memory context length and its single additional message now count against the original 16,000-character/20-message chat budget. This is a static source review fix, **not a verified test run**.

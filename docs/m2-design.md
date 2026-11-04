@@ -20,7 +20,7 @@ flowchart LR
 - `source=user_explicit` means a person saved it deliberately from the Memories UI. There is no agent-authored or automatically ingested memory in this milestone.
 - Hard limit 100 entries, 500 characters each; creating new entries locks the owner row before counting to prevent simultaneous writes from bypassing the limit.
 - Editing replaces content; deletion removes the row; clear-all is owner scoped. The frontend asks for confirmation before bulk deletion. Updates do not leave an independent copy/history in this memory table.
-- The model never receives credentials to query the memory store. The backend chooses at most three relevant memories under a strict character budget; the model receives them as **user-context data** before the current request, not as privileged system instructions.
+- The model never receives credentials to query the memory store. The backend chooses at most three relevant memories under a strict character budget; their characters and one message slot are **reserved before** the recent chat window is assembled. The model receives them as **user-context data** before the current request, not as privileged system instructions.
 - If retrieval has no match or fails, chat proceeds without those memories; no model call is made to classify or summarize memory before response generation. A user can opt out of injecting memories for their request.
 
 ## Product flow

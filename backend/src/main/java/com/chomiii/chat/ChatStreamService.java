@@ -75,12 +75,16 @@ public class ChatStreamService {
             throw exception;
         }
         long storeReadyNanos = System.nanoTime();
-        List<ChatProvider.Message> messages = new ArrayList<>(
-                ContextWindow.select(pending.history(), request.content().strip(), 20, 16_000));
-        // Saved memories are lower-trust, owner-filtered context, never new system instructions.
-        // Missing or unavailable memory must not prevent a normal chat reply.
+        // Retrieval is an optional, owner-scoped source of untrusted context.
+        // Reserve its budget BEFORE selecting history so the full model input
+        // stays within the established message and character bounds.
         String memoryContext = useMemory ? memories.forChat(owner, request.content()) : "";
-        if (!memoryContext.isBlank()) {
+        boolean hasMemory = !memoryContext.isBlank();
+        int memoryChars = hasMemory ? memoryContext.length() : 0;
+        List<ChatProvider.Message> messages = new ArrayList<>(
+                ContextWindow.select(pending.history(), request.content().strip(),
+                        hasMemory ? 19 : 20, 16_000 - memoryChars));
+        if (hasMemory) {
             messages.add(messages.size() - 1,
                     new ChatProvider.Message(ChatProvider.Role.USER, memoryContext));
         }
