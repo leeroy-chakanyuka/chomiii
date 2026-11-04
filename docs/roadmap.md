@@ -3,7 +3,7 @@
 Status of each milestone is checked against [verification.md](verification.md).
 M0 established the foundation. M1 has a locally verified Gemini chat path;
 its Docker startup remains unverified on the machine used for this milestone.
-M2–M7 are plans, not implemented behavior.
+M1.1, M1.5, M2–M8 are plans, not implemented behavior.
 
 ```mermaid
 flowchart TD
@@ -15,7 +15,7 @@ flowchart TD
     M5["M5 Durable autonomy<br/>tasks · scheduling · retries"]
     M6["M6 South African workflows<br/>rand · transport · WhatsApp"]
     M7["M7 Consumer maturity<br/>onboarding · privacy · cost · ops"]
-    M0 --> M1 --> M2 --> M3 --> M4 --> M5 --> M6 --> M7
+    M0 --> M1 --> M11["M1.1 Performance"] --> M15["M1.5 Identity and skills"] --> M2 --> M3 --> M4 --> M45["M4.5 Providers"] --> M5 --> M55["M5.5 Headless agents"] --> M6 --> M65["M6.5 Voice"] --> M7 --> M8["M8 Optional infrastructure"]
 ```
 
 ## M0 — Foundation
@@ -62,6 +62,14 @@ cross-device synchronization. Those were part of an older draft acceptance
 criterion and are outside the local M1 scope. Authentication, abuse
 prevention for a public service, and privacy operations need reassessment
 before hosting.
+
+## M1.1 — Performance and observability (planned)
+
+Measure browser time to first visible token, provider first-token latency, and end-to-end completion with p50/p95 statistics. Compare direct Gemini Developer API requests against the existing Spring Boot/SSE path using equivalent models and prompts. Inspect Starpath for applicable performance patterns if accessible. Optimize only measured bottlenecks, preserve session isolation and streaming cancellation, and document observed results. Target <=2 seconds to first visible token under normal conditions; this is a target, not a guarantee. No Docker dependency.
+
+## M1.5 — Identity, prompting, and skills (planned)
+
+Define a stable CHOMIII runtime identity distinct from the repository's OpenCode engineering AGENTS.md. Introduce tested, versioned system-prompt assembly, explicit instruction precedence, and progressively loaded declarative skills. Keep skills non-executable until the permissioned tool runtime in M3. Prevent user/retrieved text from overriding trusted instructions. Preserve the existing ChatProvider boundary.
 
 ## M2 — Memory
 
@@ -115,3 +123,21 @@ Make it something real people can rely on.
 - **Cost visibility and control** for BYOK usage and any running tasks; **authentication** and **operations** runbook finalized.
 - **Hosted** offering plus documented, working **self-hosting** (same contract, real deployment path).
 - **Acceptance:** hosted and self-hosted paths both pass the full test battery incl. browser E2E; security review complete; roadmap and verification evidence reconciled.
+
+## Additional planned milestones (proposals)
+
+### M4.5 — Multi-provider inference and free-tier research
+
+Evaluate Gemini, Groq, OpenRouter, Cloudflare Workers AI, Mistral, and local open-weight inference for legitimate free-tier quotas, latency, privacy, commercial terms, and streaming/tool support. Implement provider selection through a clean adapter boundary with explicit user-approved fallback, never silent data transfer. Free-tier quotas are not unlimited free inference.
+
+### M5.5 — Headless agents and collaboration
+
+Research isolated headless workers, delegated tasks, contributor workflows, permissions, audit trails, and safe multi-agent orchestration. Human open-source contributions can begin earlier; autonomous agent delegation requires M3/M5 foundations.
+
+### M6.5 — Voice chat
+
+Start with push-to-talk speech-to-text and text-to-speech, then evaluate streaming bidirectional voice, interruption handling, voice activity detection, and accessibility. Preserve text chat as a fallback.
+
+### M8 — Optional infrastructure and deployment
+
+Document reproducible deployment and operational checks; evaluate containerization only when the project owner opts in. No Docker requirement for earlier milestones or local verification.
