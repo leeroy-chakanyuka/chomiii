@@ -1,29 +1,123 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { fetchHealth, type HealthState } from './health'
+import { useChat } from './useChat'
 
 export default function App() {
-  const [state, setState] = useState<HealthState>({ status: 'loading' })
+  const [health, setHealth] = useState<HealthState>({ status: 'loading' })
+  const chat = useChat()
+  const scrollArea = useRef<HTMLDivElement>(null)
+  const followOutput = useRef(true)
 
   useEffect(() => {
     let current = true
-    fetchHealth().then((settled) => {
-      if (current) {
-        setState(settled)
-      }
-    })
-    return () => {
-      current = false
-    }
+    fetchHealth().then((settled) => { if (current) setHealth(settled) })
+    return () => { current = false }
   }, [])
 
+  useEffect(() => {
+    if (followOutput.current && scrollArea.current) {
+      scrollArea.current.scrollTop = scrollArea.current.scrollHeight
+    }
+  }, [chat.messages, chat.streamed])
+
+  const selectedProvider = chat.catalog.find((item) => item.id === chat.provider)
+
   return (
-    <main className="shell">
-      <h1 className="wordmark">
-        chom<span className="threes">iii</span>
-      </h1>
-      <p className="status" data-testid="status" data-state={state.status}>
-        {state.status === 'loading' ? 'checking…' : state.status}
-      </p>
+    <main className={chat.connected ? 'app chat-layout' : 'app setup-layout'}>
+      <header className="topbar">
+        <h1 className="wordmark">chom<span className="threes">iii</span></h1>
+        <p className="status" data-testid="status" data-state={health.status}>
+          {health.status === 'loading' ? 'checking…' : health.status}
+        </p>
+        {chat.connected && <div className="topbar-actions">
+          <span className="model-pill">Gemini · {chat.model}</span>
+          <button type="button" className="text-button" onClick={chat.changeKey}>Change key or model</button>
+          <button type="button" className="text-button" onClick={chat.removeKey}>Remove key</button>
+        </div>}
+      </header>
+
+      {!chat.connected ? <section className="setup-panel">
+        <p className="eyebrow">WELCOME TO CHOMI</p>
+        <p className="setup-title">A little space to think out loud.</p>
+        <p className="intro">Ask a question, work through an idea, or pick up a conversation where you left off.</p>
+        <form onSubmit={(event) => { event.preventDefault(); chat.connect() }}>
+          <label htmlFor="provider">Provider</label>
+          <select id="provider" value={chat.provider} onChange={(event) => chat.setProvider(event.target.value)}>
+            <option value="gemini">Gemini</option>
+          </select>
+          <label htmlFor="api-key">Gemini API key</label>
+          <input id="api-key" type="password" autoComplete="off" spellCheck={false}
+            value={chat.key} onChange={(event) => chat.setKey(event.target.value)}
+            placeholder="Paste your API key" />
+          <label htmlFor="model">Model</label>
+          <select id="model" value={chat.model} onChange={(event) => chat.setModel(event.target.value)}
+            disabled={chat.loading || !selectedProvider}>
+            {selectedProvider?.models.map((model) =>
+              <option key={model.id} value={model.id}>{model.name}</option>)}
+          </select>
+          {chat.error && <p role="alert" className="error">{chat.error}</p>}
+          <button className="primary-button" type="submit" disabled={chat.loading || !selectedProvider}>
+            Start chatting
+          </button>
+        </form>
+        <p className="small-print">Get a key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>. Your key stays in this browser tab’s memory and goes to the Chomiii backend to contact Gemini. Google account limits or charges may apply.</p>
+        {chat.history.length > 0 && <p className="small-print">Your conversations will be here when you reconnect with a key.</p>}
+      </section> : <div className="workspace">
+        <aside className="sidebar" aria-label="Conversations">
+          <button type="button" className="new-chat" onClick={chat.newChat} disabled={chat.busy}>+ New chat</button>
+          <nav aria-label="Previous conversations">
+            {chat.history.map((conversation) => <div className="conversation-row" key={conversation.id}>
+              <button type="button" className={conversation.id === chat.selectedId ? 'conversation-link selected' : 'conversation-link'}
+                disabled={chat.busy} onClick={() => void chat.switchChat(conversation.id)}>
+                {conversation.title}
+              </button>
+              <button type="button" className="delete-chat" aria-label={`Delete ${conversation.title}`}
+                disabled={chat.busy} onClick={() => void chat.removeChat(conversation.id)}>×</button>
+            </div>)}
+          </nav>
+        </aside>
+        <section className="conversation-view" aria-label="Chat">
+          <div className="message-scroll" ref={scrollArea} onScroll={(event) => {
+            const area = event.currentTarget
+            followOutput.current = area.scrollHeight - area.scrollTop - area.clientHeight < 120
+          }}>
+            <div className="message-column">
+              {chat.messages.length === 0 && <div className="empty-state">
+                <p className="eyebrow">JUST THE TWO OF US</p>
+                <p className="empty-title">What’s on your mind?</p>
+                <p>Ask Chomi to explain something, explore an idea, or help you write. Your chat stays here for this browser session.</p>
+              </div>}
+              {chat.messages.map((message) => <article className={`message ${message.role}`} key={message.id}>
+                <span className="speaker">{message.role === 'user' ? 'You' : 'Chomi'}</span>
+                <p>{message.content || (message.status === 'pending' ? 'Thinking…' : '')}</p>
+                {message.status === 'failed' || message.status === 'interrupted'
+                  ? <small className="message-note">{message.status === 'failed' ? 'Response failed' : 'Response stopped'}</small> : null}
+              </article>)}
+              {chat.busy && <article className="message assistant pending" aria-live="polite">
+                <span className="speaker">Chomi</span><p>{chat.streamed || 'Thinking…'}</p>
+              </article>}
+            </div>
+          </div>
+          <div className="composer-area">
+            {chat.error && <p role="alert" className="error">{chat.error}</p>}
+            <form className="composer" onSubmit={(event) => { event.preventDefault(); void chat.submit() }}>
+              <label className="visually-hidden" htmlFor="message">Message</label>
+              <textarea id="message" placeholder="Message Chomi…" rows={2} maxLength={8000}
+                value={chat.input} onChange={(event) => chat.setInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                    event.preventDefault()
+                    void chat.submit()
+                  }
+                }} disabled={chat.busy} />
+              {chat.busy ? <button type="button" className="stop-button" onClick={() => void chat.stop()}>
+                Stop generation
+              </button> : <button type="submit" className="primary-button" disabled={!chat.input.trim()}>Send</button>}
+            </form>
+            <p className="composer-hint">Enter to send · Shift+Enter for a new line</p>
+          </div>
+        </section>
+      </div>}
     </main>
   )
 }

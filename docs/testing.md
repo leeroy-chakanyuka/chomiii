@@ -1,6 +1,9 @@
 # Testing
 
-Chomiii is built test-first: specify observable behavior, run a test that fails for the intended reason, implement the smallest correct change, refactor, rerun focused tests plus relevant regression checks ([AGENTS.md](../AGENTS.md)). This page lists every check and what it proves, locally and in CI. **The honest record of what has actually been run lives in [verification.md](verification.md)** — check status there before trusting any "green" below.
+Chomiii is built test-first. Write a test for observable behavior, confirm its
+failure, implement, then rerun focused and relevant checks. All M1
+verification is local. [verification.md](verification.md) records results;
+the commands here describe how to reproduce them.
 
 ```mermaid
 flowchart TD
@@ -15,6 +18,19 @@ flowchart TD
 ## Backend (`cd backend`)
 
 Uses the Maven Wrapper (`mvnw.cmd` on Windows) so no local Maven install is needed.
+
+Run PostgreSQL API tests against a disposable PostgreSQL database without
+Docker. Set `CHOMIII_DB_URL`, `CHOMIII_DB_USER`, and `CHOMIII_DB_PASSWORD`,
+then run:
+
+```powershell
+.\mvnw.cmd '-Dtest=ChatStreamDatabaseTest,ConversationDatabaseTest,ConversationRestartDatabaseTest,ConversationHostedSecurityTest,ConversationRateLimitTest' test
+```
+
+The live Gemini adapter test is opt-in. Set `GEMINI_API_KEY` to an authorized
+test key and `CHOMIII_RUN_GEMINI_SMOKE=true`, then run
+`.\mvnw.cmd -Dtest=GeminiLiveTest test`. It makes one provider request.
+The normal unit suite skips the live test.
 
 | Command | Runs | Proves | Needs |
 | --- | --- | --- | --- |
@@ -34,40 +50,39 @@ Notable tests as of M0:
 
 ## Frontend (`cd frontend`)
 
-Run `npm ci` first (install from the lockfile). Commands from [package.json](../frontend/package.json):
+Run `npm ci` first. These commands use the scripts in
+[package.json](../frontend/package.json):
 
 | Command | Runs | Proves |
 | --- | --- | --- |
-| `npm run test` | Vitest + React Testing Library, jsdom | Component behavior, including strict health-response validation and the `VITE_API_BASE_URL` behavior |
+| `npm run test` | Vitest + React Testing Library | Health, provider setup, incremental SSE parsing, submission, stop, error, key removal, and conversation switching. |
 | `npm run lint` | ESLint (strict, typescript-eslint) | Code hygiene rules apply to all sources |
 | `npm run typecheck` | `tsc --noEmit` on both tsconfigs | Strict type soundness across app and Node configs |
 | `npm run build` | typecheck + `vite build` | Production bundle builds (`dist/`) |
-| `npm run test:browser` | Playwright, Chromium | **Standalone** shell behavior in a real browser: rendering plus `unavailable` for non-OK, malformed, and unreachable backends (in-browser response interception + a real connection-refused port). Needs **no backend** — passing it does *not* prove backend health |
-| `npm run test:browser:integration` | Playwright (`-c playwright.integration.config.ts`) | Real frontend ↔ backend integration. Requires the backend actually running at `BACKEND_URL` and local MySQL behind it; **no skip gate** — a missing/unhealthy backend fails loudly |
-| `npm run ci` | Everything above, sequentially | The full local battery (integration browser suite included) |
+| `npm run test:browser` | Playwright, Chromium | Fixture-backed two-turn chat, reload, key removal, mobile layout, and the M0 shell checks. The fixture does not prove Gemini works. |
+| `npm run test:browser:integration` | Playwright, Chromium | A running backend health check. With `CHOMIII_RUN_LIVE_CHAT=true` and an authorized `GEMINI_API_KEY`, also runs the real PostgreSQL and Gemini two-turn browser journey. |
 
-One no-surprises note: the standalone browser suite spawns dev servers on `5173`/`5174`, so it must not run concurrently with a manually occupied dev server.
+The standalone browser suite uses ports `5173` and `5174`. The integration
+suite uses `5175`; set `CHOMIII_PUBLIC_ORIGIN=http://127.0.0.1:5175` on the
+running backend. The local Gemini key is an environment value, never a test
+fixture or command-line argument.
 
-## CI (defined in the repository — first run still pending hosting)
+## Docker smoke checks
 
-The workflow lives in [.github/workflows/ci.yml](../.github/workflows/ci.yml) and will run on push/PR to `main` once the repository is hosted:
-
-```mermaid
-flowchart LR
-    CI(["CI workflow"]) --> S["Secret scan (gitleaks)"]
-    CI --> BU["Backend: unit tests +<br/>PostgreSQL Testcontainers/Flyway<br/>+ JaCoCo + OWASP dependency scan"]
-    CI --> MY["Backend: Failsafe *LocalIT suite<br/>on a real MySQL 8 service"]
-    CI --> FU["Frontend: lint / typecheck /<br/>unit tests / build / npm audit"]
-    CI --> E2E["E2E: backend jar on the prod profile<br/>against real PostgreSQL +<br/>both Playwright suites"]
-```
-
-So both database engines and the real browser integration are enforced by CI: contributors without Docker get full PostgreSQL verification via CI, while MySQL is also proven locally. Every green claim above stays hypothetical until the hosted repository's first CI run — [verification.md](verification.md) remains the evidence log.
+With Docker installed, set `CHOMIII_DB_PASSWORD` in the shell and run
+`docker compose config`, `docker compose up --build -d`,
+`docker compose ps`, and `docker compose logs --tail=100`. Check the UI at
+`http://localhost:5173`, send a real message with your own key, and restart
+the stack without removing its named PostgreSQL volume. These commands were
+not runnable on the M1 verification machine because Docker is unavailable.
 
 ## Order of operations for a change
 
 1. Write/extend a failing test for the intended observable behavior; confirm it fails for the intended reason.
 2. Implement; rerun the focused test, then the nearest relevant regression suites (backend table or frontend table above).
-3. Backend changes touching persistence additionally warrant **at least one database-engine verification path**: `.\mvnw.cmd -Plocal-mysql verify` locally, and the PostgreSQL suite via CI (or locally with Docker). Neither engine alone counts as both.
+3. Persistence changes warrant local PostgreSQL API tests and
+   `.\mvnw.cmd -Plocal-mysql verify` against disposable MySQL. Neither
+   engine alone proves both database paths.
 4. Record in [verification.md](verification.md) exactly what was run and the outcome; never invent results.
 
 ## Dependency audits

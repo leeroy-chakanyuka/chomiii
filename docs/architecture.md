@@ -1,135 +1,99 @@
 # Architecture
 
-## M1 design under implementation
-
-This section is a design contract, not a claim that M1 is finished. The current
-M0 behavior is described below. The verification log records what runs.
-
-### Request and storage boundaries
-
-The browser sends a message to the same-origin Spring MVC API using a POST
-stream. It keeps the Gemini API key in application memory and sends it in a
-request header. A request-scoped provider adapter constructs a Google GenAI
-client with that key and closes the upstream stream when generation ends.
-No application-wide mutable credential exists.
-
-The provider port accepts a model identifier, a separate system instruction,
-and an ordered list of role-tagged messages. It returns incremental text and
-supports cancellation. Gemini HTTP and SDK types stay in the adapter. Model
-availability is key-dependent; the API returns an error instead of switching
-models when Google rejects the selection.
-
-Flyway migrations add conversations and messages using SQL supported by both
-M0 database engines. Conversations have UUIDs, an owner reference, a title,
-timestamps, and an active generation marker. Messages have UUIDs, a
-conversation ID, a sequence, role, content, status, and a client request ID.
-The database constrains roles, statuses, ownership-related indexes, and request
-uniqueness. Keys are never columns in these tables.
-
-An opaque, cryptographically random browser-session cookie identifies the
-owner. The cookie is HttpOnly and SameSite, and uses Secure in hosted
-configuration. Only a hash of the random session token is used as the owner
-reference. Every conversation lookup includes the owner. State-changing
-requests must satisfy same-origin protection. Hosted configuration requires
-HTTPS and a trusted public origin. Anonymous sessions do not sync across
-devices.
-
-### Streaming and context
-
-`POST /api/conversations/{id}/messages/stream` accepts a UUID request ID,
-provider, model, and message. The key travels in a header, never in a URL.
-Before opening the provider, the service validates ownership, claims the
-conversation, and records the user message and a pending assistant message
-in one transaction. Reusing a request ID cannot create another turn; a
-conflicting or in-progress retry receives a documented conflict response.
-
-The stream uses `text/event-stream` with `start`, `delta`, `complete`, and
-`error` events containing JSON. The worker relays actual upstream chunks.
-It writes the final assistant content and terminal status on completion.
-Failures and cancellations record a non-complete assistant status. Stopping
-generation closes the upstream handle where supported. A restart reconciles
-pending messages as interrupted for the single-instance M1 deployment.
-
-Context consists of the newest complete user and assistant messages for the
-same conversation, in sequence order, plus the current user message. Failed
-or incomplete assistant messages are excluded. The service limits both the
-number of messages and the total character count, keeping the newest context
-that fits. The system instruction is separate from user content. This is
-conversation history, not long-term memory.
-
-### Design comparison
-
-Two independent sketches were considered. Persisting every streamed chunk
-would add a write for every update and require a durable replay protocol.
-M1 instead persists the initial and terminal states and relays deltas directly.
-The choice keeps interrupted work visible without promising stream replay or
-multi-instance recovery. A database-backed request ID and conversation claim
-prevent duplicates; an in-process handle is used only to cancel active work.
-
-This document describes milestone **M0** and the reasoning behind its architecture. Planned milestones live in the [roadmap](roadmap.md).
-
-## Shape
-
-Chomiii is a **two-process application in one repository**, with each process independently buildable and testable. The database engine depends on the environment:
+Chomiii keeps the M0 Java 21 Spring Boot MVC backend and React and TypeScript
+frontend under `backend/` and `frontend/`. The browser calls the API through a
+same-origin Vite or Nginx proxy. The backend owns conversation persistence,
+context construction, and access to Gemini. See [api.md](api.md) for the wire
+contract and [verification.md](verification.md) for observed M1 results.
 
 ```mermaid
 flowchart LR
-    B["Browser / Playwright"]
-    FS["frontend dev server<br/>React 18 + TS, Vite"]
-    APP["backend/<br/>Java 21, Spring MVC"]
-    B -- "HTTP (JSON) /api/..." --> FS
-    FS -- "proxy /api" --> APP
-    APP -- "JDBC (MySQL)" --> MY["MySQL<br/>LOCAL development"]
-    APP -. "JDBC (CI Testcontainers,<br/>prod profile)" .-> PG["PostgreSQL<br/>CI and production"]
+    B["Browser: React, TypeScript"] -->|"JSON and POST SSE /api"| P["Same-origin frontend proxy"]
+    P --> C["Spring MVC controllers"]
+    C --> S["Conversation services"]
+    S --> R["JDBC and Flyway"]
+    R --> D["PostgreSQL or MySQL"]
+    S --> I["ChatProvider interface"]
+    I --> G["Google GenAI Java SDK"]
+    G --> M["Gemini Developer API"]
 ```
 
-The frontend never contains backend business logic; the backend owns all data and rules and exposes them over an explicit HTTP contract. The two halves are loosely coupled on purpose: either can be rebuilt without touching the other, as long as the contract holds.
+## Conversation and provider data
 
-## Backend (`backend/`, Java 21)
+Flyway V1 is the M0 baseline. V2 creates `browser_sessions`, `conversations`,
+and `messages`. `conversations` has a UUID, hashed session owner, title,
+timestamps, and one active request ID. `messages` has a UUID, ordered sequence,
+request ID, role, content, status, and timestamp. Database constraints enforce
+valid roles and states, message ordering, and one user and assistant message
+per request. Deleting a conversation cascades to its messages. The migration
+and API were exercised on PostgreSQL 17 and MySQL 8. The `local` profile still
+defaults to MySQL; Compose explicitly supplies a PostgreSQL JDBC URL. The
+`prod` profile requires PostgreSQL credentials from the environment.
 
-- **Spring Boot 3.5.6**, conventional **Spring MVC** (`spring-boot-starter-web`) — synchronous, servlet-based, no speculative frameworks.
-- **`spring-boot-starter-jdbc`** (plain `JdbcTemplate`) with **Flyway** versioned migrations at `src/main/resources/db/migration`. Baseline migration `V1__establish_baseline.sql` proves the Flyway pipeline on every environment; application migrations start at V2.
-- **Dual-database strategy**:
-  - **Local development: MySQL.** The default profile is `local` (set in `application.yml`), whose datasource lives in `application-local.yml` with the URL default `jdbc:mysql://localhost:3306/chomiii` — **no Docker involved**.
-  - **CI and production: PostgreSQL.** CI runs the PostgreSQL Testcontainers suite (`BackendDatabaseIT` via the `ci` test profile in `src/test/resources/application-ci.yml`); the `prod` profile's datasource in `application-prod.yml` requires a `jdbc:postgresql://HOST:5432/DATABASE` URL from the environment, with **no default**. CI additionally runs the migration suite on a real MySQL 8 service for dialect parity.
-  - **Portability rule:** migration SQL stays vendor-compatible across both engines, or is shipped as vendor variants (e.g. Flyway database-specific locations such as `classpath:db/migration/{vendor}`). Both engines are first-class verification targets; neither is a second-class engine only exercised in CI.
-- **Configuration contract**: `CHOMIII_DB_URL`, `CHOMIII_DB_USER`, `CHOMIII_DB_PASSWORD` as environment variables; the URL default lives in `application-local.yml`, and `application-prod.yml` demands all three explicitly. `.env.example` documents placeholders. Spring Boot does not load `.env` files automatically; Vite can load `VITE_`-prefixed values from `frontend/.env`.
-- **Package layout**, feature-oriented: `com.chomiii.health` (the health endpoint), `com.chomiii.error` (the shared error contract), `com.chomiii` (application bootstrap/config). Controllers are thin; behavior lives in services and records; dependencies flow one way via constructor injection.
-- Runs by default at **http://localhost:8080**.
+`ChatProvider` accepts a model, a distinct system instruction, and ordered
+role-tagged messages. It opens a cancelable stream of text deltas. The Gemini
+adapter owns the Google GenAI SDK, translates provider errors, and creates a
+client for each supplied key. No global mutable key exists. The provider
+catalog lists configurable models, but Google may deny a model for a given
+key. Such a rejection is reported rather than switching models. M2 can use
+the typed conversation messages and provider port without importing Gemini
+SDK types into a future memory module.
 
-## Frontend (`frontend/`, React 18 + TypeScript 5.7 + Vite 6)
+## Stream lifecycle
 
-- Minimal shell for M0: renders the lowercase `chomiii` wordmark and performs **one** backend health check on load.
-- Health-check states, strictly validated against the contract: `checking…` (`data-state="loading"`), then `up` (`data-state="up"`) on a matching response, or `unavailable` for any non-OK status, malformed JSON, wrong payload shape, or connection failure — without crashing the app.
-- **Development proxy**: Vite forwards `/api` to the backend origin (`BACKEND_URL`, default `http://localhost:8080`), so browser requests stay same-origin and need no CORS.
-- **Build-time override**: `VITE_API_BASE_URL` points a production build directly at another origin, which requires backend CORS or a same-origin reverse proxy (neither exists yet) — otherwise the shell correctly shows `unavailable`.
-- Details and commands: [frontend/README.md](../frontend/README.md).
+`ChatTurnStore.begin` checks the owner and claims an idle conversation in one
+transaction. It writes the complete user message and a pending assistant
+message before provider execution. The request ID has a unique constraint,
+and retries or overlapping sends return 409 without duplicating the turn.
+A bounded executor relays provider chunks to the POST SSE response; the reply
+is saved once at completion. A failed or canceled generation records a failed
+or interrupted assistant message with any partial text. An explicit stop
+endpoint cancels a provider blocked waiting for another chunk. On a process
+restart, pending assistant messages become interrupted and conversation claims
+are cleared. M1 assumes one backend instance. It does not replay an
+interrupted stream.
 
-## HTTP contracts
+`ContextWindow` chooses the newest 20 complete turns within 16,000 Java
+string characters, including the current user message. It preserves message
+order and role and excludes failed or interrupted assistant messages. It reads
+only the owner-checked conversation. The fixed instruction says Chomi has no
+tools, live browsing, or long-term memory. User text cannot become a system
+instruction. There is no semantic retrieval or agent execution in M1.
 
-### Health
+## Browser sessions and credentials
 
-```
-GET /api/health
+The backend issues a cryptographically random anonymous-session token in an
+HttpOnly, SameSite=Lax cookie and stores only its SHA-256 hash. In production,
+the cookie is Secure and `__Host-` prefixed. Every conversation lookup checks
+the hash. Mutations require the configured `Origin`; the production profile
+requires HTTPS. Backend traffic must stay on a private network behind a proxy
+that replaces client-supplied forwarding headers. Conversation responses set
+`Cache-Control: no-store`.
 
-200 OK { "status": "UP", "service": "chomiii" }
-```
+The frontend keeps the Gemini key in React memory, sends it only in a request
+header to the backend, and clears it on removal, reload, or tab close. The
+backend never persists the key or returns upstream exception messages. The
+local single-instance limiter allows 60 requests per minute per established
+browser session and limits session creation by IP. At most eight generations
+run at a time. A distributed rate limiter, stronger authentication, and
+server-side key management are outside M1.
 
-Defined by backend tests (`HealthMvcTest`, `HealthServiceTest`, `HealthControllerTest`), asserted again in frontend unit tests (`src/App.test.tsx`) and browser tests. `/api` is the reserved prefix for every API endpoint.
+The bundled Nginx config disables `/api` access logging. Hosted proxies must
+also avoid logging the `X-Gemini-Api-Key` header or request bodies. Do not
+enable credential-bearing request traces on the Java server.
 
-### Errors — RFC 7807 problem details
+Anonymous cookies expire after 180 days. Users cannot reopen their chats if
+the cookie is removed or expires. Sessions do not sync between devices, and
+expired-session data has no automated retention cleanup yet. Reassess abuse
+prevention, data retention, and privacy before a widely accessible service.
 
-All errors share one shape, enforced by `com.chomiii.error.ApiExceptionHandler`:
+## Why these boundaries
 
-- Spring MVC built-in failures (400 malformed JSON, 404 unknown path, 405 wrong method, 415 unsupported media type, validation failures) keep their **native status** in a problem-detail body; unknown paths get the title `Resource not found`, validation failures add an `errors` property.
-- Anything an `@ExceptionHandler` does not claim falls through to a 500 problem detail titled `Internal server error`. The log records the exception type without its message or stack trace, which may contain sensitive data.
-
-The frontend treats anything that does not match the health contract as `unavailable`, so error shape changes cannot crash the shell.
-
-## Testing boundaries (summary)
-
-Unit and MVC-slice tests run without any database. Database-backed checks come in two vendor flavors: the local **MySQL + Flyway** suite (`mvnw -Plocal-mysql verify`, no Docker) and the **PostgreSQL** Testcontainers suite (`mvnw verify`, Docker — the CI path). See [testing.md](testing.md).
-
-## Principles
-
-From [AGENTS.md](../AGENTS.md): clarity over cleverness, small dependencies, no speculative distributed systems, no unnecessary frameworks, and engine differences kept explicit rather than papered over. New features start as failing tests; explain consequential architectural choices and their trade-offs here.
+Spring MVC's `SseEmitter` streams over the existing servlet stack without
+adding WebFlux. Request-scoped SDK clients prevent key sharing across users.
+Persisting initial and terminal states avoids a database write for each
+stream chunk while preserving interrupted work. PostgreSQL is authoritative
+for local M1 verification and production, while portable SQL keeps the M0
+MySQL development path usable. Docker Compose defines the three local
+services, but Docker was not installed on the verification machine. No
+container startup result is claimed in [verification.md](verification.md).

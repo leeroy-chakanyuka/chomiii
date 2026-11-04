@@ -1,5 +1,7 @@
 package com.chomiii.error;
 
+import com.chomiii.chat.ConversationNotFoundException;
+import com.chomiii.chat.ChatApiException;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +40,20 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     private static final String VALIDATION_FAILED = "Validation failed";
     private static final String INTERNAL_ERROR = "Internal server error";
     private static final String NOT_FOUND = "Resource not found";
+
+    @ExceptionHandler(ChatApiException.class)
+    ProblemDetail handleChatError(ChatApiException exception) {
+        ProblemDetail problem = ProblemDetail.forStatus(exception.status());
+        problem.setTitle(exception.getMessage());
+        return problem;
+    }
+
+    @ExceptionHandler(ConversationNotFoundException.class)
+    ProblemDetail handleConversationNotFound() {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        problem.setTitle(NOT_FOUND);
+        return problem;
+    }
 
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException exception,

@@ -9,7 +9,7 @@ const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:8080'
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: '**/integration.spec.ts',
+  testMatch: ['**/integration.spec.ts', '**/live-chat.spec.ts'],
   timeout: 30_000,
   expect: { timeout: 15_000 },
   use: {

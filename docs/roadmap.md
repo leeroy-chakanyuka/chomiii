@@ -1,6 +1,9 @@
 # Roadmap
 
-Status of each milestone is kept honest against [verification.md](verification.md). **Only M0 has any implemented work** — milestones M1–M7 are plans, not implemented behavior. Acceptance criteria define what "done" means for each and may be refined as work proceeds.
+Status of each milestone is checked against [verification.md](verification.md).
+M0 established the foundation. M1 has a locally verified Gemini chat path;
+its Docker startup remains unverified on the machine used for this milestone.
+M2–M7 are plans, not implemented behavior.
 
 ```mermaid
 flowchart TD
@@ -15,7 +18,7 @@ flowchart TD
     M0 --> M1 --> M2 --> M3 --> M4 --> M5 --> M6 --> M7
 ```
 
-## M0 — Foundation (current, partially implemented)
+## M0 — Foundation
 
 Prove the engineering discipline on a minimal vertical slice before any AI work: a **public repository**, a **two-process architecture** behind an explicit HTTP contract, **test-first development**, and **CI**.
 
@@ -33,16 +36,32 @@ Prove the engineering discipline on a minimal vertical slice before any AI work:
 | M0-6 | Dependency audits (frontend high gate; backend OWASP scan in CI) | ⚠️ Frontend high threshold met; 12 moderate minimatch findings remain. Backend scan configured in CI, not yet executed |
 | M0-7 | Public hosted repository, pushed history, and **CI green on it** | 🔶 Public repository created and pushed; GitHub Actions blocked by an account billing issue |
 
-## M1 — Chat
+## M1 — Chat (implemented locally, Docker smoke pending)
 
-The first real product milestone: a hosted, multi-turn streaming chat that people can actually use. **Pstack engineering workflows (TDD cadence, verification-before-merge, focused review) become the working development discipline from M1 onward** — studied from [references.md](references.md).
+The browser accepts a user-supplied Gemini key, selects a configured model,
+streams real responses, and resumes conversations saved in PostgreSQL. A live
+browser run completed a two-turn conversation with Gemini, reloaded, and
+reopened the history with the same anonymous session cookie. The key required
+re-entry after reload. See [verification.md](verification.md) and the
+[API reference](api.md) for observed checks and contracts.
 
-- Chat backend backed by **Gemini first**, with the provider behind an internal port; **BYOK** (bring your own key) so user credentials are supplied, never stored server-side without explicit consent.
-- **Hosted multi-turn streaming chat**: real responses streaming to a working browser UI over the explicit HTTP contract.
-- **Conversation persistence** via versioned Flyway migrations that run on both MySQL and PostgreSQL.
-- **Accounts / session boundaries** so conversations belong to their owner and are not world-readable.
-- **Errors** follow the RFC 7807 convention end-to-end; the browser degrades without crashing.
-- **Acceptance:** a real hosted deployment where a browser user signs in, streams a multi-turn conversation with Gemini, and the conversation persists across sessions; backend and browser suites green, including streaming and error paths; CI green.
+- A small `ChatProvider` port keeps Gemini SDK calls outside chat services.
+- The frontend keeps API keys in memory. The Java backend creates
+  request-scoped Gemini clients and never stores the key.
+- Flyway V2 persists conversations and messages on PostgreSQL and MySQL.
+- Anonymous HttpOnly cookies and owner-filtered queries isolate browser
+  sessions; the production profile requires HTTPS and an allowed Origin.
+- `POST` SSE sends `start`, `delta`, `complete`, or `error` events. A stop
+  request cancels the active provider call.
+- Unit, PostgreSQL API, MySQL migration and API, browser fixture, and live
+  Gemini browser checks passed locally. The machine has no Docker executable,
+  so Compose configuration and stack restart remain unverified.
+
+M1 does not claim a hosted deployment, account sign-in, CI results, or
+cross-device synchronization. Those were part of an older draft acceptance
+criterion and are outside the local M1 scope. Authentication, abuse
+prevention for a public service, and privacy operations need reassessment
+before hosting.
 
 ## M2 — Memory
 

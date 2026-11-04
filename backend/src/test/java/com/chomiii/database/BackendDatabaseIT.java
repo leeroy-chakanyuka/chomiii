@@ -46,9 +46,12 @@ class BackendDatabaseIT {
         List<Map<String, Object>> history =
                 jdbcTemplate.queryForList("select version, description, success from flyway_schema_history order by installed_rank");
 
-        assertThat(history).hasSize(1);
+        assertThat(history).hasSize(2);
         assertThat(history.getFirst().get("version")).isEqualTo("1");
         assertThat(history.getFirst().get("description")).isEqualTo("establish baseline");
         assertThat(history.getFirst().get("success")).isEqualTo(true);
+        assertThat(history.get(1).get("version")).isEqualTo("2");
+        assertThat(history.get(1).get("description")).isEqualTo("conversations");
+        assertThat(history.get(1).get("success")).isEqualTo(true);
     }
 }

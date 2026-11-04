@@ -15,8 +15,69 @@ The existing origin was `https://github.com/leeroy-chakanyuka/chomiii.git`.
 | Docker Compose | BLOCKED | `docker compose config` could not run because `docker` was not found. The repository had no Compose file or Dockerfiles. |
 | Pstack | PASS | OpenCode loaded the `poteto-mode`, `tdd`, and `architect` skills. |
 
-The M0 sections following the M1 evidence describe earlier verification and
-are not evidence for M1.
+## M1 local verification, 2026-11-04
+
+| Verification | Result | Evidence |
+| --- | --- | --- |
+| Backend unit and MVC tests | PASS | Isolated MySQL runner executed `mvn clean -Plocal-mysql verify`: 62 Surefire tests, 57 passed and five intentionally skipped because they require PostgreSQL or an opt-in live key. |
+| MySQL migration and integration | PASS | Same clean run: Flyway applied V1 and V2; two MySQL Failsafe tests passed. Eight conversation API tests and four streaming API tests also passed against MySQL 8. |
+| PostgreSQL integration and API | PASS | Isolated PostgreSQL 17.11 runner executed the focused chat, session, restart, rate, and context suite. Four streaming API tests, eight conversation API tests, hosted HTTPS/cookie, request limiting, restart, and four pure unit tests passed (20 total). The Docker Testcontainers suite was not run. |
+| Frontend unit tests | PASS | `npm run test`: 12 tests passed across health, BYOK setup, SSE parsing, progress, stop, history, and key removal. |
+| Frontend lint and build | PASS | `npm run lint` and `npm run build` passed, including both TypeScript configs. |
+| Standalone browser tests | PASS | `npm run test:browser`: six Chromium tests passed, including two-turn fixture chat, reload, mobile layout, and keyboard submission. |
+| Real browser, API, PostgreSQL, Gemini | PASS | A locally started Spring Boot jar and PostgreSQL instance ran `npm run test:browser:integration` with the opt-in live test. Two tests passed. The browser sent two user messages, received Gemini replies, reloaded, re-entered its key, and reopened the messages. |
+| Live Gemini adapter | PASS | Opt-in `GeminiLiveTest` returned `Hello.` through the real Google SDK. |
+| Conversation persistence and session isolation | PASS | PostgreSQL restart test reopened a message after the Spring application context restarted, marked a pending assistant turn interrupted, and cleared the stale claim. Both database-backed API suites rejected access from a different cookie. |
+| Docker Compose stack and restart | BLOCKED | `docker compose config` could not run because Docker is not installed. `compose.yaml` parsed as YAML, but no container or named volume could be smoke-tested. |
+| Security review | BLOCKED | Earlier independent provider and session reviews found issues that were fixed and tested. A review of the combined change was attempted but the dispatch was aborted; the user requested no independent review today. A self-audit and local checks are not an independent verdict. |
+
+After reviewing the passing local checks, the project owner deferred Docker
+smoke verification and a final independent review for this handoff. Neither
+deferred check is claimed as passed.
+
+The browser displayed actual Gemini text, shown without credentials in
+[chat-live.png](screenshots/chat-live.png). The completed interaction was:
+
+```text
+User: My favourite programming language is Java. Please acknowledge that in one sentence.
+Chomi: That's awesome, Java is a powerful and reliable language known for its "write once, run anywhere" philosophy!
+User: Which programming language did I mention? Reply with its name.
+Chomi: Java
+```
+
+The backend API test read the first `delta` from a real HTTP response while
+the provider fake was blocked before completing. The frontend component test
+observed `Hello` on screen before its second chunk arrived. Those tests
+demonstrate progressive rendering rather than an artificial typing effect.
+The live test showed real Gemini replies but did not count the number of
+chunks Gemini emitted on that particular request.
+
+### Additional M1 red-to-green evidence
+
+`ContextWindowTest` initially returned only the current user message instead
+of the earlier Java user turn and assistant reply. After implementing the
+context window, both tests passed. `ChatStreamDatabaseTest` first returned
+404 because the POST stream endpoint did not exist; four API cases passed
+later against both PostgreSQL and MySQL. In the frontend,
+`chatApi.test.ts` initially received `[]` instead of a `delta` containing
+`Hello`, and `ChatApp.test.tsx` could not find the Gemini key field. The
+parser and setup UI made those checks green. Finally, the session-budget test
+returned 429 for a second browser behind the same proxy; after separating
+known sessions from new-session IP limits, it passed against PostgreSQL.
+
+The first opt-in live browser run received both Gemini replies and captured
+its screenshot, then failed because a test selector matched both the chat
+button and Delete. The corrected test passed on the next isolated run.
+
+A final self-audit found that aborting the browser stream immediately after
+the stop request could load history while the assistant row was still pending.
+The frontend now waits for the terminal event and uses a six-second abort
+fallback. A component test delays the backend's interruption and confirms
+the UI displays `Response stopped` after the stored status changes. Its
+three component tests and the TypeScript check passed after the change.
+
+The M0 sections after the M1 test-first record are historical. Their test
+counts and CI notes do not describe the M1 implementation.
 
 ### M1 provider catalog test-first cycle
 
@@ -62,6 +123,41 @@ then passed 41 tests with the opt-in live test skipped. The live test had
 already been run separately as described above. An independent reviewer checked
 the provider stage; the actionable timeout and error-classification findings
 were covered by failing tests and fixed.
+
+### M1 conversation storage test-first cycle
+
+An isolated PostgreSQL 17.11 instance accepted a real query. Against that
+database, the initial `ConversationDatabaseTest` failed because
+`GET /api/conversations` returned 404 instead of 200. After the first storage
+implementation, the PostgreSQL-backed `ConversationDatabaseTest` passed five
+tests covering creation, ownership, deletion, ordering, constraints, and origin
+checks. A later run passed seven conversation tests and two tests that reopen a
+conversation after a Spring application context restart. After the restart test
+was extended, a later PostgreSQL run passed all 11 conversation, hosted
+security, and restart tests, including reopening a stored message. The restart
+test was extended again to simulate a pending generation; its two cases passed
+after confirming the incomplete assistant is interrupted and the claim clears.
+
+An independent session review identified missing no-store response headers.
+Two PostgreSQL-backed checks failed because `Cache-Control` was absent. A
+hosted-profile check passed for HTTPS enforcement and secure cookie attributes.
+The no-store checks passed in the later PostgreSQL and MySQL runs.
+
+An isolated MySQL 8 run applied both migrations and rejected an invalid role.
+The first test run failed because Spring translated MySQL's check-constraint
+error differently from PostgreSQL's. The assertion now checks the observable
+rejection and that no invalid row was stored. A clean local MySQL verification
+passed eight conversation tests and two existing Flyway integration tests.
+An earlier MySQL attempt failed during local TLS negotiation before migrations
+started. A subsequent run passed the tests but failed on corrupt generated
+JaCoCo data; the clean run produced the report successfully.
+
+The first request-rate test failed because an unlimited stub accepted a third
+request after a limit of two. A bounded per-client limiter is now in place.
+A PostgreSQL-backed run passed 14 tests, including the limiter unit tests and
+an HTTP 429 check. A later test found the shared-IP issue documented above.
+
+## M0 historical verification
 
 The project's evidence log: what was **actually run**, on this machine, and what was **not**. Updated by hand only with observed outcomes — never invent results ([AGENTS.md](../AGENTS.md)). Where a result predates a code change, that is stated; such results cannot be counted as evidence for the current state of the code and are followed up by re-running.
 

@@ -55,6 +55,11 @@ class BackendMySqlLocalIT {
                 assertThat(history.getString("version")).isEqualTo("1");
                 assertThat(history.getString("description")).isEqualTo("establish baseline");
                 assertThat(history.getInt("success")).isEqualTo(1);
+                assertThat(history.next()).isTrue();
+                assertThat(history.getString("version")).isEqualTo("2");
+                assertThat(history.getString("description")).isEqualTo("conversations");
+                assertThat(history.getInt("success")).isEqualTo(1);
+                assertThat(history.next()).isFalse();
             }
         }
     }

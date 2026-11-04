@@ -5,3 +5,10 @@ spring:
     url: ${CHOMIII_DB_URL}
     username: ${CHOMIII_DB_USER}
     password: ${CHOMIII_DB_PASSWORD}
+chomiii:
+  public-origin: ${CHOMIII_PUBLIC_ORIGIN}
+  session:
+    secure: true
+
+server:
+  forward-headers-strategy: framework
