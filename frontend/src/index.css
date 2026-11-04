@@ -144,3 +144,9 @@ a { color: #165a50; text-underline-offset: 3px; }
 .composer-footer { row-gap: 6px; }
 .composer-footer .memory-use-toggle { white-space: nowrap; }
 .memory-item .memory-save { background: #176b57; color: white; border-color: #176b57; }
+
+/* M3 small local task action panel. Reuses the memory panel's neutral styling. */
+.memory-form input[type='text'] {
+  width: 100%; padding: 12px; border: 1px solid #bbc9c0; border-radius: 10px;
+  background: white; color: #223e32;
+}
