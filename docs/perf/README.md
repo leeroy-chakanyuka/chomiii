@@ -57,16 +57,13 @@ provider call because it records the user's message, claims the conversation,
 and prevents duplicate requests. The final transaction occurs after all text
 deltas are delivered and before the `complete` event.
 
-## Starpath and model thinking
+## HTTP clients, Markdown, and model thinking
 
-Starpath's `backend/.../ai/GeminiClient.java` keeps a Java `HttpClient` for
-streaming. Its Developer API example places the key in a URL, so Chomiii
-does not copy that implementation. The current Google SDK closes its
-per-request client and evicts that client's pool; sharing a pool naively could
-affect other concurrent credentials. No connection-pooling speedup is claimed.
-Starpath's viewer uses `react-markdown` and `remark-gfm`. Chomiii uses those
-libraries for text, lists, tables, and code while disabling raw HTML and
-external images. It does not copy Starpath's full viewer or its tool features.
+The current Google SDK closes its per-request client and evicts that client's
+pool. Sharing a pool without accounting for that behavior could affect other
+concurrent credentials. No connection-pooling speedup is claimed. Chomiii uses
+`react-markdown` and `remark-gfm` for text, lists, tables, and code while
+disabling raw HTML and external images.
 
 [Google's thinking documentation](https://ai.google.dev/gemini-api/docs/thinking)
 says `gemini-3.5-flash-lite` supports thinking, with minimal thinking by default.
