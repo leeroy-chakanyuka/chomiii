@@ -136,3 +136,7 @@ a { color: #165a50; text-underline-offset: 3px; }
 .memory-error { color: #a12d2d; padding: 10px; border-radius: 8px; background: #fff2f1; }
 .memory-empty { color: #5f7468; padding: 14px; }
 .memory-danger { color: #a12d2d; }
+
+.composer-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.memory-use-toggle { display: inline-flex; align-items: center; gap: 6px; color: #4d6658; font-size: 12px; cursor: pointer; }
+.memory-use-toggle input { accent-color: #176b57; }

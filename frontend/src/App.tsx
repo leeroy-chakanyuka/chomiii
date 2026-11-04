@@ -130,7 +130,14 @@ export default function App() {
                 Stop generation
               </button> : <button type="submit" className="primary-button" disabled={!chat.input.trim()}>Send</button>}
             </form>
-            <p className="composer-hint">Enter to send · Shift+Enter for a new line</p>
+            <div className="composer-footer">
+              <p className="composer-hint">Enter to send · Shift+Enter for a new line</p>
+              <label className="memory-use-toggle">
+                <input type="checkbox" checked={chat.useMemory} disabled={chat.busy}
+                  onChange={event => chat.setUseMemory(event.target.checked)} />
+                Use saved memories
+              </label>
+            </div>
           </div>
         </section>
       </div>}

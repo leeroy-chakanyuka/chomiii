@@ -50,6 +50,11 @@ public class ChatStreamService {
     }
 
     public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request, String key) {
+        return start(conversation, owner, request, key, true);
+    }
+
+    public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request,
+            String key, boolean useMemory) {
         if (key == null || key.isBlank() || key.length() > 512) {
             throw new ChatApiException(HttpStatus.BAD_REQUEST, "Enter a Gemini API key.");
         }
@@ -74,7 +79,7 @@ public class ChatStreamService {
                 ContextWindow.select(pending.history(), request.content().strip(), 20, 16_000));
         // Saved memories are lower-trust, owner-filtered context, never new system instructions.
         // Missing or unavailable memory must not prevent a normal chat reply.
-        String memoryContext = memories.forChat(owner, request.content());
+        String memoryContext = useMemory ? memories.forChat(owner, request.content()) : "";
         if (!memoryContext.isBlank()) {
             messages.add(messages.size() - 1,
                     new ChatProvider.Message(ChatProvider.Role.USER, memoryContext));
