@@ -9,8 +9,9 @@ You can select a Gemini model, stream its response, return to earlier chats,
 and continue with the same conversation context. Messages live in PostgreSQL.
 The browser keeps your Gemini key in memory by default. You can choose
 **Remember this key on this device** to restore it after a reload. The saved
-copy is encrypted in your browser profile; anyone with access to that profile
-can use it. **Remove key** deletes it. Get a key at
+copy is encrypted in your browser profile, but the decryption key is stored
+there too. This is convenience storage, not protection from a compromised
+browser or another app served from the same local origin. **Remove key** deletes it. Get a key at
 [Google AI Studio](https://aistudio.google.com/apikey). Your Google account
 controls provider limits and any charges.
 
