@@ -3,6 +3,10 @@ package com.chomiii.memory;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +25,7 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("local")
 class MemoryDatabaseTest {
     @Autowired TestRestTemplate http;
+    @Autowired MemoryService memories;
 
     @Test
     void usersCanOnlySeeCorrectOrDeleteTheirOwnExplicitMemories() {
@@ -79,6 +84,29 @@ class MemoryDatabaseTest {
                 new HttpEntity<>("{\"content\":\"stolen\"}", headers), JsonNode.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(request(HttpMethod.GET, "/api/memories", cookie, null).getBody()).hasSize(0);
+    }
+
+    @Test
+    void inferenceMustBeReviewedBeforeItCanEnterChatContext() throws Exception {
+        String first = session();
+        String stranger = session();
+        String token = first.substring(first.indexOf('=') + 1);
+        String owner = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(token.getBytes(StandardCharsets.US_ASCII)));
+        UUID conversation = UUID.randomUUID();
+        memories.learn(owner, conversation, 0L, "I might prefer weekend groceries",
+                "inferred", 0.75);
+        var mine = request(HttpMethod.GET, "/api/memories", first, null).getBody();
+        assertThat(mine).hasSize(1);
+        assertThat(mine.get(0).path("status").asText()).isEqualTo("suggested");
+        assertThat(memories.forChat(owner, "Which groceries do I prefer?")).isEmpty();
+        String id = mine.get(0).path("id").asText();
+        assertThat(request(HttpMethod.POST, "/api/memories/" + id + "/approve",
+                stranger, null).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(request(HttpMethod.POST, "/api/memories/" + id + "/approve",
+                first, null).getBody().path("status").asText()).isEqualTo("active");
+        assertThat(memories.forChat(owner, "What are my groceries?"))
+                .contains("weekend groceries");
     }
 
     private String session() {
