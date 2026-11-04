@@ -137,6 +137,11 @@ export default function App() {
                   onChange={event => chat.setUseMemory(event.target.checked)} />
                 Use saved memories
               </label>
+              <label className="memory-use-toggle" title="Optional: runs a separate Gemini extraction request after a completed reply.">
+                <input type="checkbox" checked={chat.learnMemory} disabled={chat.busy}
+                  onChange={event => chat.setLearnMemory(event.target.checked)} />
+                Learn from chats
+              </label>
             </div>
           </div>
         </section>

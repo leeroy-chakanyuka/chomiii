@@ -3,7 +3,10 @@ import { healthUrl } from './health'
 export interface PersonalMemory {
   id: string
   content: string
-  source: 'user_explicit'
+  source: 'user_explicit' | 'conversation_fact' | 'inferred'
+  status: 'active' | 'suggested'
+  confidence: number
+  sourceConversationId: string | null
   createdAt: string
   updatedAt: string
 }
@@ -16,11 +19,17 @@ function parseMemory(value: unknown): PersonalMemory {
   }
   const v = value as Record<string, unknown>
   if (typeof v.id !== 'string' || typeof v.content !== 'string'
-    || v.source !== 'user_explicit' || typeof v.createdAt !== 'string'
+    || !['user_explicit', 'conversation_fact', 'inferred'].includes(String(v.source))
+    || typeof v.createdAt !== 'string'
     || typeof v.updatedAt !== 'string') {
     throw new Error('Invalid memory response.')
   }
-  return { id: v.id, content: v.content, source: v.source, createdAt: v.createdAt, updatedAt: v.updatedAt }
+  return { id: v.id as string, content: v.content as string,
+    source: v.source as PersonalMemory['source'],
+    status: v.status === 'suggested' ? 'suggested' : 'active',
+    confidence: typeof v.confidence === 'number' && v.confidence >= 0 && v.confidence <= 1 ? v.confidence : 1,
+    sourceConversationId: typeof v.sourceConversationId === 'string' ? v.sourceConversationId : null,
+    createdAt: v.createdAt as string, updatedAt: v.updatedAt as string }
 }
 
 async function request(path: string, init?: RequestInit): Promise<Response> {
@@ -63,4 +72,10 @@ export async function removeMemory(id: string): Promise<void> {
 
 export async function clearMemories(): Promise<void> {
   await request('', { method: 'DELETE' })
+}
+
+export async function approveMemory(id: string): Promise<PersonalMemory> {
+  const body: unknown = await (await request('/' + encodeURIComponent(id) + '/approve',
+    { method: 'POST' })).json()
+  return parseMemory(body)
 }
