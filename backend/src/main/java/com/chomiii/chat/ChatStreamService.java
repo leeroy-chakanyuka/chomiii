@@ -24,8 +24,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Service
 public class ChatStreamService {
     private static final Logger log = LoggerFactory.getLogger(ChatStreamService.class);
-    private static final String SYSTEM_INSTRUCTION = "You are Chomi, a helpful general-purpose assistant. "
-            + "Answer honestly. You have no tools, live browsing, or long-term memory.";
+    private static final String SYSTEM_INSTRUCTION = "You are Chomiii, also called Chomi, a helpful general-purpose assistant. "
+            + "Be warm, clear, and honest. Admit uncertainty. You have no tools, live browsing, or long-term memory.";
     private static final int MAX_REPLY_CHARS = 16_000;
     private final ChatTurnStore store;
     private final ConversationRepository conversations;
@@ -109,8 +109,11 @@ public class ChatStreamService {
     private void run(UUID requestId, UUID assistantId, String owner, UUID conversation, ChatProvider provider,
             ChatProvider.ChatInput input, String key, Active generation, SseEmitter emitter,
             long requestStartedNanos, long storeReadyNanos, long contextReadyNanos) {
+        long workerStartedNanos = System.nanoTime();
         StringBuilder response = new StringBuilder();
         long[] firstDeltaNanos = {0L};
+        long[] firstSentNanos = {0L};
+        long finishMs = -1;
         String outcome = "failed";
         try {
             send(emitter, "start", Map.of("requestId", requestId.toString(), "messageId", assistantId.toString()));
@@ -131,13 +134,18 @@ public class ChatStreamService {
                     }
                     response.append(chunk);
                     send(emitter, "delta", Map.of("text", chunk));
+                    if (firstSentNanos[0] == 0L) {
+                        firstSentNanos[0] = System.nanoTime();
+                    }
                 };
                 providerStream.stream(delta);
             }
             if (generation.cancelled.get()) {
                 throw new CancellationException();
             }
+            long finishStartedNanos = System.nanoTime();
             store.finish(conversation, owner, requestId, assistantId, response.toString(), "complete");
+            finishMs = elapsedMillis(finishStartedNanos, System.nanoTime());
             generation.finished.set(true);
             outcome = "complete";
             send(emitter, "complete", Map.of("messageId", assistantId.toString(), "status", "complete"));
@@ -168,12 +176,15 @@ public class ChatStreamService {
             }
         } finally {
             long completedNanos = System.nanoTime();
-            log.info("chat_latency provider={} model={} outcome={} store_ms={} context_ms={} first_delta_ms={} total_ms={}",
+            log.info("chat_latency provider={} model={} outcome={} store_ms={} context_ms={} queue_ms={} "
+                            + "first_delta_ms={} first_sse_ms={} finish_ms={} total_ms={}",
                     provider.id(), input.model(), outcome,
                     elapsedMillis(requestStartedNanos, storeReadyNanos),
                     elapsedMillis(storeReadyNanos, contextReadyNanos),
+                    elapsedMillis(contextReadyNanos, workerStartedNanos),
                     firstDeltaNanos[0] == 0L ? -1 : elapsedMillis(requestStartedNanos, firstDeltaNanos[0]),
-                    elapsedMillis(requestStartedNanos, completedNanos));
+                    firstSentNanos[0] == 0L ? -1 : elapsedMillis(firstDeltaNanos[0], firstSentNanos[0]),
+                    finishMs, elapsedMillis(requestStartedNanos, completedNanos));
             active.remove(requestId, generation);
             slots.release();
             emitter.complete();

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { fetchHealth, type HealthState } from './health'
 import { useChat } from './useChat'
+import { MarkdownReply } from './MarkdownReply'
 
 export default function App() {
   const [health, setHealth] = useState<HealthState>({ status: 'loading' })
@@ -32,7 +33,7 @@ export default function App() {
         {chat.connected && <div className="topbar-actions">
           <span className="model-pill">Gemini · {chat.model}</span>
           <button type="button" className="text-button" onClick={chat.changeKey}>Change key or model</button>
-          <button type="button" className="text-button" onClick={chat.removeKey}>Remove key</button>
+          <button type="button" className="text-button" onClick={() => void chat.removeKey()}>Remove key</button>
         </div>}
       </header>
 
@@ -40,27 +41,33 @@ export default function App() {
         <p className="eyebrow">WELCOME TO CHOMI</p>
         <p className="setup-title">A little space to think out loud.</p>
         <p className="intro">Ask a question, work through an idea, or pick up a conversation where you left off.</p>
-        <form onSubmit={(event) => { event.preventDefault(); chat.connect() }}>
+        <form onSubmit={(event) => { event.preventDefault(); void chat.connect() }}>
           <label htmlFor="provider">Provider</label>
-          <select id="provider" value={chat.provider} onChange={(event) => chat.setProvider(event.target.value)}>
+          <select id="provider" value={chat.provider} disabled={chat.connecting}
+            onChange={(event) => chat.setProvider(event.target.value)}>
             <option value="gemini">Gemini</option>
           </select>
           <label htmlFor="api-key">Gemini API key</label>
           <input id="api-key" type="password" autoComplete="off" spellCheck={false}
-            value={chat.key} onChange={(event) => chat.setKey(event.target.value)}
+            disabled={chat.connecting} value={chat.key} onChange={(event) => chat.setKey(event.target.value)}
             placeholder="Paste your API key" />
           <label htmlFor="model">Model</label>
           <select id="model" value={chat.model} onChange={(event) => chat.setModel(event.target.value)}
-            disabled={chat.loading || !selectedProvider}>
+            disabled={chat.loading || chat.connecting || !selectedProvider}>
             {selectedProvider?.models.map((model) =>
               <option key={model.id} value={model.id}>{model.name}</option>)}
           </select>
+          <label className="remember-option" htmlFor="remember-key">
+            <input id="remember-key" type="checkbox" checked={chat.remember} disabled={chat.connecting}
+              onChange={(event) => chat.setRemember(event.target.checked)} />
+            <span>Remember this key on this device</span>
+          </label>
           {chat.error && <p role="alert" className="error">{chat.error}</p>}
-          <button className="primary-button" type="submit" disabled={chat.loading || !selectedProvider}>
-            Start chatting
+          <button className="primary-button" type="submit" disabled={chat.loading || chat.connecting || !selectedProvider}>
+            {chat.connecting ? 'Connecting…' : 'Start chatting'}
           </button>
         </form>
-        <p className="small-print">Get a key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>. Your key stays in this browser tab’s memory and goes to the Chomiii backend to contact Gemini. Google account limits or charges may apply.</p>
+        <p className="small-print">Get a key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>. Without Remember, your key stays in memory until you close this tab. Remember saves an encrypted copy in this browser profile so you can return without re-entering it. This is convenience storage, not protection against a compromised browser; another app served from the same local address and port could also access it. Google account limits or charges may apply.</p>
         {chat.history.length > 0 && <p className="small-print">Your conversations will be here when you reconnect with a key.</p>}
       </section> : <div className="workspace">
         <aside className="sidebar" aria-label="Conversations">
@@ -89,12 +96,15 @@ export default function App() {
               </div>}
               {chat.messages.map((message) => <article className={`message ${message.role}`} key={message.id}>
                 <span className="speaker">{message.role === 'user' ? 'You' : 'Chomi'}</span>
-                <p>{message.content || (message.status === 'pending' ? 'Thinking…' : '')}</p>
+                {message.role === 'assistant' && message.status === 'complete'
+                  ? <MarkdownReply content={message.content} />
+                  : <p>{message.content || (message.status === 'pending' ? 'Thinking…' : '')}</p>}
                 {message.status === 'failed' || message.status === 'interrupted'
                   ? <small className="message-note">{message.status === 'failed' ? 'Response failed' : 'Response stopped'}</small> : null}
               </article>)}
               {chat.busy && <article className="message assistant pending" aria-live="polite">
-                <span className="speaker">Chomi</span><p>{chat.streamed || 'Thinking…'}</p>
+                <span className="speaker">Chomi</span>
+                {chat.streamed ? <MarkdownReply content={chat.streamed} /> : <p>Thinking…</p>}
               </article>}
             </div>
           </div>

@@ -1,0 +1,138 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "prompt": "2+2 single-digit answer",
+  "generation": "SDK default; fixed system instruction; no prior turns",
+  "targetSamplesPerSide": 10,
+  "warmupsPerSide": 1,
+  "failures": [],
+  "app": {
+    "count": 10,
+    "ttftMs": {
+      "p50": 5658.7,
+      "p95": 35608.3,
+      "min": 2589.9,
+      "max": 35608.3
+    },
+    "completeMs": {
+      "p50": 5674,
+      "p95": 35741.4,
+      "min": 2610.2,
+      "max": 35741.4
+    },
+    "createMs": {
+      "p50": 30.5,
+      "p95": 266.2,
+      "min": 14.5,
+      "max": 266.2
+    },
+    "samples": [
+      {
+        "createMs": 37.4,
+        "ttftMs": 3585.8,
+        "completeMs": 3606.5
+      },
+      {
+        "createMs": 30.5,
+        "ttftMs": 3235.9,
+        "completeMs": 3406.3
+      },
+      {
+        "createMs": 39,
+        "ttftMs": 4350.7,
+        "completeMs": 4369.1
+      },
+      {
+        "createMs": 16.2,
+        "ttftMs": 5821.1,
+        "completeMs": 5835.6
+      },
+      {
+        "createMs": 34.1,
+        "ttftMs": 2589.9,
+        "completeMs": 2610.2
+      },
+      {
+        "createMs": 22,
+        "ttftMs": 5658.7,
+        "completeMs": 5674
+      },
+      {
+        "createMs": 14.5,
+        "ttftMs": 10159.3,
+        "completeMs": 10173.4
+      },
+      {
+        "createMs": 54.9,
+        "ttftMs": 6460.9,
+        "completeMs": 6529.8
+      },
+      {
+        "createMs": 19,
+        "ttftMs": 11208.7,
+        "completeMs": 11230.7
+      },
+      {
+        "createMs": 266.2,
+        "ttftMs": 35608.3,
+        "completeMs": 35741.4
+      }
+    ]
+  },
+  "direct": {
+    "count": 10,
+    "ttftMs": {
+      "p50": 7107.1,
+      "p95": 12934,
+      "min": 1906.5,
+      "max": 12934
+    },
+    "completeMs": {
+      "p50": 7107.6,
+      "p95": 12935,
+      "min": 1907.3,
+      "max": 12935
+    },
+    "samples": [
+      {
+        "ttftMs": 1906.5,
+        "completeMs": 1907.3
+      },
+      {
+        "ttftMs": 4020.1,
+        "completeMs": 4020.9
+      },
+      {
+        "ttftMs": 4573.8,
+        "completeMs": 4575.7
+      },
+      {
+        "ttftMs": 4298.7,
+        "completeMs": 4299.2
+      },
+      {
+        "ttftMs": 8558.3,
+        "completeMs": 8578
+      },
+      {
+        "ttftMs": 9071.1,
+        "completeMs": 9282.2
+      },
+      {
+        "ttftMs": 7107.1,
+        "completeMs": 7107.6
+      },
+      {
+        "ttftMs": 9948.1,
+        "completeMs": 9963.6
+      },
+      {
+        "ttftMs": 11443.5,
+        "completeMs": 11446
+      },
+      {
+        "ttftMs": 12934,
+        "completeMs": 12935
+      }
+    ]
+  }
+}

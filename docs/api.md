@@ -23,8 +23,10 @@ replaces client-supplied forwarding headers. The backend adds
 For message streaming, supply the Gemini API key in
 `X-Gemini-Api-Key: <your-key>`. Do not put the key in the JSON body or URL.
 The backend passes the key to a request-specific Gemini client and does not
-persist or log it. Browser memory is the only frontend key store. Reloading
-requires re-entry. Google account limits and charges are determined by Google.
+persist or log it. By default the frontend keeps it only in memory. When the
+user opts in, the browser stores an encrypted copy and non-extractable Web
+Crypto key in IndexedDB. The same origin can still decrypt it. Removing the
+key deletes that record. Google account limits and charges are determined by Google.
 
 ## Endpoints
 

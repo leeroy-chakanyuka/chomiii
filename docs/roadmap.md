@@ -65,7 +65,7 @@ before hosting.
 
 ## M1.1 — Performance and observability (planned)
 
-Measure browser time to first visible token, provider first-token latency, and end-to-end completion with p50/p95 statistics. Compare direct Gemini Developer API requests against the existing Spring Boot/SSE path using equivalent models and prompts. Inspect Starpath for applicable performance patterns if accessible. Optimize only measured bottlenecks, preserve session isolation and streaming cancellation, and document observed results. Target <=2 seconds to first visible token under normal conditions; this is a target, not a guarantee. No Docker dependency.
+Measure browser time to first visible token, provider first-token latency, and end-to-end completion with p50/p95 statistics. Compare direct Gemini Developer API requests against the existing Spring Boot/SSE path using equivalent models and prompts. Optimize only measured bottlenecks, preserve session isolation and streaming cancellation, and document observed results. Target <=2 seconds to first visible token under normal conditions; this is a target, not a guarantee. No Docker dependency.
 
 ## M1.5 — Identity, prompting, and skills (planned)
 

@@ -4,6 +4,7 @@ import {
   sendMessage, stopMessage,
   type ChatMessage, type ConversationSummary, type Provider,
 } from './chatApi'
+import { forgetRememberedKey, loadRememberedKey, rememberKey } from './rememberKey'
 
 function errorText(cause: unknown): string {
   return cause instanceof Error ? cause.message : 'Something went wrong. Try again.'
@@ -15,6 +16,8 @@ export function useChat() {
   const [loading, setLoading] = useState(true)
   const [connected, setConnected] = useState(false)
   const [key, setKey] = useState('')
+  const [remember, setRemember] = useState(false)
+  const [connecting, setConnecting] = useState(false)
   const [provider, setProvider] = useState('gemini')
   const [model, setModel] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -26,14 +29,40 @@ export function useChat() {
   const sending = useRef(false)
   const running = useRef<{ conversationId: string; requestId: string; abort: AbortController } | null>(null)
   const stopTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const startedAt = useRef<number | null>(null)
+  const firstVisibleMeasured = useRef(false)
+  const hadSavedKey = useRef(false)
+  const connectionInFlight = useRef(false)
+
+  useEffect(() => {
+    if (!streamed || startedAt.current === null || firstVisibleMeasured.current
+      || typeof requestAnimationFrame !== 'function') return
+    firstVisibleMeasured.current = true
+    const start = startedAt.current
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (startedAt.current === start && typeof performance.measure === 'function') {
+        performance.measure('chomiii:first-visible-token', { start, end: performance.now() })
+      }
+    }))
+  }, [streamed])
 
   useEffect(() => {
     let mounted = true
-    Promise.all([providers(), conversations()]).then(([available, previous]) => {
+    Promise.all([providers(), conversations(), loadRememberedKey()]).then(([available, previous, saved]) => {
       if (!mounted) return
       setCatalog(available)
       setHistory(previous)
-      setModel(available.find((item) => item.id === 'gemini')?.defaultModel ?? '')
+      if (saved) {
+        hadSavedKey.current = true
+        setKey(saved.apiKey)
+        setRemember(true)
+        setModel(saved.model)
+        if (available.some((item) => item.id === 'gemini'
+          && item.models.some((entry) => entry.id === saved.model))) setConnected(true)
+        else setError('Your saved model is no longer offered. Choose a model before chatting.')
+      } else {
+        setModel(available.find((item) => item.id === 'gemini')?.defaultModel ?? '')
+      }
       setLoading(false)
     }).catch((cause: unknown) => {
       if (mounted) { setError(errorText(cause)); setLoading(false) }
@@ -43,18 +72,46 @@ export function useChat() {
     }
   }, [])
 
-  function connect() {
-    if (!key.trim()) { setError('Enter a Gemini API key to start chatting.'); return }
+  async function connect() {
+    if (connectionInFlight.current) return
+    const selectedKey = key.trim()
+    if (!selectedKey) { setError('Enter a Gemini API key to start chatting.'); return }
     if (!catalog.some((item) => item.id === provider && item.models.some((entry) => entry.id === model))) {
       setError('Choose an available Gemini model.'); return
     }
-    setKey(key.trim())
-    setConnected(true)
-    setError('')
+    connectionInFlight.current = true
+    setConnecting(true)
+    try {
+      if (remember) {
+        await rememberKey({ apiKey: selectedKey, model })
+        hadSavedKey.current = true
+      } else if (hadSavedKey.current) {
+        await forgetRememberedKey()
+        hadSavedKey.current = false
+      }
+      setKey(selectedKey)
+      setConnected(true)
+      setError('')
+    } catch (cause) {
+      setError(errorText(cause))
+    } finally {
+      connectionInFlight.current = false
+      setConnecting(false)
+    }
   }
 
   function changeKey() { setConnected(false); setError('') }
-  function removeKey() { setKey(''); setConnected(false); setError(''); if (running.current) void stop() }
+  async function removeKey() {
+    if (running.current) void stop()
+    setKey('')
+    setConnected(false)
+    setRemember(false)
+    try {
+      await forgetRememberedKey()
+      hadSavedKey.current = false
+      setError('')
+    } catch (cause) { setError(errorText(cause)) }
+  }
 
   function newChat() {
     if (sending.current) return
@@ -93,6 +150,12 @@ export function useChat() {
     if (!key.trim()) { setError('Enter a Gemini API key.'); setConnected(false); return }
 
     sending.current = true
+    startedAt.current = performance.now()
+    firstVisibleMeasured.current = false
+    if (typeof performance.clearMeasures === 'function') {
+      performance.clearMeasures('chomiii:first-visible-token')
+      performance.clearMeasures('chomiii:response-complete')
+    }
     setBusy(true)
     setError('')
     setInput('')
@@ -108,7 +171,8 @@ export function useChat() {
         const created = await createConversation()
         conversationId = created.id
         setSelectedId(created.id)
-        setHistory(await conversations())
+        setHistory((previous) => [{ id: created.id, title: created.title,
+          createdAt: created.createdAt, updatedAt: created.updatedAt }, ...previous])
       }
       const abort = new AbortController()
       running.current = { conversationId, requestId, abort }
@@ -116,6 +180,10 @@ export function useChat() {
         signal: abort.signal, onEvent(event) {
           if (event.kind === 'delta') setStreamed((previous) => previous + event.text)
           if (event.kind === 'error') streamError = event.message
+          if ((event.kind === 'complete' || event.kind === 'error') && startedAt.current !== null
+            && typeof performance.measure === 'function') {
+            performance.measure('chomiii:response-complete', { start: startedAt.current, end: performance.now() })
+          }
         },
       })
       if (streamError) setError(streamError)
@@ -160,7 +228,7 @@ export function useChat() {
   }
 
   return {
-    catalog, history, loading, connected, key, setKey, provider, setProvider, model, setModel,
+    catalog, history, loading, connected, connecting, key, setKey, remember, setRemember, provider, setProvider, model, setModel,
     selectedId, messages, input, setInput, streamed, busy, error,
     connect, changeKey, removeKey, newChat, switchChat, removeChat, submit, stop,
   }

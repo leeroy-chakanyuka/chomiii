@@ -1,0 +1,24 @@
+gemini_timing model=gemini-3.5-flash-lite client_init_ms=1467 request_open_ms=13437 first_text_ms=18916 total_ms=18951 outcome=complete
+chat_latency provider=gemini model=gemini-3.5-flash-lite outcome=complete store_ms=20 context_ms=19 queue_ms=68 first_delta_ms=19052 first_sse_ms=8 finish_ms=32 total_ms=19136
+gemini_timing model=gemini-3.5-flash-lite client_init_ms=10 request_open_ms=13616 first_text_ms=13629 total_ms=13645 outcome=complete
+chat_latency provider=gemini model=gemini-3.5-flash-lite outcome=complete store_ms=15 context_ms=0 queue_ms=2 first_delta_ms=13648 first_sse_ms=8 finish_ms=4 total_ms=13671
+gemini_timing model=gemini-3.5-flash-lite client_init_ms=12 request_open_ms=14277 first_text_ms=14370 total_ms=14382 outcome=complete
+chat_latency provider=gemini model=gemini-3.5-flash-lite outcome=complete store_ms=28 context_ms=0 queue_ms=9 first_delta_ms=14415 first_sse_ms=4 finish_ms=11 total_ms=14444
+gemini_timing model=gemini-3.5-flash-lite client_init_ms=4 request_open_ms=7905 first_text_ms=7912 total_ms=7933 outcome=complete
+chat_latency provider=gemini model=gemini-3.5-flash-lite outcome=complete store_ms=9 context_ms=0 queue_ms=1 first_delta_ms=7927 first_sse_ms=7 finish_ms=8 total_ms=7959
+gemini_timing model=gemini-3.5-flash-lite client_init_ms=36 request_open_ms=21833 first_text_ms=21873 total_ms=21880 outcome=complete
+chat_latency provider=gemini model=gemini-3.5-flash-lite outcome=complete store_ms=13 context_ms=0 queue_ms=15 first_delta_ms=21908 first_sse_ms=1 finish_ms=10 total_ms=21929
+gemini_timing model=gemini-3.5-flash-lite client_init_ms=5 request_open_ms=13304 first_text_ms=13318 total_ms=13333 outcome=complete
+chat_latency provider=gemini model=gemini-3.5-flash-lite outcome=complete store_ms=10 context_ms=0 queue_ms=4 first_delta_ms=13340 first_sse_ms=3 finish_ms=5 total_ms=13363
+gemini_timing model=gemini-3.5-flash-lite client_init_ms=27 request_open_ms=14784 first_text_ms=14820 total_ms=14861 outcome=complete
+chat_latency provider=gemini model=gemini-3.5-flash-lite outcome=complete store_ms=11 context_ms=0 queue_ms=6 first_delta_ms=14861 first_sse_ms=4 finish_ms=7 total_ms=14919
+gemini_timing model=gemini-3.5-flash-lite client_init_ms=6 request_open_ms=9892 first_text_ms=9900 total_ms=9920 outcome=complete
+chat_latency provider=gemini model=gemini-3.5-flash-lite outcome=complete store_ms=12 context_ms=0 queue_ms=7 first_delta_ms=9931 first_sse_ms=8 finish_ms=16 total_ms=9969
+gemini_timing model=gemini-3.5-flash-lite client_init_ms=8 request_open_ms=11608 first_text_ms=11753 total_ms=11935 outcome=complete
+chat_latency provider=gemini model=gemini-3.5-flash-lite outcome=complete store_ms=31 context_ms=0 queue_ms=0 first_delta_ms=11785 first_sse_ms=150 finish_ms=4 total_ms=11988
+gemini_timing model=gemini-3.5-flash-lite client_init_ms=21 request_open_ms=14340 first_text_ms=14426 total_ms=14476 outcome=complete
+chat_latency provider=gemini model=gemini-3.5-flash-lite outcome=complete store_ms=20 context_ms=0 queue_ms=5 first_delta_ms=14453 first_sse_ms=21 finish_ms=10 total_ms=14905
+gemini_timing model=gemini-3.5-flash-lite client_init_ms=5 request_open_ms=16296 first_text_ms=16304 total_ms=16420 outcome=complete
+chat_latency provider=gemini model=gemini-3.5-flash-lite outcome=complete store_ms=11 context_ms=0 queue_ms=0 first_delta_ms=16318 first_sse_ms=77 finish_ms=11 total_ms=16451
+gemini_timing model=gemini-3.5-flash-lite client_init_ms=11 request_open_ms=16287 first_text_ms=16333 total_ms=16414 outcome=complete
+chat_latency provider=gemini model=gemini-3.5-flash-lite outcome=complete store_ms=9 context_ms=0 queue_ms=0 first_delta_ms=16344 first_sse_ms=0 finish_ms=173 total_ms=16600

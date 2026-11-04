@@ -23,10 +23,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import okhttp3.Call;
 import okhttp3.OkHttpClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
 public class GeminiProvider implements ChatProvider {
+    private static final Logger log = LoggerFactory.getLogger(GeminiProvider.class);
     private final URI endpoint;
     private final int timeoutMillis;
 
@@ -69,6 +72,11 @@ public class GeminiProvider implements ChatProvider {
 
         @Override
         public void stream(Consumer<String> delta) {
+            long started = System.nanoTime();
+            long clientReady = 0;
+            long streamOpen = 0;
+            long firstText = 0;
+            String outcome = "complete";
             if (cancelled.get()) {
                 throw failure(ProviderFailure.Code.CANCELLED);
             }
@@ -97,27 +105,32 @@ public class GeminiProvider implements ChatProvider {
                     }).build();
 
             try (Client client = Client.builder().enterprise(false).apiKey(apiKey).httpOptions(options)
-                    .clientOptions(ClientOptions.builder().customHttpClient(transport).build()).build();
-                    ResponseStream<GenerateContentResponse> response =
-                            client.models.generateContentStream(input.model(), messages, config)) {
-                if (cancelled.get()) {
-                    throw failure(ProviderFailure.Code.CANCELLED);
-                }
-                boolean receivedText = false;
-                for (GenerateContentResponse chunk : response) {
+                    .clientOptions(ClientOptions.builder().customHttpClient(transport).build()).build()) {
+                clientReady = System.nanoTime();
+                try (ResponseStream<GenerateContentResponse> response =
+                        client.models.generateContentStream(input.model(), messages, config)) {
+                    streamOpen = System.nanoTime();
                     if (cancelled.get()) {
                         throw failure(ProviderFailure.Code.CANCELLED);
                     }
-                    String text = chunk.text();
-                    if (text != null && !text.isEmpty()) {
-                        receivedText = true;
-                        delta.accept(text);
+                    boolean receivedText = false;
+                    for (GenerateContentResponse chunk : response) {
+                        if (cancelled.get()) {
+                            throw failure(ProviderFailure.Code.CANCELLED);
+                        }
+                        String text = chunk.text();
+                        if (text != null && !text.isEmpty()) {
+                            if (firstText == 0) firstText = System.nanoTime();
+                            receivedText = true;
+                            delta.accept(text);
+                        }
+                    }
+                    if (!receivedText) {
+                        throw failure(ProviderFailure.Code.EMPTY_RESPONSE);
                     }
                 }
-                if (!receivedText) {
-                    throw failure(ProviderFailure.Code.EMPTY_RESPONSE);
-                }
             } catch (ApiException exception) {
+                outcome = "upstream_" + exception.code();
                 throw failure(switch (exception.code()) {
                     case 400 -> invalidKeyMessage(exception.message())
                             ? ProviderFailure.Code.INVALID_KEY : ProviderFailure.Code.INVALID_REQUEST;
@@ -128,10 +141,19 @@ public class GeminiProvider implements ChatProvider {
                     default -> ProviderFailure.Code.UNAVAILABLE;
                 });
             } catch (GenAiIOException exception) {
+                outcome = cancelled.get() ? "cancelled" : "transport_error";
                 if (cancelled.get()) {
                     throw failure(ProviderFailure.Code.CANCELLED);
                 }
                 throw failure(isTimeout(exception) ? ProviderFailure.Code.TIMEOUT : ProviderFailure.Code.UNAVAILABLE);
+            } catch (RuntimeException exception) {
+                outcome = cancelled.get() ? "cancelled" : "failed";
+                throw exception;
+            } finally {
+                log.info("gemini_timing model={} client_init_ms={} request_open_ms={} first_text_ms={} total_ms={} outcome={}",
+                        input.model(), elapsed(started, clientReady), elapsed(clientReady, streamOpen),
+                        elapsed(started, firstText),
+                        elapsed(started, System.nanoTime()), outcome);
             }
         }
 
@@ -143,6 +165,10 @@ public class GeminiProvider implements ChatProvider {
                 call.cancel();
             }
         }
+    }
+
+    private static long elapsed(long start, long end) {
+        return end == 0 ? -1 : (end - start) / 1_000_000;
     }
 
     private static boolean isTimeout(Throwable exception) {

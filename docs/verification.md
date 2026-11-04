@@ -1,5 +1,41 @@
 # Verification evidence
 
+## Local performance and UI follow-up, 2026-11-04
+
+The response-time target is **not met**. In the five-sample after run,
+first-visible browser text had p50 15.14 seconds and p95 17.43 seconds.
+In alternating requests, direct Gemini had p50 18.88 seconds and p95
+21.63 seconds. Both samples have substantial variance, so the local UI change
+cannot be credited with a measured end-to-end speedup. The earlier ten-sample
+baseline, matching direct comparison, stage timings, prompt conditions, and
+limitations are in [perf/README.md](perf/README.md).
+
+The frontend test held the conversation-list refresh open. Before the change,
+the stream never started; after removing the unnecessary await, it started
+without waiting. `ChatIdentityTest` failed before the system prompt identified
+Chomiii as warm and passed afterward. `MarkdownReply.test.tsx` failed when
+Markdown was shown as literal text and passed with Markdown rendering. The
+browser key test initially could not find the remember option; it passed after
+implementation and checked reload, removal, encrypted IndexedDB storage, and
+absence of the raw test key in localStorage, sessionStorage, and cookies.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Backend tests | PASS | 37 focused tests on isolated PostgreSQL, including provider streaming/cancellation, distinct credentials, log redaction, context, chat API, isolation, and restart. |
+| Frontend unit tests | PASS | `npm run test`: 14 tests passed. |
+| Frontend build and lint | PASS | `npm run build` and `npm run lint` passed. |
+| Browser fixture tests | PASS | Seven tests passed before the extra storage-unavailable case; both remembered-key tests then passed. |
+| Browser live latency | PASS, target missed | Five measured real Gemini requests, one warmup, no failures; see [browser-after.json](perf/browser-after.json). |
+| Windows launcher | PASS | `node tools/launcher/smoke.mjs` started the actual frontend, backend, and isolated PostgreSQL twice and reopened a test conversation after restart. `start-chomiii.bat` also launched the app in a visible command window. |
+| Independent review | NOT RUN | The owner deferred further independent review in this conversation. |
+
+The existing green visual theme remains. The generated
+[desktop](screenshots/chat-desktop.png) and [mobile](screenshots/chat-mobile.png)
+screenshots show fixture conversations and do not contain user credentials.
+Gemini supports thought summaries, but this change does not expose them as a
+trace. The earlier badge and command references were not specific enough in
+the available conversation to determine their original requirements.
+
 ## M1 baseline, 2026-11-04
 
 Before M1 changes, the working tree was clean on `main` at `566abf8`.

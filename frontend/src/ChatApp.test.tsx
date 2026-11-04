@@ -146,3 +146,53 @@ it('switches conversations, starts a new chat, stops a stream, and removes the k
   fireEvent.click(screen.getByRole('button', { name: 'Remove key' }))
   expect(screen.getByLabelText('Gemini API key')).toHaveValue('')
 })
+
+it('starts provider streaming without waiting for a conversation-list refresh', async () => {
+  let created = false
+  let listed = false
+  let streamed = false
+  let releaseList: ((response: Response) => void) | undefined
+  let streamController: ReadableStreamDefaultController<Uint8Array> | undefined
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input)
+    if (url.endsWith('/health')) return new Response('{"status":"UP","service":"chomiii"}')
+    if (url.endsWith('/chat/providers')) return new Response(JSON.stringify([
+      { id: 'gemini', name: 'Gemini', defaultModel: 'gemini-3.5-flash-lite',
+        models: [{ id: 'gemini-3.5-flash-lite', name: 'Gemini Flash-Lite' }] },
+    ]))
+    if (url.endsWith('/conversations') && init?.method === 'POST') {
+      created = true
+      return new Response(JSON.stringify({ id: 'chat-1', title: 'New chat',
+        createdAt: 'now', updatedAt: 'now', messages: [] }), { status: 201 })
+    }
+    if (url.endsWith('/conversations') && created) {
+      listed = true
+      return new Promise<Response>((resolve) => { releaseList = resolve })
+    }
+    if (url.endsWith('/conversations')) return new Response('[]')
+    if (url.endsWith('/messages/stream')) {
+      streamed = true
+      return new Response(new ReadableStream<Uint8Array>({ start(controller) { streamController = controller } }),
+        { headers: { 'content-type': 'text/event-stream' } })
+    }
+    if (url.endsWith('/conversations/chat-1')) return new Response(JSON.stringify({
+      id: 'chat-1', title: 'Hello', createdAt: 'now', updatedAt: 'now', messages: [],
+    }))
+    throw new Error(`Unexpected request ${url}`)
+  }))
+
+  render(<App />)
+  fireEvent.change(await screen.findByLabelText('Gemini API key'), { target: { value: 'private-test-key' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Start chatting' }))
+  fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Hello' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+  try {
+    await waitFor(() => expect(streamed).toBe(true), { timeout: 700 })
+    expect(created).toBe(true)
+    expect(listed).toBe(false)
+  } finally {
+    releaseList?.(new Response('[]'))
+    streamController?.enqueue(new TextEncoder().encode('event:complete\ndata:{"messageId":"m","status":"complete"}\n\n'))
+    streamController?.close()
+  }
+})

@@ -7,9 +7,13 @@ with a user-supplied API key. The existing public repository is
 
 You can select a Gemini model, stream its response, return to earlier chats,
 and continue with the same conversation context. Messages live in PostgreSQL.
-The browser holds your Gemini key in memory only, so you enter it again after a
-reload. Get a key at [Google AI Studio](https://aistudio.google.com/apikey).
-Your Google account controls provider limits and any charges.
+The browser keeps your Gemini key in memory by default. You can choose
+**Remember this key on this device** to restore it after a reload. The saved
+copy is encrypted in your browser profile, but the decryption key is stored
+there too. This is convenience storage, not protection from a compromised
+browser or another app served from the same local origin. **Remove key** deletes it. Get a key at
+[Google AI Studio](https://aistudio.google.com/apikey). Your Google account
+controls provider limits and any charges.
 
 ```mermaid
 flowchart LR
@@ -22,6 +26,19 @@ Chomiii does not yet include accounts, tools, autonomous agents, or long-term
 memory. Anonymous conversations belong to one browser cookie. They do not sync
 between devices, and losing the cookie loses access to them. See
 [docs/roadmap.md](docs/roadmap.md) for later milestones.
+
+## Start on Windows
+
+Install Java 21 and Node.js 22 or newer, then double-click
+`start-chomiii.bat` in the repository root. On first run, the launcher
+installs its dependencies and creates a local PostgreSQL database. It opens
+the app at <http://127.0.0.1:5173/> and shows backend output in the command
+window. Keep that window open while using the app; press Ctrl+C to stop it.
+
+Your local database and its database-only credentials live under
+`%LOCALAPPDATA%\chomiii`, outside the repository, and survive launcher
+restarts. The launcher does not save or supply your Gemini API key. A running
+service on port 8080 or 5173 must be stopped before starting another copy.
 
 ## Run the stack with Docker
 

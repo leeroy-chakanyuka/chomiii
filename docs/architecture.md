@@ -70,9 +70,12 @@ requires HTTPS. Backend traffic must stay on a private network behind a proxy
 that replaces client-supplied forwarding headers. Conversation responses set
 `Cache-Control: no-store`.
 
-The frontend keeps the Gemini key in React memory, sends it only in a request
-header to the backend, and clears it on removal, reload, or tab close. The
-backend never persists the key or returns upstream exception messages. The
+By default, the frontend keeps the Gemini key in React memory and clears it
+on reload. The optional remember setting encrypts it with a non-extractable
+Web Crypto key and stores the ciphertext and CryptoKey in browser IndexedDB.
+The same browser origin can decrypt it; this is not a passphrase-protected vault.
+The key goes only in a request header to the backend. Remove key deletes the
+browser record. The backend never persists the key or returns upstream exception messages. The
 local single-instance limiter allows 60 requests per minute per established
 browser session and limits session creation by IP. At most eight generations
 run at a time. A distributed rate limiter, stronger authentication, and
