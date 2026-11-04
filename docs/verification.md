@@ -281,3 +281,26 @@ Green and observed: backend unit/MVC tests, MySQL integration, Flyway migrations
 M1.5 Java loader isolated smoke check (2026-11-04): Java 21 compilation and seven assertions passed on a recreated copy of the fetched `AgentInstructions.java` and `SYSTEM.md` source. This **does not** exercise the Maven/JUnit integration, the production classpath, or the frontend. Do not mark full CI or release gates green based on this result.
 
 M1.5 context-window isolated smoke check (2026-11-04): Java 21 compiled a recreated copy of the fetched `ContextWindow.java` plus a minimal `ChatProvider` type stub; **six assertions passed** (message budget, selection order, user role, oversized request rejection and interrupted-text exclusion). This is **not** repository Maven/JUnit execution.
+
+## M2 draft PR #3 — research and implementation status (2026-11-04)
+
+- **Research completed:** compared Agent Beacon, Mem0, Letta, Muse, OpenClaw
+  and OWASP memory/prompt-injection boundaries. The adopted first slice is
+  native JDBC/Flyway memory with explicit user saves and bounded retrieval;
+  [decision record](m2-research.md).
+- **Implemented on PR branch, pending review:** `V3__personal_memories.sql`,
+  `MemoryController`, `MemoryService`, `MemoryRepository`,
+  `MemorySelector`, chat context wiring, and a React Memories manager.
+  The assistant cannot automatically decide to create memories, buy things
+  or access external services.
+- **Tests authored, not yet run:** unit selection/service tests, explicit
+  trust-boundary tests, real-DB CRUD and cross-owner isolation tests,
+  React memory manager and API parsing checks.
+- **Known gaps:** no signed-in accounts/cross-device sync, no automatic
+  cookie-expiry cleanup, no semantic memory or inference-assisted curation,
+  incomplete deletion coverage for upstream provider/backups, no verified
+  multi-database migration, full UI or latency benchmarks.
+- **GitHub CI:** account billing prevents runner allocation. Do not
+  treat the workflow status as compiled/tested evidence.
+- **M2 is not certified complete.** This is a draft PR for review and further
+  verification, not a release or merge instruction.

@@ -1,6 +1,9 @@
 # Memory and user context policy (M2 design contract)
 
-**Status: not implemented.** The current PostgreSQL conversation history is not a personal-memory or preferences engine.
+**Status: implementation proposed in draft PR #3; not verified or merged.**
+The M1 conversation history remains distinct from the proposed M2
+`personal_memories` store. See [M2 research](../m2-research.md) and
+[design](../m2-design.md).
 
 ## Invariants for M2
 - Memory entries are owner-scoped and cannot cross sessions or accounts.
@@ -12,6 +15,9 @@
 - Do not persist passwords, API keys, or other secrets as "memories".
 - Avoid a separate inference call on every turn without measuring cost, latency and quality.
 
-**Candidate:** Evaluate Agent Beacon against these requirements first, but note it is built for coding-agent traces and must prove consumer fit, including its coding-agent focus, lifecycle, redaction and delete guarantees, before adopting it for end-user memory.
+**Decision from research:** Agent Beacon is oriented toward coding-agent
+telemetry and is **not selected as Chomiii's M2 consumer memory backend**.
+The first implementation is a Spring/JDBC store; Mem0 and Letta remain
+architecture references. See [research decision](../m2-research.md).
 
 Any future summarization, embedding or memory distillation should run after the visible response where possible, with bounded queues and explicit failure handling; it must not block first token by default.

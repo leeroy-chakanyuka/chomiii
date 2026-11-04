@@ -107,3 +107,25 @@ path. This is not a memory or tool implementation.
 Then run `./mvnw test` and the frontend lint/typecheck/Vitest/build/Playwright
 checks, including `PostStreamRefresh.test.tsx` for concurrent independent
 post-stream refreshes. Do not claim these checks passed without actual output.
+
+## M2 draft memory tests
+
+Backend focused (no live model):
+
+```bash
+cd backend
+./mvnw -Dtest=MemorySelectorTest,MemoryServiceTest,MemoryContextIntegrationTest,ChatIdentityTest test
+```
+
+With an authorized disposable PostgreSQL or MySQL DB set in `CHOMIII_DB_URL`,
+run `./mvnw -Dtest=MemoryDatabaseTest,ChatStreamDatabaseTest test` to exercise
+real API and user isolation, plus the normal `./mvnw verify` integration suite.
+
+Frontend, in `frontend/`: `npm ci && npm run lint && npm run typecheck && npm test && npm run build`.
+Review `MemoryPanel.test.tsx` and `memoryApi.test.ts` for CRUD and failure states.
+Manually test a newly saved "usual groceries" memory across two conversations,
+correction/deletion, disabled memory recall, a second session, and a live
+Gemini model's use of the selected fact.
+
+All tests in this PR are **authored, not independently executed** until their
+actual output is recorded in [verification](verification.md).
