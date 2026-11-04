@@ -41,29 +41,30 @@ export default function App() {
         <p className="eyebrow">WELCOME TO CHOMI</p>
         <p className="setup-title">A little space to think out loud.</p>
         <p className="intro">Ask a question, work through an idea, or pick up a conversation where you left off.</p>
-        <form onSubmit={(event) => { event.preventDefault(); chat.connect() }}>
+        <form onSubmit={(event) => { event.preventDefault(); void chat.connect() }}>
           <label htmlFor="provider">Provider</label>
-          <select id="provider" value={chat.provider} onChange={(event) => chat.setProvider(event.target.value)}>
+          <select id="provider" value={chat.provider} disabled={chat.connecting}
+            onChange={(event) => chat.setProvider(event.target.value)}>
             <option value="gemini">Gemini</option>
           </select>
           <label htmlFor="api-key">Gemini API key</label>
           <input id="api-key" type="password" autoComplete="off" spellCheck={false}
-            value={chat.key} onChange={(event) => chat.setKey(event.target.value)}
+            disabled={chat.connecting} value={chat.key} onChange={(event) => chat.setKey(event.target.value)}
             placeholder="Paste your API key" />
           <label htmlFor="model">Model</label>
           <select id="model" value={chat.model} onChange={(event) => chat.setModel(event.target.value)}
-            disabled={chat.loading || !selectedProvider}>
+            disabled={chat.loading || chat.connecting || !selectedProvider}>
             {selectedProvider?.models.map((model) =>
               <option key={model.id} value={model.id}>{model.name}</option>)}
           </select>
           <label className="remember-option" htmlFor="remember-key">
-            <input id="remember-key" type="checkbox" checked={chat.remember}
+            <input id="remember-key" type="checkbox" checked={chat.remember} disabled={chat.connecting}
               onChange={(event) => chat.setRemember(event.target.checked)} />
             <span>Remember this key on this device</span>
           </label>
           {chat.error && <p role="alert" className="error">{chat.error}</p>}
-          <button className="primary-button" type="submit" disabled={chat.loading || !selectedProvider}>
-            Start chatting
+          <button className="primary-button" type="submit" disabled={chat.loading || chat.connecting || !selectedProvider}>
+            {chat.connecting ? 'Connecting…' : 'Start chatting'}
           </button>
         </form>
         <p className="small-print">Get a key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>. Without Remember, your key stays in memory until you close this tab. Remember saves an encrypted copy in this browser profile so you can return without re-entering it. Anyone with access to this profile may use it. Google account limits or charges may apply.</p>
