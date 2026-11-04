@@ -33,6 +33,16 @@ class MemorySelectorTest {
     }
 
     @Test
+    void recognizesCommonEverydayWordVariations() {
+        var shopping = memory("My usual groceries include milk", 12);
+        var favourite = memory("My favourite sport is tennis", 13);
+        assertThat(MemorySelector.select(List.of(shopping), "Show my usual grocery list"))
+                .containsExactly(shopping);
+        assertThat(MemorySelector.select(List.of(favourite), "What's my favorite sport?"))
+                .containsExactly(favourite);
+    }
+
+    @Test
     void rejectsNoMatchesAndDoesNotInjectMemoriesForGenericPrompts() {
         var personal = memory("My usual groceries include milk", 12);
         assertThat(MemorySelector.select(List.of(personal), "Explain sorting algorithms")).isEmpty();

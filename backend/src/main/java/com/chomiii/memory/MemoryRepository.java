@@ -38,6 +38,13 @@ public class MemoryRepository {
                 (row, index) -> fromRow(row), owner);
     }
 
+    public java.util.Optional<PersonalMemory> find(String owner, UUID id) {
+        return jdbc.query(
+                "select id, content, source, created_at, updated_at from personal_memories "
+                        + "where owner_hash = ? and id = ?",
+                (row, index) -> fromRow(row), owner, id.toString()).stream().findFirst();
+    }
+
     public PersonalMemory create(String owner, String content) {
         UUID id = UUID.randomUUID();
         Instant now = Instant.now();

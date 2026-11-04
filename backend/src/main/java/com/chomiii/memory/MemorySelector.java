@@ -46,8 +46,19 @@ public final class MemorySelector {
     private static Set<String> words(String input) {
         return Arrays.stream(input.toLowerCase(Locale.ROOT)
                         .split("[^\\p{L}\\p{N}]+"))
+                .map(MemorySelector::canonical)
                 .filter(word -> word.length() >= 4 && !STOPWORDS.contains(word))
                 .collect(Collectors.toSet());
+    }
+
+    private static String canonical(String word) {
+        return switch (word) {
+            case "groceries", "grocery" -> "grocery";
+            case "favourite", "favorite", "favourites", "favorites" -> "favorite";
+            case "usually", "usual" -> "usual";
+            default -> word.endsWith("s") && word.length() > 5
+                    ? word.substring(0, word.length() - 1) : word;
+        };
     }
 
     private record Match(PersonalMemory memory, int score) {}

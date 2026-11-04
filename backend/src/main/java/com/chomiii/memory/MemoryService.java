@@ -36,11 +36,12 @@ public class MemoryService {
     }
 
     @Transactional
-    public List<PersonalMemory> replace(String owner, UUID id, String content) {
+    public PersonalMemory replace(String owner, UUID id, String content) {
         if (!repository.update(owner, id, validated(content))) {
             throw new ChatApiException(HttpStatus.NOT_FOUND, "Memory not found.");
         }
-        return repository.list(owner).stream().filter(item -> item.id().equals(id)).toList();
+        return repository.find(owner, id).orElseThrow(
+                () -> new ChatApiException(HttpStatus.NOT_FOUND, "Memory not found."));
     }
 
     @Transactional
