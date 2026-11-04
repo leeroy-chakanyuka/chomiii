@@ -20,4 +20,7 @@ telemetry and is **not selected as Chomiii's M2 consumer memory backend**.
 The first implementation is a Spring/JDBC store; Mem0 and Letta remain
 architecture references. See [research decision](../m2-research.md).
 
-Any future summarization, embedding or memory distillation should run after the visible response where possible, with bounded queues and explicit failure handling; it must not block first token by default.
+Opt-in conversation distillation is implemented after the visible response
+in PR #3, using a bounded worker, confidence/evidence validation and
+user-review state. It is not reliable semantic memory or permission to act.
+Any further summarization, embedding or memory distillation should run after the visible response where possible, with bounded queues and explicit failure handling; it must not block first token by default.

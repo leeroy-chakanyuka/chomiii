@@ -129,3 +129,20 @@ Gemini model's use of the selected fact.
 
 All tests in this PR are **authored, not independently executed** until their
 actual output is recorded in [verification](verification.md).
+
+## Additional M2 automatic-learning checks
+
+- Unit: `MemoryCandidateParserTest`, `MemoryLearningServiceTest`, and
+  `MemoryServiceTest` should cover evidence matching, sensitive content,
+  confidence/status, revisions and queued post-response work.
+- Browser: `MemoryLearningToggle.test.ts` and
+  `MemoryLearningReview.test.tsx` verify one-time opt-in, suggested-memory
+  review, and the distinct permission for retrieval vs learning.
+- Manual: opt in, say a stable preference, allow the second model call to finish,
+  reopen Memories, confirm its provenance and active status; test an ambiguous
+  inferred preference and confirm it requires approval. Turn learning off and
+  confirm no extra extraction request is triggered. Test delete/clear while
+  extraction is in flight.
+- Measure **additional Gemini tokens and charges** separately from visible
+  response time; record false-positive and missed-memory rates from representative
+  everyday scenarios. Nothing above is a claimed passing run.

@@ -69,8 +69,10 @@ than switching models.
 
 ## M2 review PR: explicit personal memory endpoints
 
-A person must choose to save a memory in the UI; the assistant does not
-automatically extract or persist facts from chats. The browser-session
+A person may save a memory manually **or opt in once to learn from chats**.
+Eligible completed turns can be sent to the selected model in a separate
+post-response extraction request. The app does not secretly save every message.
+Tentative inferences are suggestions until approved. The browser-session
 cookie identifies the owner. A foreign memory ID returns `404`.
 
 | Method and path | Response | Purpose |
@@ -78,11 +80,15 @@ cookie identifies the owner. A foreign memory ID returns `404`.
 | `GET /api/memories` | `200` array | List up to 100 memories saved by this browser-session owner. |
 | `POST /api/memories` | `201` memory | Save explicit `{"content":"My usual groceries are oats"}`. |
 | `PUT /api/memories/{id}` | `200` memory | Replace owned memory content. |
+| `POST /api/memories/{id}/approve` | `200` memory | Approve a tentative inferred memory for future recall. |
 | `DELETE /api/memories/{id}` | `204` | Hard-delete an owned memory record. |
 | `DELETE /api/memories` | `204` | Delete all memories for the current owner. |
 
-Entries have `id`, `content`, `source:"user_explicit"`,
-`createdAt` and `updatedAt`. Content is trimmed and must contain
+Entries have `id`, `content`, `source` (`user_explicit`, `conversation_fact`, or `inferred`),
+`status` (`active` or `suggested`), `confidence` (0–1), optional
+`sourceConversationId`, `createdAt` and `updatedAt`.
+The confidence is an uncalibrated model estimate; suggested memories are
+not used as chat context before approval. Content is trimmed and must contain
 **1–500 Java characters**; the owner is limited to **100 records**.
 The same Origin and cookie restrictions apply as for conversation mutations.
 
@@ -90,7 +96,11 @@ Chat normally retrieves up to three relevant saved memories (bounded
 total context), added as *user-role context*, not as instructions.
 Set `X-Chomiii-Use-Memory: false` on a chat-stream request to skip
 memory retrieval for that turn. This is controlled by a visible checkbox
-in the PR frontend. The backend performs lexical relevance checks;
+in the PR frontend. Set `X-Chomiii-Learn-Memory: true` only after the user enables
+**Learn from chats**. It may schedule a second, bounded Gemini request after
+a successful completed reply. The header is intentionally absent unless
+opted in. Learning and recall are independently controlled.
+The backend performs lexical relevance checks;
 it does not promise semantic search or successful recall of every fact.
 
 **Privacy:** relevant saved memory content is sent to the configured Gemini

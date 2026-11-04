@@ -89,7 +89,9 @@ are in [agent-architecture-plan.md](agent-architecture-plan.md).
 ## M2 — Memory
 
 **Current M2 review:** [PR #3](https://github.com/leeroy-chakanyuka/chomiii/pull/3)
-implements a bounded, explicit save/list/correct/delete/clear UI and SQL store,
+now includes optional automatic extraction after a completed chat, evidence
+checks, user review of inferred candidates, and a save/list/correct/delete/
+approve/clear UI and SQL store,
 plus relevant lower-trust context. The [research decision](m2-research.md)
 rejects Beacon as a consumer memory backend for now and adopts a small Spring
 service. **This is an initial slice, not verified release completion.** Cookie

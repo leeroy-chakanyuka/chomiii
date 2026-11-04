@@ -32,12 +32,16 @@ between devices, and losing the cookie loses access to them. See
 
 [PR #3](https://github.com/leeroy-chakanyuka/chomiii/pull/3) introduces
 a **Memories** panel where people can deliberately save, inspect, edit and
-delete preferences or commitments. The PR's backend stores owner-scoped
-records in the existing database and selects up to three relevant memories
+delete preferences or commitments. The PR's backend stores owner-scoped memories (manually saved or learned
+after an optional post-reply extraction) in the existing database and selects
+up to three relevant **active** memories
 for future chats without another inference request. The chat screen has a
 **Use saved memories** checkbox to opt out of using saved facts.
 
-This is **not** automatic memory extraction, cross-device accounts, or
+Learning requires a one-time **Learn from chats** opt-in and may use additional
+Gemini tokens after the reply. Directly supported personal facts can be
+saved; weak inferences are marked as suggestions for review. This is **not**
+cross-device accounts, or
 permission to take actions. The existing anonymous cookie owns the saved
 records: losing it may lose access. Relevant memories sent to the model
 provider are subject to that provider's data handling; memory entries remain

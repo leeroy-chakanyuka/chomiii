@@ -7,7 +7,7 @@
 - **What:** Let Chomiii remember a user-approved preference or commitment across conversations, recall it when relevant, and allow the user to inspect, correct or delete it.
 - **Why:** Repeating "my usual groceries" or recurring priorities in every new chat defeats the purpose of a personal assistant.
 - **For whom:** Everyday mobile-first people who want continuity without learning memory frameworks, paying for another platform, or surrendering control.
-- **Success:** Owner isolation, explicit consent, provenance, practical recall, correction/deletion, no fabricated memories or automatic saving, bounded first-token overhead, and honest limitations.
+- **Success:** Owner isolation, explicit consent, provenance, practical recall, correction/deletion, no fabricated memories, and no inferred fact silently promoted to confirmed, bounded first-token overhead, and honest limitations.
 
 ## What we investigated
 
@@ -25,8 +25,9 @@
 
 **Build the first M2 memory store inside the existing Java 21 + JDBC + Flyway application.** Use the same PostgreSQL/MySQL setup, owner checks, HTTP API, and ordinary React UI.
 
-- Explicit `Save memory` action, no automatic chat harvesting or inferred facts.
-- Up to 100 entries per browser-session owner, 500 characters each, with UUID, source=`user_explicit`, created/updated timestamps.
+- Explicit manual saves **plus opt-in, best-effort learning from conversations**. A user enables **Learn from chats** once; an eligible completed turn can trigger one separate Gemini extraction call AFTER the visible reply. The request is bounded, isolated from chat workers, and carries no system privileges. This uses extra model quota.
+- Explicitly stated, evidence-backed facts (model confidence >=0.88) may be saved as active memories. Lower-confidence facts and inferences remain `suggested` until the person approves them. All can be edited or deleted. The model cannot directly write database records.
+- Up to 100 entries per browser-session owner, 500 characters each, with UUID, source (`user_explicit`, `conversation_fact`, or `inferred`), status (`active` or `suggested`), confidence, source conversation, and timestamps.
 - `/api/memories` read/create/update/delete/clear with consistent error handling. All SQL queries filter by the server-established owner hash, never a model-supplied identifier.
 - Send only at most three locally selected, relevant memories to the model, capped at ~1,400 Java characters in **user-role context**, not trusted system instructions; zero embedding requests and zero extra model calls. A user can disable memory use for a chat turn.
 - No separate provider or cloud memory account; no additional Maven/npm dependencies.
@@ -39,8 +40,8 @@
 - **Deletion boundaries:** Deleting a memory removes the primary DB row; it does **not** erase a similar fact previously typed in chat history, a provider request already sent, infrastructure backups, or logs maintained externally. Clear disclosures and operational retention are required.
 - **Search quality:** Current retrieval is lexical with limited normalization. Paraphrases, conflicting facts, chronology and indirect references may be missed. Benchmark ordinary-user scenarios before adding embeddings, rerankers or extraction.
 - **At-rest protection:** Memory strings are plain database content, as are current chat transcripts; do not store passwords, keys or payment details. Encryption/key management is a future privacy requirement before collecting high-risk user data.
-- **Consent boundary:** Saving an entry is explicit consent for that entry to be considered during relevant chats; when used, the selected fact is forwarded to the currently selected Gemini model provider. The UI lets the user opt out of recall on a chat turn.
-- **No agent action:** This PR does not send emails, order groceries, schedule work, infer private preferences automatically, or persist cross-app identity.
+- **Consent boundary:** Manual saving explicitly opts into storing that entry; automatic learning needs the separate **Learn from chats** opt-in (off by default). Opted-in turns can send a second extraction request to the selected Gemini provider after the reply. Relevant active memories are forwarded to that provider on future chat requests unless the user disables recall.
+- **No agent action:** This PR does not send emails, order groceries, schedule work, take real-world actions, or persist cross-app identity.
 
 ## Why this is a sensible first step
 
@@ -52,6 +53,30 @@ A modest, auditable memory row with an explicit write path is better than sophis
 2. Explicit memory CRUD and chat recall work in a real browser against both supported databases, with cross-owner isolation tests.
 3. Benchmark memory-enabled vs disabled p50/p95 first-visible text latency; no "free" performance claim.
 4. Choose account identity/retention lifecycle for production, implement orphan cleanup and define deletion/backups policy.
-5. User-study evidence for whether explicit save UX is natural and whether lexical recall is sufficiently useful.
+5. User-study evidence for whether opt-in automatic learning, review, rejection, and bounded lexical recall are natural and accurate; measure false positives and added model cost.
 
 **Conclusion:** choose a small native M2 implementation **now**, keep Mem0/Letta techniques as future options, and keep Beacon for engineering telemetry rather than consumer memory.
+
+## Follow-up decision: automatic learning (2026-11-05)
+
+Product review established that users should **not have to manually curate every memory**.
+The first implementation therefore makes extraction automatic **after a one-time opt-in**,
+without removing the Memory panel. A second model request is made only after a
+completed, eligible chat turn, from a separate bounded executor. A strict JSON
+parser checks confidence, source kind, evidence quoted from the current user
+message, response length, and an initial sensitive-content exclusion list.
+This filter is intentionally conservative and does **not** constitute a proven
+PII classifier. Learned data is user-owned and can be edited, approved, or deleted.
+Queued extraction captures the user's memory revision; a later manual mutation
+invalidates older pending writes.
+
+The **confidence score is a model estimate, not a calibrated probability**.
+Direct facts and tentative inferences have separate states; tentative entries
+are not passed to the answer model until reviewed. The person can turn
+learning off independently of turning recall off.
+
+Known limits: the single-turn extractor cannot reliably infer preferences across
+several conversations; queued in-memory work can be lost on restart; extra
+model calls cost money and may use the same model as the main chat; sensitive
+data protection is heuristic; and the provider sees a second copy of the
+eligible user turn. Test real false-positive and omission rates before production.

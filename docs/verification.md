@@ -291,13 +291,15 @@ M1.5 context-window isolated smoke check (2026-11-04): Java 21 compiled a recrea
 - **Implemented on PR branch, pending review:** `V3__personal_memories.sql`,
   `MemoryController`, `MemoryService`, `MemoryRepository`,
   `MemorySelector`, chat context wiring, and a React Memories manager.
-  The assistant cannot automatically decide to create memories, buy things
+  The user may opt in to post-response automatic memory extraction; a bounded
+  model output can propose direct facts or reviewable inferences, but the
+  assistant still cannot buy things
   or access external services.
 - **Tests authored, not yet run:** unit selection/service tests, explicit
   trust-boundary tests, real-DB CRUD and cross-owner isolation tests,
   React memory manager and API parsing checks.
 - **Known gaps:** no signed-in accounts/cross-device sync, no automatic
-  cookie-expiry cleanup, no semantic memory or inference-assisted curation,
+  cookie-expiry cleanup, no semantic memory or cross-turn inference,
   incomplete deletion coverage for upstream provider/backups, no verified
   multi-database migration, full UI or latency benchmarks.
 - **GitHub CI:** account billing prevents runner allocation. Do not
@@ -306,3 +308,11 @@ M1.5 context-window isolated smoke check (2026-11-04): Java 21 compiled a recrea
   verification, not a release or merge instruction.
 
 M2 PR #3 review follow-up: memory context length and its single additional message now count against the original 16,000-character/20-message chat budget. This is a static source review fix, **not a verified test run**.
+
+M2 automatic-learning change (2026-11-05): opt-in, queued post-reply
+Gemini extractor, evidence/confidence validation, suggested inference review,
+and revision-based stale-write protection are implemented on the PR branch.
+Parser, learning service, memory-state and frontend opt-in/review tests were
+authored. **Neither full Maven nor frontend tests have been executed in this
+session**. The provider's reported confidence has not been empirically
+calibrated, and no live memory-learning benchmark has been run.
