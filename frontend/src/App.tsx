@@ -67,7 +67,7 @@ export default function App() {
             {chat.connecting ? 'Connecting…' : 'Start chatting'}
           </button>
         </form>
-        <p className="small-print">Get a key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>. Without Remember, your key stays in memory until you close this tab. Remember saves an encrypted copy in this browser profile so you can return without re-entering it. Anyone with access to this profile may use it. Google account limits or charges may apply.</p>
+        <p className="small-print">Get a key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>. Without Remember, your key stays in memory until you close this tab. Remember saves an encrypted copy in this browser profile so you can return without re-entering it. This is convenience storage, not protection against a compromised browser; another app served from the same local address and port could also access it. Google account limits or charges may apply.</p>
         {chat.history.length > 0 && <p className="small-print">Your conversations will be here when you reconnect with a key.</p>}
       </section> : <div className="workspace">
         <aside className="sidebar" aria-label="Conversations">
