@@ -1,5 +1,68 @@
 # Verification evidence
 
+## M1 baseline, 2026-11-04
+
+Before M1 changes, the working tree was clean on `main` at `566abf8`.
+The existing origin was `https://github.com/leeroy-chakanyuka/chomiii.git`.
+
+| Local check | Result | Evidence |
+| --- | --- | --- |
+| Backend build and unit tests | PASS | `backend/mvnw.cmd package`: 23 tests passed and the executable jar was built. An earlier concurrent `mvnw.cmd test` timed out; the subsequent package run completed. |
+| Frontend tests | PASS | `npm run test`: 7 tests passed. |
+| Frontend build and lint | PASS | `npm run build` and `npm run lint` completed. |
+| Standalone browser tests | PASS | `npm run test:browser`: 4 tests passed. These tests did not exercise a backend. |
+| PostgreSQL | NOT RUN | Nothing was listening on port 5432. A local PostgreSQL binary is present; it had not been started for this baseline. |
+| Docker Compose | BLOCKED | `docker compose config` could not run because `docker` was not found. The repository had no Compose file or Dockerfiles. |
+| Pstack | PASS | OpenCode loaded the `poteto-mode`, `tdd`, and `architect` skills. |
+
+The M0 sections following the M1 evidence describe earlier verification and
+are not evidence for M1.
+
+### M1 provider catalog test-first cycle
+
+`backend/mvnw.cmd -Dtest=ProviderCatalogMvcTest test` failed before the
+catalog was added. The response to `GET /api/chat/providers` was 404 instead
+of 200. The test specifies that Gemini and its default model are discoverable
+without supplying a key.
+After the catalog was added, the same command passed with 1 test and no failures.
+
+`backend/mvnw.cmd -Dtest=GeminiProviderTest test` was run against an empty
+provider implementation before adding the SDK adapter. It failed with an empty
+chunk list instead of `Hello`, ` world`.
+With Google GenAI Java SDK 1.80.0, the same test passed against a local HTTP
+fixture. The fixture observed the supplied test key in a header, the ordered
+conversation and separate system instruction in the request, and two response
+chunks. This is not a live Gemini test.
+
+An idle-stream cancellation test initially timed out because closing the SDK
+reader waited for a blocked read. The adapter now cancels the underlying
+request. `backend/mvnw.cmd -Dtest=GeminiProviderTest test` passed all 13 tests,
+including cancellation while the provider was idle and separate concurrent
+credentials.
+
+An actual delayed-server timeout test returned `UNAVAILABLE` instead of
+`TIMEOUT`. The adapter now recognizes the HTTP client's interrupted I/O
+timeout. The same focused test passed after that change.
+
+The opt-in `GeminiLiveTest` ran once with the available `GEMINI_API_KEY` and
+`CHOMIII_RUN_GEMINI_SMOKE=true`. Google returned `Hello.` for the prompt
+`Reply with the single word hello.` The test used the real SDK and network,
+not the local fixture. It verifies the adapter, not a complete chat journey.
+
+An independent provider review identified the HTTP client's default read
+timeout and the handling of HTTP 400 responses. Before their fixes, focused
+tests failed when a stream paused for 11 seconds and when a non-key HTTP 400
+was classified as an invalid key. The adapter now sets explicit timeouts and
+distinguishes invalid requests. `backend/mvnw.cmd
+"-Dtest=GeminiProviderTest,ProviderCatalogMvcTest" test` passed all 18 tests
+after the fixes.
+
+The complete backend unit and MVC regression command, `backend/mvnw.cmd test`,
+then passed 41 tests with the opt-in live test skipped. The live test had
+already been run separately as described above. An independent reviewer checked
+the provider stage; the actionable timeout and error-classification findings
+were covered by failing tests and fixed.
+
 The project's evidence log: what was **actually run**, on this machine, and what was **not**. Updated by hand only with observed outcomes — never invent results ([AGENTS.md](../AGENTS.md)). Where a result predates a code change, that is stated; such results cannot be counted as evidence for the current state of the code and are followed up by re-running.
 
 Environment: **local Windows machine, 2026-11-03, M0**.

@@ -1,5 +1,71 @@
 # Architecture
 
+## M1 design under implementation
+
+This section is a design contract, not a claim that M1 is finished. The current
+M0 behavior is described below. The verification log records what runs.
+
+### Request and storage boundaries
+
+The browser sends a message to the same-origin Spring MVC API using a POST
+stream. It keeps the Gemini API key in application memory and sends it in a
+request header. A request-scoped provider adapter constructs a Google GenAI
+client with that key and closes the upstream stream when generation ends.
+No application-wide mutable credential exists.
+
+The provider port accepts a model identifier, a separate system instruction,
+and an ordered list of role-tagged messages. It returns incremental text and
+supports cancellation. Gemini HTTP and SDK types stay in the adapter. Model
+availability is key-dependent; the API returns an error instead of switching
+models when Google rejects the selection.
+
+Flyway migrations add conversations and messages using SQL supported by both
+M0 database engines. Conversations have UUIDs, an owner reference, a title,
+timestamps, and an active generation marker. Messages have UUIDs, a
+conversation ID, a sequence, role, content, status, and a client request ID.
+The database constrains roles, statuses, ownership-related indexes, and request
+uniqueness. Keys are never columns in these tables.
+
+An opaque, cryptographically random browser-session cookie identifies the
+owner. The cookie is HttpOnly and SameSite, and uses Secure in hosted
+configuration. Only a hash of the random session token is used as the owner
+reference. Every conversation lookup includes the owner. State-changing
+requests must satisfy same-origin protection. Hosted configuration requires
+HTTPS and a trusted public origin. Anonymous sessions do not sync across
+devices.
+
+### Streaming and context
+
+`POST /api/conversations/{id}/messages/stream` accepts a UUID request ID,
+provider, model, and message. The key travels in a header, never in a URL.
+Before opening the provider, the service validates ownership, claims the
+conversation, and records the user message and a pending assistant message
+in one transaction. Reusing a request ID cannot create another turn; a
+conflicting or in-progress retry receives a documented conflict response.
+
+The stream uses `text/event-stream` with `start`, `delta`, `complete`, and
+`error` events containing JSON. The worker relays actual upstream chunks.
+It writes the final assistant content and terminal status on completion.
+Failures and cancellations record a non-complete assistant status. Stopping
+generation closes the upstream handle where supported. A restart reconciles
+pending messages as interrupted for the single-instance M1 deployment.
+
+Context consists of the newest complete user and assistant messages for the
+same conversation, in sequence order, plus the current user message. Failed
+or incomplete assistant messages are excluded. The service limits both the
+number of messages and the total character count, keeping the newest context
+that fits. The system instruction is separate from user content. This is
+conversation history, not long-term memory.
+
+### Design comparison
+
+Two independent sketches were considered. Persisting every streamed chunk
+would add a write for every update and require a durable replay protocol.
+M1 instead persists the initial and terminal states and relays deltas directly.
+The choice keeps interrupted work visible without promising stream replay or
+multi-instance recovery. A database-backed request ID and conversation claim
+prevent duplicates; an in-process handle is used only to cancel active work.
+
 This document describes milestone **M0** and the reasoning behind its architecture. Planned milestones live in the [roadmap](roadmap.md).
 
 ## Shape
