@@ -260,16 +260,20 @@ Both engines have been exercised locally. The PostgreSQL Testcontainers suite st
 Green and observed: backend unit/MVC tests, MySQL integration, Flyway migrations on both database engines, the browser-to-backend path on both engines, frontend checks, and the `npm audit` high-severity gate. PostgreSQL Testcontainers, backend vulnerability scanning, and hosted CI remain unverified until the GitHub billing blocker is resolved.
 
 
-## M1.5 proposed PR: agent instructions and skill routing (2026-11-04)
+## M1.5 proposed PR: everyday-assistant identity and context (2026-11-04)
 
-- **Implemented in branch:** cached Markdown identity, six portable task skills,
-  local deterministic activation, trusted classpath loading, and policy files
-  for future tool/memory milestones.
-- **Tests authored:** `AgentInstructionsTest`, plus existing chat identity tests.
-  **Not executed in this environment:** Maven dependencies and GitHub Actions
-  are unavailable. Do not treat authored tests as passing evidence.
-- **Latency change:** successful post-stream message and conversation-list GETs
-  run concurrently. No matched benchmark was run; no improvement is claimed.
-- **CI:** GitHub Actions has previously stopped before runners execute any
-  steps due to account billing restrictions. Verify the new PR's current CI
-  run rather than assuming it tested the code.
+- **Implemented in branch:** short, cached classpath `SYSTEM.md` for a
+  general-purpose assistant, separate from user messages. Removed the
+  generic skill router and all six initial `SKILL.md` files after product
+  review; a real workflow-skill milestone is planned for M2.5.
+- **Documented only, not built yet:** the product definition and target
+  architecture, context and user-scoped memory plans, lessons from Meta
+  Muse, OpenAI dots, open-source Muse, OpenDot, OpenClaw and Letta.
+- **Tests authored:** `AgentInstructionsTest`, existing `ChatIdentityTest`
+  and `ContextWindowTest`. **Not independently executed in this environment.**
+- **Latency change retained:** the two independent post-stream browser
+  refresh requests run concurrently. This improves request scheduling after
+  streaming, **not Gemini first-token latency**; no speedup is claimed.
+- **CI blocker:** GitHub Actions has refused to assign runners due to the
+  account billing issue. This is not evidence that tests ran or failed.
+  Restore CI billing access or run tests locally before merge.

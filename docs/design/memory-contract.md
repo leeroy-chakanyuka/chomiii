@@ -12,6 +12,6 @@
 - Do not persist passwords, API keys, or other secrets as "memories".
 - Avoid a separate inference call on every turn without measuring cost, latency and quality.
 
-**Candidate:** Evaluate Agent Beacon against these requirements first, including its coding-agent focus, lifecycle, redaction and delete guarantees, before adopting it for end-user memory.
+**Candidate:** Evaluate Agent Beacon against these requirements first, but note it is built for coding-agent traces and must prove consumer fit, including its coding-agent focus, lifecycle, redaction and delete guarantees, before adopting it for end-user memory.
 
 Any future summarization, embedding or memory distillation should run after the visible response where possible, with bounded queues and explicit failure handling; it must not block first token by default.

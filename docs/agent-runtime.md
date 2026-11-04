@@ -1,39 +1,33 @@
-# Chomiii agent instructions: M1.5
+# Minimal runtime identity — M1.5
 
-This is the **implemented prompt and skill foundation**, not yet a tool-running autonomous agent. The backend uses versioned, trusted Markdown from \`backend/src/main/resources/agent/\` on its system-instruction channel. \`AGENTS.md\` at the repository root is for coding contributors and is not sent to Gemini.
+Chomiii's **current** runtime is a streaming chatbot for everyday conversations, not an autonomous tool-using agent. The M1.5 contribution is a small, versioned identity that can be reviewed independently of code.
 
-## Files and roles
+## What is loaded
 
-- \`SYSTEM.md\` — short runtime identity, trust boundary and honest capability declaration.
-- \`skills/<name>/SKILL.md\` — portable Agent Skills format with YAML \`name\` and \`description\`; \`triggers\` is Chomiii-specific optional routing metadata used by this first runtime.
-- \`TOOLS_POLICY.md\` — M3 server-side permission/approval contract (not an executable tool).
-- \`MEMORY_POLICY.md\` — M2 provenance, consent, isolation and deletion policy (no memory store yet).
-- \`RESPONSE_PROTOCOL.md\` — action lifecycle and instruction precedence reference for future milestones.
-- \`EVALUATION.md\` — focused test cases and evaluation checklist.
+- `backend/src/main/resources/agent/SYSTEM.md` is packaged into the Java artifact.
+- `AgentInstructions` reads and validates it once per process and supplies the same short text for all turns.
+- `ChatStreamService` sends it via `ChatProvider.ChatInput.systemInstruction`. The current user message and bounded owner-scoped history remain role-tagged messages, never substituted into system instructions.
+- System prompts are capped at **2,000 Java characters** and rejected if missing or empty. The startup path does **not** load generic `SKILL.md` files, run a separate router model, or read prompt files for every turn.
+- This changes the wording supplied to the model, not its permissions or actual capabilities.
 
-## Runtime
+The repository-root `AGENTS.md` is the engineering contributor contract for developers. It is not Chomiii's persona and is not shipped as runtime model context.
 
-\`AgentInstructions\` loads the core and discovers skill files on the classpath **once** when its Java class initializes. It validates the frontmatter, builds a small name/description catalog, then deterministically selects at most one relevant skill based on phrase triggers from the latest user message. \`/skill <name>\` explicitly selects an installed skill. Only the selected instruction body is appended to the system prompt. There are no extra LLM calls, file reads per turn, hidden side effects or memory writes.
+## What the persona should and should not do
 
-This is an interim **local selector**, not model-driven load-on-demand tools. The model cannot call \`load_skill\` or read reference files. When M3 adds a permissioned tool runtime, the skill catalog can be discovered with a typed read-only tool; the caller must enforce ownership and bounds outside the model.
+Be warm, reliable and practical in ordinary life; answer questions, help make decisions, explain, write and plan. Do not portray the product as a specialist coding agent. Do not pretend to browse, send mail, schedule jobs, remember facts long-term, or work after the chat finishes. A small prompt is not a permission system.
 
-## Trust boundary
+## Context belongs in M1.5 too
 
-System and skill files come from the versioned **application artifact**, not an HTTP request, user-controlled filesystem path or retrieved page. They are trusted only after code review. User text and external material are always lower-priority message data. A skill never grants tool access or authority to send, delete or persist data.
+The [context contract](context.md) defines present history selection and future tiers for user preferences, external sources and task state. It intentionally separates **context assembly** from **memory persistence**. See also [product vision](product-vision.md).
 
-## Latency
+## What moved out of M1.5
 
-Core files and catalog are cached for the process lifetime. Only one short skill can be appended, so normal chat avoids the cost of all skill bodies. Routing runs locally without network traffic. This does **not** eliminate the measured Gemini provider wait, and may slightly increase prompt-token cost for skill-activated turns. A separate frontend change parallelizes the two post-stream refresh GETs; this affects completion UI, not first token.
+The initial PR experimented with six generic auto-selected skills, including debugging. Product review determined that those are mostly ordinary model capabilities and make the UX too developer-oriented. They were removed, along with the extra routing code. **M2.5** will assess concrete, everyday workflow-specific skills against real-user utility and token/latency cost.
 
-## Adding a skill
+Tool approvals, persistent memory and autonomous work are future milestones. Their contracts are kept under `docs/design/` rather than injected into the chat runtime.
 
-Create \`agent/skills/<slug>/SKILL.md\` with valid YAML frontmatter \`name\`, \`description\` and a comma-separated \`triggers\` line, plus focused instructions. Keep the body under 5,000 characters, with no external permissions implied. Add deterministic selection and safety tests, and review for prompt injection, unsupported claims and token cost. See [Agent Skills](https://agentskills.io/specification).
+## Performance and tests
 
-## Inspiration, not dependencies
+A short constant prompt avoids extra pre-stream inference and keeps most context stable. The post-stream frontend improvement parallelizes two independent refreshes; neither change is claimed to fix Gemini provider first-token waits. See [performance](perf/README.md).
 
-- [Open Dot](https://github.com/whatif-dev/agent-open-dot): separated prompt composition, tools, policy checks and approvals.
-- [Muse agent architecture](https://github.com/wlsdks/muse-agent): model neutrality, deterministic security gates, untrusted tool outputs and auditable actions.
-- [Open Agent Skills](https://agentskills.io/specification): portable \`SKILL.md\` and progressive disclosure.
-- [Anthropic Agent Skills engineering](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills): compact catalog first, task-specific instructions on demand.
-
-We drew architectural ideas from these sources; no code or prompt text was copied.
+Run `./mvnw -Dtest=AgentInstructionsTest,ChatIdentityTest,ContextWindowTest test` in `backend/` (or the wrapper on Windows). Tests are authored but CI cannot run due to account billing restrictions. See [verification](verification.md).

@@ -95,11 +95,15 @@ not runnable on the M1 verification machine because Docker is unavailable.
 Frontend: `npm audit --audit-level=high` is the accepted severity gate. As of 2026-11-03 the **high-severity threshold passes**, while **12 moderate findings remain** in the `minimatch` dependency chain — recorded and consciously accepted at "moderate"; revisit when lockfiles change. Backend: the [CI workflow](../.github/workflows/ci.yml) invokes OWASP dependency-check (`-DfailBuildOnCVSS=7`, no NVD API key configured yet), but it is not configured as a `pom.xml` plugin and **has never actually executed yet** — see [verification.md](verification.md).
 
 
-## M1.5 identity and skills tests (new PR)
+## M1.5 general-purpose identity and context tests (PR #2)
 
-From `backend/`, run `./mvnw -Dtest=AgentInstructionsTest,ChatIdentityTest test`
-(or use `.\\mvnw.cmd` on Windows). The tests check packaged Markdown,
-explicit and phrase-triggered routing, bounded prompt length, and that user
-text never enters the trusted instruction field. Then rerun the full backend
-unit suite and frontend lint/typecheck/Vitest/Playwright checks, including the
-post-stream refresh path. A tool or memory capability is not part of this PR.
+From `backend/`, run `./mvnw -Dtest=AgentInstructionsTest,ChatIdentityTest,ContextWindowTest test`
+(or `.\\mvnw.cmd` on Windows). Assert that a compact `SYSTEM.md` is
+packaged, rejected when missing/empty/overlong, and supplied separately from
+the actual user message. `ContextWindowTest` covers the current bounded
+role-tagged conversation selection. No skill router should be in the request
+path. This is not a memory or tool implementation.
+
+Then run `./mvnw test` and the frontend lint/typecheck/Vitest/build/Playwright
+checks, including `PostStreamRefresh.test.tsx` for concurrent independent
+post-stream refreshes. Do not claim these checks passed without actual output.
