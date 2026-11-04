@@ -35,7 +35,8 @@ export function useChat() {
   const connectionInFlight = useRef(false)
 
   useEffect(() => {
-    if (!streamed || startedAt.current === null || firstVisibleMeasured.current) return
+    if (!streamed || startedAt.current === null || firstVisibleMeasured.current
+      || typeof requestAnimationFrame !== 'function') return
     firstVisibleMeasured.current = true
     const start = startedAt.current
     requestAnimationFrame(() => requestAnimationFrame(() => {
