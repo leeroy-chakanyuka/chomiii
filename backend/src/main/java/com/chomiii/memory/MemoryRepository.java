@@ -5,24 +5,38 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class MemoryRepository {
+    private static final String FIELDS =
+            "id, content, source, status, confidence, source_conversation_id, created_at, updated_at";
     private final JdbcTemplate jdbc;
 
     public MemoryRepository(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
-    /** Serializes per-session writes so the bounded memory count cannot race. */
+    /** Owner row lock serializes lifecycle mutations and auto-learner writes. */
     public void lockOwner(String owner) {
         List<String> owners = jdbc.query(
                 "select owner_hash from browser_sessions where owner_hash = ? for update",
                 (row, index) -> row.getString("owner_hash"), owner);
         if (owners.isEmpty()) throw new IllegalStateException("Unknown memory owner");
+    }
+
+    public long revision(String owner) {
+        Long version = jdbc.queryForObject("select memory_revision from browser_sessions where owner_hash = ?",
+                Long.class, owner);
+        return version == null ? -1L : version;
+    }
+
+    public void bumpRevision(String owner) {
+        jdbc.update("update browser_sessions set memory_revision = memory_revision + 1 where owner_hash = ?",
+                owner);
     }
 
     public int count(String owner) {
@@ -31,16 +45,21 @@ public class MemoryRepository {
         return count == null ? 0 : count;
     }
 
+    public boolean existsContent(String owner, String content) {
+        Integer matches = jdbc.queryForObject(
+                "select count(*) from personal_memories where owner_hash = ? and lower(content) = lower(?)",
+                Integer.class, owner, content);
+        return matches != null && matches > 0;
+    }
+
     public List<PersonalMemory> list(String owner) {
-        return jdbc.query(
-                "select id, content, source, created_at, updated_at from personal_memories "
+        return jdbc.query("select " + FIELDS + " from personal_memories "
                         + "where owner_hash = ? order by updated_at desc, id desc limit 100",
                 (row, index) -> fromRow(row), owner);
     }
 
-    public java.util.Optional<PersonalMemory> find(String owner, UUID id) {
-        return jdbc.query(
-                "select id, content, source, created_at, updated_at from personal_memories "
+    public Optional<PersonalMemory> find(String owner, UUID id) {
+        return jdbc.query("select " + FIELDS + " from personal_memories "
                         + "where owner_hash = ? and id = ?",
                 (row, index) -> fromRow(row), owner, id.toString()).stream().findFirst();
     }
@@ -49,17 +68,34 @@ public class MemoryRepository {
         UUID id = UUID.randomUUID();
         Instant now = Instant.now();
         jdbc.update("insert into personal_memories "
-                        + "(id, owner_hash, content, source, created_at, updated_at) "
-                        + "values (?, ?, ?, 'user_explicit', ?, ?)",
+                        + "(id, owner_hash, content, source, status, confidence, created_at, updated_at) "
+                        + "values (?, ?, ?, 'user_explicit', 'active', 1.000, ?, ?)",
                 id.toString(), owner, content, Timestamp.from(now), Timestamp.from(now));
         return new PersonalMemory(id, content, "user_explicit", now, now);
     }
 
+    public void createLearned(String owner, UUID conversation, String content,
+            String source, String status, double confidence) {
+        Instant now = Instant.now();
+        jdbc.update("insert into personal_memories "
+                        + "(id, owner_hash, content, source, status, confidence, source_conversation_id, "
+                        + "created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                UUID.randomUUID().toString(), owner, content, source, status, confidence,
+                conversation.toString(), Timestamp.from(now), Timestamp.from(now));
+    }
+
     public boolean update(String owner, UUID id, String content) {
         return jdbc.update(
-                "update personal_memories set content = ?, updated_at = ? "
+                "update personal_memories set content = ?, source = 'user_explicit', "
+                        + "status = 'active', confidence = 1.000, updated_at = ? "
                         + "where id = ? and owner_hash = ?",
                 content, Timestamp.from(Instant.now()), id.toString(), owner) == 1;
+    }
+
+    public boolean approve(String owner, UUID id) {
+        return jdbc.update("update personal_memories set status = 'active', updated_at = ? "
+                        + "where id = ? and owner_hash = ? and status = 'suggested'",
+                Timestamp.from(Instant.now()), id.toString(), owner) == 1;
     }
 
     public boolean delete(String owner, UUID id) {
@@ -72,9 +108,11 @@ public class MemoryRepository {
     }
 
     private static PersonalMemory fromRow(ResultSet row) throws SQLException {
+        String conversation = row.getString("source_conversation_id");
         return new PersonalMemory(UUID.fromString(row.getString("id")),
                 row.getString("content"), row.getString("source"),
-                row.getTimestamp("created_at").toInstant(),
-                row.getTimestamp("updated_at").toInstant());
+                row.getTimestamp("created_at").toInstant(), row.getTimestamp("updated_at").toInstant(),
+                row.getString("status"), row.getDouble("confidence"),
+                conversation == null ? null : UUID.fromString(conversation));
     }
 }

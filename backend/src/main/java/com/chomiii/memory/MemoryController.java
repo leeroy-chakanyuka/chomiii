@@ -35,7 +35,6 @@ public class MemoryController {
         return memory.list(owner);
     }
 
-    /** Saving is explicit: no chat transcript is mined for memory automatically. */
     @PostMapping
     public ResponseEntity<PersonalMemory> create(
             @RequestAttribute(AnonymousSessionFilter.OWNER_ATTRIBUTE) String owner,
@@ -47,7 +46,14 @@ public class MemoryController {
     public PersonalMemory replace(
             @RequestAttribute(AnonymousSessionFilter.OWNER_ATTRIBUTE) String owner,
             @PathVariable UUID id, @Valid @RequestBody SaveMemory request) {
-        return memory.replace(owner, id, request.content()).getFirst();
+        return memory.replace(owner, id, request.content());
+    }
+
+    @PostMapping("/{id}/approve")
+    public PersonalMemory approve(
+            @RequestAttribute(AnonymousSessionFilter.OWNER_ATTRIBUTE) String owner,
+            @PathVariable UUID id) {
+        return memory.approve(owner, id);
     }
 
     @DeleteMapping("/{id}")
