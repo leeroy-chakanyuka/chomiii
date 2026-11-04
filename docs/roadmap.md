@@ -93,6 +93,7 @@ Give each person user-scoped, trustworthy personal memory and relevant context. 
 - Remember / retrieve / correct / delete paths, each tested end-to-end including the browser; deletion actually deletes.
 - **Provenance and consent**: every memory records where it came from and what the user approved; users can inspect and delete it.
 - **Acceptance:** memory CRUD with user scoping, provenance, and consent covered by tests on both engines and in the browser; deletion propagated to connected stores where providers are used.
+- **Consumer scenario:** "my usual groceries" is recalled only when saved or approved, updated when corrected, and honestly unknown when never supplied. This enables future workflows but does not purchase anything in M2.
 
 ## M2.5 — Task-specific skills and workflows
 
@@ -120,6 +121,7 @@ creating a reminder or managing a personal to-do—not a coding tool.
 - **Permissions and approval**: every tool behind a server-side least-privilege check; consequential external actions require explicit user approval.
 - **Trace**: each run traced (steps, tool calls, approvals) so behavior is auditable.
 - **Acceptance:** deterministic fake-LLM tests for the whole loop; no tool executes without its permission check; timeout and bounded-turn behavior covered by tests; traces inspectable.
+- **Consumer scenario:** prepare and authorize a simple reminder/task action end-to-end. Compound email/calendar/grocery workflows are an integration-era goal, not the first M3 slice.
 
 ## M4 — Integrations
 

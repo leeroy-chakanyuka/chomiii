@@ -50,6 +50,27 @@ Before adopting Agent Beacon, Mem0, Letta, or a homegrown store, evaluate privac
 
 A skill is useful only when it adds tested workflow value, such as an appointment planner or budgeting flow with structured inputs and later real tools. Do not require users to type `/skill` or select a generic "writing" plugin to do everyday tasks. Load only a relevant skill body, if any, and keep safety decisions in code rather than prompt prose.
 
+## Context for coordinated everyday tasks (future design)
+
+A request such as "I'm working late; notify the people I'm meeting and check
+my usual groceries" may depend on *several different kinds* of information.
+The current turn explains what changed; conversation history provides local
+background; M2 personal memory may supply a previously approved usual grocery
+basket; M4 calendar/contact tools provide fresh external facts; and M3/M5
+action/task state records which operations are pending, approved, attempted or
+completed. **These are not interchangeable data sources.**
+
+Memory must carry provenance and be distinguishable from a live cart, email,
+calendar invitation or actual purchase. A user may change a preference or
+withdraw permission without changing a historical statement. When a source is
+missing, stale or disconnected, ask for the relevant fact or offer prepared
+work; never fabricate a "usual" preference, contact identity, availability
+or action result. Retrieval should be relevance- and permission-scoped, not an
+automatic dump of every known fact.
+
+This is a future M2–M5 context composition problem and **not a demand** to
+inject these data types into M1.5. See the [evaluation scenarios](design/experience-evaluation.md).
+
 ## What to measure
 
 - Base system-prompt size and response context size; move from Java characters to provider-aware token estimates when supported.

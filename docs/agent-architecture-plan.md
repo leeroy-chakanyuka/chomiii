@@ -63,6 +63,20 @@ When tool execution is added, it must be bounded by steps, time, budget, and per
 
 OpenDot's single-process Python architecture, OpenClaw's long-running gateway, and Muse's distributed packages solve different operational problems. Chomiii already has a compact Spring Boot/React architecture. The *boundaries* and *experience* are transferable; the tech stacks, per-agent desktop sandboxes, and large infrastructure are not first-milestone requirements.
 
+## North-star coordination without architecture inflation
+
+One ordinary-language request can span calendars, email, memories, groceries
+and priorities. The core runtime should **plan the required sequence**, but
+the separate capability boundaries own each fact and side effect. The model
+may propose a message, grocery cart or schedule change; server-side policy
+checks the exact recipient, amount, destination and permission. The backend
+records each attempted/resulting action so that cancellation or restart
+cannot silently double-send or double-order.
+
+This is a **future M3–M5 requirement**, not justification for building a
+general browser, cloud VM or multi-agent swarm in M1.5. The staged concrete
+scenarios are in [experience evaluation](design/experience-evaluation.md).
+
 ## Performance rules
 
 Keep stable trusted instructions compact and consistent to make provider-side caching possible where supported. Do not attach an entire skill library, complete chat transcript, or every memory on each turn. Do not make a second model call just to classify an everyday message. A slow/unavailable memory service must not block the core response. Measure front-end paint, server queue/DB, and provider first-token times separately.

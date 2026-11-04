@@ -36,6 +36,28 @@ A person says: "I have a dentist appointment Friday, two bills due, and family p
 
 The first version should deliver steps 1–2 well. Steps 3–5 are staged milestones.
 
+## The ultimate experience: one request, many connected results
+
+The short-term assistant should be great at ordinary conversations. The **long-term
+agent ambition** goes further: a person who has to work late can ask Chomiii to
+notify the right people about cancelled plans, rearrange dinner, check a
+grocery service for their usual basket, and deal with the follow-up.
+
+Doing this well depends on **context and memory** (who the people are and what
+"usual" means), **actual service integrations** (email, calendar and groceries),
+**permissions** (no unapproved sending or spending), and **durable task state**
+(no duplicated requests or mysterious unfinished actions). This is a north-star
+evaluation scenario across M2–M5, **not** something M1.5 already does.
+
+A second ambition is "Free up Tuesday afternoon." With consented knowledge
+of the user's stated priorities, Chomiii can propose which commitments are
+flexible, distinguish personal tasks from obligations to other people, request
+approval for changes, and report the result. It must not silently cancel
+important commitments or promote guessed priorities into memories.
+
+See [experience evaluation](design/experience-evaluation.md) for the full
+multi-step scenarios and staged, testable failure cases.
+
 ## Non-negotiable product tests
 
 - **Simple:** Can a new person understand the home screen and start chatting without a technical tutorial?
