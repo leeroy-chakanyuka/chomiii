@@ -82,6 +82,7 @@ export function MemoryPanel({ onClose }: { onClose: () => void }) {
       <p className="memory-intro">
         Save information you want Chomi to use in future conversations on this browser.
         Chomi uses saved memories only when relevant, and you can edit or delete them here.
+        Relevant memories are sent to your selected AI provider as part of chat requests.
         Saving one does not let Chomi access your apps or spend money.
       </p>
       <p className="memory-intro">
