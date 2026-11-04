@@ -65,7 +65,7 @@ public class ChatStreamService {
             throw exception;
         }
         long storeReadyNanos = System.nanoTime();
-        ChatProvider.ChatInput input = new ChatProvider.ChatInput(request.model(), AGENT_INSTRUCTIONS.forMessage(request.content()),
+        ChatProvider.ChatInput input = new ChatProvider.ChatInput(request.model(), AGENT_INSTRUCTIONS.systemPrompt(),
                 ContextWindow.select(pending.history(), request.content().strip(), 20, 16_000));
         long contextReadyNanos = System.nanoTime();
         var emitter = new SseEmitter(130_000L);
