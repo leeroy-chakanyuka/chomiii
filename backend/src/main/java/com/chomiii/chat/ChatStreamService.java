@@ -2,8 +2,8 @@ package com.chomiii.chat;
 
 import com.chomiii.agent.AgentInstructions;
 import com.chomiii.memory.MemoryService;
+import com.chomiii.memory.MemoryLearningService;
 import java.util.ArrayList;
-import org.springframework.dao.DataAccessException;
 import com.chomiii.provider.ChatProvider;
 import com.chomiii.provider.ProviderCatalog;
 import com.chomiii.provider.ProviderFailure;
@@ -33,6 +33,7 @@ public class ChatStreamService {
     private final ChatTurnStore store;
     private final ConversationRepository conversations;
     private final MemoryService memories;
+    private final MemoryLearningService learning;
     private final ProviderCatalog catalog;
     private final List<ChatProvider> providers;
     private final ExecutorService executor;
@@ -40,21 +41,28 @@ public class ChatStreamService {
     private final ConcurrentHashMap<UUID, Active> active = new ConcurrentHashMap<>();
 
     public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
-            ProviderCatalog catalog, List<ChatProvider> providers, ExecutorService chatExecutor) {
+            MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
+            ExecutorService chatExecutor) {
         this.store = store;
         this.conversations = conversations;
         this.memories = memories;
+        this.learning = learning;
         this.catalog = catalog;
         this.providers = List.copyOf(providers);
         this.executor = chatExecutor;
     }
 
     public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request, String key) {
-        return start(conversation, owner, request, key, true);
+        return start(conversation, owner, request, key, true, false);
     }
 
     public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request,
             String key, boolean useMemory) {
+        return start(conversation, owner, request, key, useMemory, false);
+    }
+
+    public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request,
+            String key, boolean useMemory, boolean learnFromChat) {
         if (key == null || key.isBlank() || key.length() > 512) {
             throw new ChatApiException(HttpStatus.BAD_REQUEST, "Enter a Gemini API key.");
         }
@@ -100,7 +108,7 @@ public class ChatStreamService {
         try {
             executor.execute(() -> run(request.requestId(), pending.assistantId(), owner, conversation,
                     provider, input, key, generation, emitter, requestStartedNanos, storeReadyNanos,
-                    contextReadyNanos));
+                    contextReadyNanos, learnFromChat));
         } catch (RuntimeException exception) {
             active.remove(request.requestId(), generation);
             slots.release();
@@ -131,7 +139,8 @@ public class ChatStreamService {
 
     private void run(UUID requestId, UUID assistantId, String owner, UUID conversation, ChatProvider provider,
             ChatProvider.ChatInput input, String key, Active generation, SseEmitter emitter,
-            long requestStartedNanos, long storeReadyNanos, long contextReadyNanos) {
+            long requestStartedNanos, long storeReadyNanos, long contextReadyNanos,
+            boolean learnFromChat) {
         long workerStartedNanos = System.nanoTime();
         StringBuilder response = new StringBuilder();
         long[] firstDeltaNanos = {0L};
@@ -211,6 +220,16 @@ public class ChatStreamService {
             active.remove(requestId, generation);
             slots.release();
             emitter.complete();
+            if ("complete".equals(outcome) && learnFromChat) {
+                // Completed replies remain independent of additional, paid extraction calls.
+                // Best effort only: no memory learning error may change response delivery.
+                try {
+                    learning.schedule(owner, conversation, input.messages().getLast().text(),
+                            provider, input.model(), key);
+                } catch (RuntimeException ignored) {
+                    log.debug("memory_learning scheduling unavailable");
+                }
+            }
         }
     }
 

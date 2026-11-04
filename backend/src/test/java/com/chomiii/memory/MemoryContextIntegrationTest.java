@@ -3,6 +3,7 @@ package com.chomiii.memory;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.chomiii.provider.ChatProvider;
+import com.chomiii.memory.MemoryLearningService;
 import com.chomiii.provider.ProviderCatalog;
 import com.chomiii.chat.ChatStreamController;
 import com.chomiii.chat.ChatStreamService;
@@ -43,7 +44,7 @@ class MemoryContextIntegrationTest {
             }
         };
         try (var executor = Executors.newSingleThreadExecutor()) {
-            var chat = new ChatStreamService(store, mock(ConversationRepository.class), memories,
+            var chat = new ChatStreamService(store, mock(ConversationRepository.class), memories, mock(MemoryLearningService.class),
                     new ProviderCatalog(List.of("gemini-3.5-flash-lite")), List.of(provider), executor);
             chat.start(UUID.randomUUID(), "owner", new ChatStreamController.MessageRequest(
                     UUID.randomUUID(), "gemini", "gemini-3.5-flash-lite", "What are my groceries?"),
@@ -78,7 +79,7 @@ class MemoryContextIntegrationTest {
         };
         try (var executor = Executors.newSingleThreadExecutor()) {
             ChatStreamService chat = new ChatStreamService(
-                    store, mock(ConversationRepository.class), memories,
+                    store, mock(ConversationRepository.class), memories, mock(MemoryLearningService.class),
                     new ProviderCatalog(List.of("gemini-3.5-flash-lite")), List.of(provider), executor);
             chat.start(UUID.randomUUID(), "owner", new ChatStreamController.MessageRequest(
                     UUID.randomUUID(), "gemini", "gemini-3.5-flash-lite", "What are my usual groceries?"), "test-key");
