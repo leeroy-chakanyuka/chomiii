@@ -171,3 +171,15 @@ The [API reference](docs/api.md) documents requests, streaming events,
 sessions, error codes, and cancellation. [Architecture](docs/architecture.md)
 explains the provider boundary and context policy. [AGENTS.md](AGENTS.md)
 contains the engineering contract. Chomiii is licensed under [MIT](LICENSE).
+
+## M3 first authorized action (stacked development PR)
+
+M3 begins with a user-reviewable `Tasks` panel: a task is **proposed**
+first and exists as a real personal task only after explicit approval.
+The Spring Boot backend owns session isolation, typed operations, and
+idempotent approval. This does **not** give Chomiii natural-language
+tool calling, scheduled reminders, external app permissions or autonomous
+purchases yet. See [M3 action design](docs/m3-action-design.md).
+
+M3 is stacked on M2 because Flyway V4 follows the memory migration V3.
+Do not merge M3 ahead of its prerequisite; full tests remain required.

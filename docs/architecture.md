@@ -142,3 +142,11 @@ Memory identity currently follows the existing anonymous cookie, **not
 a named cross-device user**. Retrieval makes an indexed local DB read
 but no extra model call. The M2 acceptance and retention requirements
 are outlined in [M2 design](m2-design.md).
+
+## M3 action boundary under development
+
+The first task action is implemented as a separately owner-scoped
+proposal table and resulting task table. `TaskActionService` validates
+the known action and uses a transactional, owner-filtered row lock;
+the React panel sends an explicit approval. The assistant's model
+does not execute tools yet. See [M3 action design](m3-action-design.md).
