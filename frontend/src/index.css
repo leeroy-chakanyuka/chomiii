@@ -110,3 +110,29 @@ a { color: #165a50; text-underline-offset: 3px; }
   .composer-area { padding: 10px 12px; }
   .composer .primary-button, .stop-button { padding: 9px 11px; }
 }
+
+/* M2: local, user-controlled memory management. No UI framework dependency. */
+.memories-shortcut { white-space: nowrap; margin-left: auto; }
+.memory-backdrop { position: fixed; inset: 0; z-index: 30; display: flex; justify-content: flex-end;
+  background: rgba(24, 40, 33, .35); }
+.memory-dialog { width: min(100%, 500px); height: 100dvh; overflow-y: auto; background: #fcfcfa;
+  box-shadow: -14px 0 40px rgba(24,40,33,.12); padding: 30px clamp(18px, 4vw, 36px); }
+.memory-dialog h2 { font-size: 23px; letter-spacing: -.04em; margin: 0; }
+.memory-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.memory-intro { line-height: 1.55; color: #57655d; font-size: 14px; }
+.memory-form { display: grid; gap: 10px; margin: 24px 0; }
+.memory-form label { font-size: 14px; font-weight: 650; }
+.memory-dialog textarea { width: 100%; min-height: 86px; border: 1px solid #bbc9c0;
+  border-radius: 10px; padding: 12px; background: white; color: #223e32; resize: vertical; }
+.memory-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
+.memory-actions button { border-radius: 8px; border: 1px solid #bacac2; background: white; padding: 8px 11px; }
+.memory-actions button:hover { background: #f2f5f2; }
+.memory-actions .memory-save { color: white; background: #176b57; border-color: #176b57; }
+.memory-actions .memory-save:hover { background: #10513f; }
+.memory-list { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 12px; }
+.memory-item { border: 1px solid #dbe3db; border-radius: 12px; background: white; padding: 15px; }
+.memory-item p { margin: 0 0 8px; overflow-wrap: anywhere; line-height: 1.5; }
+.memory-meta { font-size: 11px; color: #65786d; margin-bottom: 12px; display: block; }
+.memory-error { color: #a12d2d; padding: 10px; border-radius: 8px; background: #fff2f1; }
+.memory-empty { color: #5f7468; padding: 14px; }
+.memory-danger { color: #a12d2d; }

@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { fetchHealth, type HealthState } from './health'
 import { useChat } from './useChat'
 import { MarkdownReply } from './MarkdownReply'
+import { MemoryPanel } from './MemoryPanel'
 
 export default function App() {
+  const [memoriesOpen, setMemoriesOpen] = useState(false)
   const [health, setHealth] = useState<HealthState>({ status: 'loading' })
   const chat = useChat()
   const scrollArea = useRef<HTMLDivElement>(null)
@@ -30,6 +32,9 @@ export default function App() {
         <p className="status" data-testid="status" data-state={health.status}>
           {health.status === 'loading' ? 'checking…' : health.status}
         </p>
+        <button type="button" className="text-button memories-shortcut"
+          aria-expanded={memoriesOpen} aria-controls="memories-dialog"
+          onClick={() => setMemoriesOpen(true)}>Memories</button>
         {chat.connected && <div className="topbar-actions">
           <span className="model-pill">Gemini · {chat.model}</span>
           <button type="button" className="text-button" onClick={chat.changeKey}>Change key or model</button>
@@ -37,6 +42,7 @@ export default function App() {
         </div>}
       </header>
 
+      {memoriesOpen && <MemoryPanel onClose={() => setMemoriesOpen(false)} />}
       {!chat.connected ? <section className="setup-panel">
         <p className="eyebrow">WELCOME TO CHOMI</p>
         <p className="setup-title">A little space to think out loud.</p>
