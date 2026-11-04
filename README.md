@@ -22,10 +22,23 @@ flowchart LR
     API -->|"request-scoped user key"| Gemini["Google Gemini API"]
 ```
 
-Chomiii does not yet include accounts, tools, autonomous agents, or long-term
-memory. Anonymous conversations belong to one browser cookie. They do not sync
+Chomiii now packages a **versioned runtime identity and six prompt-only skills**.
+It still does not include accounts, executable tools, autonomous action loops,
+background tasks or long-term personal memory. Anonymous conversations belong to one browser cookie. They do not sync
 between devices, and losing the cookie loses access to them. See
 [docs/roadmap.md](docs/roadmap.md) for later milestones.
+
+## Runtime identity and skills (M1.5)
+
+Java loads trusted Markdown from [backend/src/main/resources/agent](backend/src/main/resources/agent)
+once when the application starts. The small system prompt includes an available
+skill catalog; a single matching `SKILL.md` is attached to the system-instruction
+channel when relevant. You can explicitly select a skill with `/skill research`,
+`/skill debugging`, `/skill planning`, `/skill writing`, `/skill decision-support`,
+or `/skill summarization`. No extra model call is used for skill selection.
+Skills guide answers but **cannot run code, browse, perform actions or save memory**.
+See [agent runtime](docs/agent-runtime.md) for loading, limitations, trust
+boundaries and future tools/approval design.
 
 ## Start on Windows
 

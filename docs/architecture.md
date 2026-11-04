@@ -56,9 +56,12 @@ interrupted stream.
 `ContextWindow` chooses the newest 20 complete turns within 16,000 Java
 string characters, including the current user message. It preserves message
 order and role and excludes failed or interrupted assistant messages. It reads
-only the owner-checked conversation. The fixed instruction says Chomi has no
-tools, live browsing, or long-term memory. User text cannot become a system
-instruction. There is no semantic retrieval or agent execution in M1.
+only the owner-checked conversation. The M1.5 prompt layer loads a versioned `SYSTEM.md` and compact skill catalog
+from the Java classpath once per process, and attaches at most one matching
+`SKILL.md` via local deterministic routing. User text remains in the user role,
+not trusted system instructions. The identity declares no tools, browsing or
+long-term memory. This is prompt composition, not semantic retrieval or agent
+execution. See [agent-runtime.md](agent-runtime.md).
 
 ## Browser sessions and credentials
 

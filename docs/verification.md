@@ -258,3 +258,18 @@ Both engines have been exercised locally. The PostgreSQL Testcontainers suite st
 ## Honest summary
 
 Green and observed: backend unit/MVC tests, MySQL integration, Flyway migrations on both database engines, the browser-to-backend path on both engines, frontend checks, and the `npm audit` high-severity gate. PostgreSQL Testcontainers, backend vulnerability scanning, and hosted CI remain unverified until the GitHub billing blocker is resolved.
+
+
+## M1.5 proposed PR: agent instructions and skill routing (2026-11-04)
+
+- **Implemented in branch:** cached Markdown identity, six portable task skills,
+  local deterministic activation, trusted classpath loading, and policy files
+  for future tool/memory milestones.
+- **Tests authored:** `AgentInstructionsTest`, plus existing chat identity tests.
+  **Not executed in this environment:** Maven dependencies and GitHub Actions
+  are unavailable. Do not treat authored tests as passing evidence.
+- **Latency change:** successful post-stream message and conversation-list GETs
+  run concurrently. No matched benchmark was run; no improvement is claimed.
+- **CI:** GitHub Actions has previously stopped before runners execute any
+  steps due to account billing restrictions. Verify the new PR's current CI
+  run rather than assuming it tested the code.

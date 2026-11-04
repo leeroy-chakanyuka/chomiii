@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -46,7 +47,7 @@ public final class AgentInstructions {
             throw new IllegalStateException("Could not load agent skills", exception);
         }
         if (found.isEmpty()) throw new IllegalStateException("No agent skills were packaged");
-        skills = Map.copyOf(found);
+        skills = Collections.unmodifiableMap(new LinkedHashMap<>(found));
         StringBuilder catalog = new StringBuilder(identity)
                 .append("\n\n## Available guidance (not executable tools)\n");
         found.values().forEach(skill -> catalog.append("- ")

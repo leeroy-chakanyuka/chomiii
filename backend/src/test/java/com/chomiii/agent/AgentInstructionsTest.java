@@ -26,7 +26,7 @@ class AgentInstructionsTest {
     @Test
     void explicitSkillSelectionIsDeterministic() {
         String prompt = instructions.forMessage("/skill research What evidence do we have?");
-        assertThat(prompt).contains("## Activated skill: research", "Sources");
+        assertThat(prompt).contains("## Activated skill: research", "source reliability");
     }
 
     @Test
