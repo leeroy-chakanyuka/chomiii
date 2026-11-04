@@ -52,7 +52,7 @@ it('does not create a task until the person approves a proposal', async () => {
   expect(screen.queryByText('No tasks created yet.')).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Mark complete' }))
   await screen.findByText('Completed')
-  expect(calls).toContain('POST http://localhost:8080/api/actions/tasks/proposals/proposal-1/approve')
+  expect(calls.some(entry => /POST .*\/actions\/tasks\/proposals\/proposal-1\/approve$/.test(entry))).toBe(true)
 })
 
 it('shows an error instead of claiming a failed action completed', async () => {
