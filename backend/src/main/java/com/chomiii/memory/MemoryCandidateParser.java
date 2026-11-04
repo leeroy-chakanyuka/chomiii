@@ -14,7 +14,8 @@ public final class MemoryCandidateParser {
             "(?i)\\b(password|passphrase|api[ -]?key|secret[ -]?key|otp|pin|cvv|credit[ -]?card|"
             + "bank[ -]?account|account[ -]?number|identity[ -]?number|passport|diagnos(?:is|ed)|"
             + "medication|medical|religion|religious|politic(?:s|al)|sexual|ethnic(?:ity)?|"
-            + "racial|pregnan(?:t|cy)|cancer|adhd|depression|suicide)\\b");
+            + "racial|pregnan(?:t|cy)|cancer|adhd|depression|suicide|"
+            + "ignore[ -]previous|system[ -]prompt|developer[ -]instructions)\\b");
 
     public record Candidate(String content, String source, double confidence) {}
 

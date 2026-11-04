@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Service
@@ -42,7 +43,7 @@ public class ChatStreamService {
 
     public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
             MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
-            ExecutorService chatExecutor) {
+            @Qualifier("chatExecutor") ExecutorService chatExecutor) {
         this.store = store;
         this.conversations = conversations;
         this.memories = memories;
