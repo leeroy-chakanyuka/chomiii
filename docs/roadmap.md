@@ -11,9 +11,9 @@ real autonomous action is not currently implemented.
 ```mermaid
 flowchart TD
     M0["M0 Foundation<br/>public repo · architecture · TDD · CI"]
-    M1["M1 Chat<br/>Gemini first · BYOK · hosted streaming chat"]
+    M1["M1 Chat<br/>Gemini first · BYOK · local streaming chat"]
     M2["M2 Memory<br/>user-scoped persistence"]
-    M3["M3 Agent<br/>tools · bounded loop · permissions"]
+    M3["M3 Actions<br/>everyday tools · approvals · bounded loop"]
     M4["M4 Integrations<br/>Gmail · Calendar · search · MCP"]
     M5["M5 Durable autonomy<br/>tasks · scheduling · retries"]
     M6["M6 South African workflows<br/>rand · transport · WhatsApp"]
@@ -74,7 +74,7 @@ Measure browser time to first visible token, provider first-token latency, and c
 
 First answer [what we are building and who it is for](product-vision.md).
 Chomiii is an everyday personal assistant, not a coding-specific agent. Keep
-a concise versioned identity (§SYSTEM.md§) and define the [context contract](context.md):
+a concise versioned identity ([SYSTEM.md](../backend/src/main/resources/agent/SYSTEM.md)) and define the [context contract](context.md):
 trusted identity, current user turn, bounded owner-scoped recent history, and
 clear separation from personal memory. No automatic generic skill selection,
 unnecessary provider calls, or promises of capabilities we do not have.
