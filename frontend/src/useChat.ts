@@ -17,6 +17,7 @@ export function useChat() {
   const [connected, setConnected] = useState(false)
   const [key, setKey] = useState('')
   const [remember, setRemember] = useState(false)
+  const [connecting, setConnecting] = useState(false)
   const [provider, setProvider] = useState('gemini')
   const [model, setModel] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -31,6 +32,7 @@ export function useChat() {
   const startedAt = useRef<number | null>(null)
   const firstVisibleMeasured = useRef(false)
   const hadSavedKey = useRef(false)
+  const connectionInFlight = useRef(false)
 
   useEffect(() => {
     if (!streamed || startedAt.current === null || firstVisibleMeasured.current) return
@@ -69,21 +71,32 @@ export function useChat() {
     }
   }, [])
 
-  function connect() {
-    if (!key.trim()) { setError('Enter a Gemini API key to start chatting.'); return }
+  async function connect() {
+    if (connectionInFlight.current) return
+    const selectedKey = key.trim()
+    if (!selectedKey) { setError('Enter a Gemini API key to start chatting.'); return }
     if (!catalog.some((item) => item.id === provider && item.models.some((entry) => entry.id === model))) {
       setError('Choose an available Gemini model.'); return
     }
-    const activate = () => { setKey(key.trim()); setConnected(true); setError('') }
-    if (remember) {
-      void rememberKey({ apiKey: key.trim(), model }).then(() => {
+    connectionInFlight.current = true
+    setConnecting(true)
+    try {
+      if (remember) {
+        await rememberKey({ apiKey: selectedKey, model })
         hadSavedKey.current = true
-        activate()
-      }).catch((cause: unknown) => setError(errorText(cause)))
-    } else if (hadSavedKey.current) {
-      void forgetRememberedKey().then(() => { hadSavedKey.current = false; activate() })
-        .catch((cause: unknown) => setError(errorText(cause)))
-    } else activate()
+      } else if (hadSavedKey.current) {
+        await forgetRememberedKey()
+        hadSavedKey.current = false
+      }
+      setKey(selectedKey)
+      setConnected(true)
+      setError('')
+    } catch (cause) {
+      setError(errorText(cause))
+    } finally {
+      connectionInFlight.current = false
+      setConnecting(false)
+    }
   }
 
   function changeKey() { setConnected(false); setError('') }
@@ -214,7 +227,7 @@ export function useChat() {
   }
 
   return {
-    catalog, history, loading, connected, key, setKey, remember, setRemember, provider, setProvider, model, setModel,
+    catalog, history, loading, connected, connecting, key, setKey, remember, setRemember, provider, setProvider, model, setModel,
     selectedId, messages, input, setInput, streamed, busy, error,
     connect, changeKey, removeKey, newChat, switchChat, removeChat, submit, stop,
   }
