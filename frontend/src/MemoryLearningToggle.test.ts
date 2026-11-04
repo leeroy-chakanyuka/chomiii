@@ -4,7 +4,8 @@ import { sendMessage } from './chatApi'
 afterEach(() => { vi.unstubAllGlobals() })
 
 it('requires explicit learn-memory opt-in before sending an extraction permission header', async () => {
-  const fetchMock = vi.fn(async () => new Response(new ReadableStream<Uint8Array>({
+  const fetchMock = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) =>
+    new Response(new ReadableStream<Uint8Array>({
     start(controller) {
       controller.enqueue(new TextEncoder().encode(
         'event:complete\ndata:{"messageId":"saved","status":"complete"}\n\n',
