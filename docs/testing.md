@@ -146,3 +146,19 @@ actual output is recorded in [verification](verification.md).
 - Measure **additional Gemini tokens and charges** separately from visible
   response time; record false-positive and missed-memory rates from representative
   everyday scenarios. Nothing above is a claimed passing run.
+
+## M3 initial action suite (unverified)
+
+```bash
+cd backend
+./mvnw -Dtest=TaskActionServiceTest test
+# With disposable PostgreSQL or MySQL:
+./mvnw -Dtest=TaskActionDatabaseTest test
+cd ../frontend
+npm ci && npm run test && npm run typecheck && npm run build
+```
+
+`TasksPanel.test.tsx` validates draft/approve/complete and error states;
+`taskApi.test.ts` checks proposal/approval requests remain separate.
+Exercise two independent sessions, rejection before approval, concurrent
+approval retries and restart persistence before merging.

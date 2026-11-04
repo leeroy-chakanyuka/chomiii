@@ -316,3 +316,17 @@ Parser, learning service, memory-state and frontend opt-in/review tests were
 authored. **Neither full Maven nor frontend tests have been executed in this
 session**. The provider's reported confidence has not been empirically
 calibrated, and no live memory-learning benchmark has been run.
+
+## M3 stacked task-action branch (2026-11-05)
+
+- Implemented on a new branch only: Flyway V4 proposal/task schema,
+  owner-scoped task action service/controller, task review panel, and
+  unit/database/frontend tests.
+- The actual tool boundary is an explicit server-side approval; LLM
+  tool invocation is **not yet wired up**.
+- **Unverified:** compilation, Maven and DB suites on both engines,
+  frontend tests, browser interaction, and simultaneous approval
+  idempotency under real database concurrency. GitHub Actions billing
+  still prevents runner assignment.
+- This is *progress on M3*, **not M3 completion**. M2 remains an
+  unmerged prerequisite for V4 migration ordering.

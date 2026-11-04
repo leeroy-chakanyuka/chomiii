@@ -5,7 +5,7 @@ M0 established the foundation. M1 has a locally verified Gemini chat path;
 its Docker startup remains unverified on the machine used for this milestone.
 M1.1 has measured the latency bottleneck without meeting its speed target;
 M1.5 product/context scope is delivered in PR #2, with full-suite verification still outstanding; see [M1.5 closure](m1.5-closure.md).
-M2 memory is under active development in review PR #3; M2.5 (workflow skills) and M3 (authorized actions) remain planned;
+M2 memory is under active development in review PR #3; M2.5 (workflow skills) remains planned, and an initial M3 authorized-task slice is in a stacked review branch;
 real autonomous action is not currently implemented.
 
 ```mermaid
@@ -186,3 +186,12 @@ Start with push-to-talk speech-to-text and text-to-speech, then evaluate streami
 ### M8 — Optional infrastructure and deployment
 
 Document reproducible deployment and operational checks; evaluate containerization only when the project owner opts in. No Docker requirement for earlier milestones or local verification.
+
+## M3 first implementation note (stacked, not completed)
+
+The first typed action is creation of a personal task **only after a
+reviewable proposal has been approved by its browser-session owner**.
+The code uses a transactional, idempotent proposal-to-task transition.
+See [M3 action design](m3-action-design.md). The model-to-tool loop,
+tool schema catalog, per-tool budget and in-chat approvals are **still
+outstanding**; this is not a general autonomous agent.

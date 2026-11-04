@@ -180,3 +180,23 @@ events with `INVALID_KEY`, `INVALID_REQUEST`, `UNSUPPORTED_MODEL`,
 `RATE_LIMITED`, `TIMEOUT`, `UNAVAILABLE`, or `EMPTY_RESPONSE`. A storage failure
 can produce `STORAGE_UNAVAILABLE`. Raw upstream messages and keys are never
 included in these errors.
+
+## M3 first typed action (stacked on M2)
+
+These endpoints act on the browser-session owner and share the Origin/CSRF
+and error policies described above. All titles are trimmed and limited to
+1–200 Java characters. Creating a proposal does **not** create a task.
+
+| Method and path | Response | Semantics |
+| --- | --- | --- |
+| `POST /api/actions/tasks/proposals` | `201` | Draft a task with `{"title":"Call the dentist"}`. |
+| `GET /api/actions/tasks/proposals` | `200` | List the owner's pending proposals. |
+| `POST /api/actions/tasks/proposals/{id}/approve` | `200` | Create a task exactly once; retry returns the same ID. |
+| `DELETE /api/actions/tasks/proposals/{id}` | `204` | Reject a pending proposal without execution. |
+| `GET /api/actions/tasks` | `200` | List the owner's actual tasks. |
+| `POST /api/actions/tasks/{id}/complete` | `200` | Mark an owned task completed, idempotently. |
+
+A foreign/unknown proposal ID returns 404. A rejected proposal cannot
+be approved and yields 409. Neither a proposal nor an open task is a
+scheduled alert, email or external action. No Gemini tool calling
+is connected to these endpoints yet. See [M3 design](m3-action-design.md).

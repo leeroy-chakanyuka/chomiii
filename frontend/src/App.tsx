@@ -3,9 +3,11 @@ import { fetchHealth, type HealthState } from './health'
 import { useChat } from './useChat'
 import { MarkdownReply } from './MarkdownReply'
 import { MemoryPanel } from './MemoryPanel'
+import { TasksPanel } from './TasksPanel'
 
 export default function App() {
   const [memoriesOpen, setMemoriesOpen] = useState(false)
+  const [tasksOpen, setTasksOpen] = useState(false)
   const [health, setHealth] = useState<HealthState>({ status: 'loading' })
   const chat = useChat()
   const scrollArea = useRef<HTMLDivElement>(null)
@@ -33,6 +35,9 @@ export default function App() {
           {health.status === 'loading' ? 'checking…' : health.status}
         </p>
         <button type="button" className="text-button memories-shortcut"
+          aria-expanded={tasksOpen} aria-controls="tasks-dialog"
+          onClick={() => setTasksOpen(true)}>Tasks</button>
+        <button type="button" className="text-button"
           aria-expanded={memoriesOpen} aria-controls="memories-dialog"
           onClick={() => setMemoriesOpen(true)}>Memories</button>
         {chat.connected && <div className="topbar-actions">
@@ -43,6 +48,7 @@ export default function App() {
       </header>
 
       {memoriesOpen && <MemoryPanel onClose={() => setMemoriesOpen(false)} />}
+      {tasksOpen && <TasksPanel onClose={() => setTasksOpen(false)} />}
       {!chat.connected ? <section className="setup-panel">
         <p className="eyebrow">WELCOME TO CHOMI</p>
         <p className="setup-title">A little space to think out loud.</p>
