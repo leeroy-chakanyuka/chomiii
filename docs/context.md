@@ -9,7 +9,7 @@
 | Stable runtime identity (`SYSTEM.md`) | Trusted application resource | Loaded at app startup | Remains stable/versioned |
 | Current user turn | User role, not system rules | Sent to provider | Same |
 | Recent complete conversation history | Owner-scoped role-tagged data | Selected by `ContextWindow` | Improved token-aware selection |
-| Personal preferences, commitments, facts | Constrained/consented user data | **Not implemented** | M2 |
+| Personal preferences, commitments, facts | Constrained/consented user data | **M2 PR #3:** manual and automatically learned owner-scoped memories and bounded lexical recall | M2 release hardening |
 | Notes, files, web results, app records | Untrusted source data | **Not implemented** | M2/M4 retrieval |
 | Task state, action results, deadline changes | Verified backend state | **Not implemented** | M3/M5 |
 | Date/time and app capabilities | Typed runtime context | **Not implemented** | Added only when needed |
@@ -80,3 +80,19 @@ inject these data types into M1.5. See the [evaluation scenarios](design/experie
 - Whether remembering a fact or loading a workflow **actually improves task completion**.
 
 **Acceptance for M1.5:** documented context boundaries, short trusted identity, deterministic current-message/history separation, focused tests, and no extra pre-stream inference. M2 and M2.5 are plans, not features already available.
+
+## M2 implementation note (PR #3, not merged)
+
+The proposed memory service stores user-explicit entries plus automatically learned
+conversation facts and reviewable inferences. It performs
+bounded, owner-scoped lexical selection on normal chat turns. The selected
+memories are added as lower-trust **user-role context** immediately before
+the current request, never as trusted system instructions. The app includes
+a browser-visible **Use saved memories** toggle, which sends an opt-out
+header for that turn.
+
+This still uses browser-cookie ownership, not stable signed-in accounts.
+A memory is not a source of instructions or authority to act, and relevant
+memories will be transmitted to the configured model provider. The memory
+lookup does not invoke another model. Retrieval/latency improvements must
+be measured rather than assumed. See [M2 design](m2-design.md).

@@ -160,11 +160,13 @@ export async function sendMessage(input: {
   model: string
   apiKey: string
   signal: AbortSignal
+  useMemory?: boolean
   onEvent: (event: ChatEvent) => void
 }): Promise<void> {
   const response = await fetch(url(`/conversations/${encodeURIComponent(input.conversationId)}/messages/stream`), {
     method: 'POST', credentials: 'same-origin', cache: 'no-store', signal: input.signal,
-    headers: { 'Content-Type': 'application/json', 'X-Gemini-Api-Key': input.apiKey },
+    headers: { 'Content-Type': 'application/json', 'X-Gemini-Api-Key': input.apiKey,
+      ...(input.useMemory === false ? { 'X-Chomiii-Use-Memory': 'false' } : {}) },
     body: JSON.stringify({ requestId: input.requestId, provider: input.provider, model: input.model, content: input.content }),
   })
   if (!response.ok) throw await problem(response)

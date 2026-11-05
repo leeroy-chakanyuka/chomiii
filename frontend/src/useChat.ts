@@ -15,6 +15,9 @@ export function useChat() {
   const [history, setHistory] = useState<ConversationSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [connected, setConnected] = useState(false)
+  const [useMemory, setUseMemory] = useState(() => {
+    try { return window.localStorage.getItem('chomiii:use-memory') !== 'false' } catch { return true }
+  })
   const [key, setKey] = useState('')
   const [remember, setRemember] = useState(false)
   const [connecting, setConnecting] = useState(false)
@@ -33,6 +36,10 @@ export function useChat() {
   const firstVisibleMeasured = useRef(false)
   const hadSavedKey = useRef(false)
   const connectionInFlight = useRef(false)
+
+  useEffect(() => {
+    try { window.localStorage.setItem('chomiii:use-memory', String(useMemory)) } catch { /* storage may be unavailable */ }
+  }, [useMemory])
 
   useEffect(() => {
     if (!streamed || startedAt.current === null || firstVisibleMeasured.current
@@ -177,7 +184,7 @@ export function useChat() {
       const abort = new AbortController()
       running.current = { conversationId, requestId, abort }
       await sendMessage({ conversationId, requestId, content, provider, model, apiKey: key,
-        signal: abort.signal, onEvent(event) {
+        signal: abort.signal, useMemory, onEvent(event) {
           if (event.kind === 'delta') setStreamed((previous) => previous + event.text)
           if (event.kind === 'error') streamError = event.message
           if ((event.kind === 'complete' || event.kind === 'error') && startedAt.current !== null
@@ -230,7 +237,7 @@ export function useChat() {
 
   return {
     catalog, history, loading, connected, connecting, key, setKey, remember, setRemember, provider, setProvider, model, setModel,
-    selectedId, messages, input, setInput, streamed, busy, error,
+    selectedId, messages, input, setInput, streamed, busy, error, useMemory, setUseMemory,
     connect, changeKey, removeKey, newChat, switchChat, removeChat, submit, stop,
   }
 }

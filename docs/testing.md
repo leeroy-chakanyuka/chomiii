@@ -107,3 +107,42 @@ path. This is not a memory or tool implementation.
 Then run `./mvnw test` and the frontend lint/typecheck/Vitest/build/Playwright
 checks, including `PostStreamRefresh.test.tsx` for concurrent independent
 post-stream refreshes. Do not claim these checks passed without actual output.
+
+## M2 PR #3 memory tests
+
+Backend focused (no live model):
+
+```bash
+cd backend
+./mvnw -Dtest=MemorySelectorTest,MemoryServiceTest,MemoryContextIntegrationTest,ChatIdentityTest test
+```
+
+With an authorized disposable PostgreSQL or MySQL DB set in `CHOMIII_DB_URL`,
+run `./mvnw -Dtest=MemoryDatabaseTest,ChatStreamDatabaseTest test` to exercise
+real API and user isolation, plus the normal `./mvnw verify` integration suite.
+
+Frontend, in `frontend/`: `npm ci && npm run lint && npm run typecheck && npm test && npm run build`.
+Review `MemoryPanel.test.tsx` and `memoryApi.test.ts` for CRUD and failure states.
+Manually test a newly saved "usual groceries" memory across two conversations,
+correction/deletion, disabled memory recall, a second session, and a live
+Gemini model's use of the selected fact.
+
+The results of executed PR tests are recorded in [verification](verification.md).
+
+## Additional M2 automatic-learning checks
+
+- Unit: `MemoryCandidateParserTest`, `MemoryLearningServiceTest`, and
+  `MemoryServiceTest` should cover evidence matching, sensitive content,
+  confidence/status, revisions and queued post-response work.
+- Browser: `MemoryLearningDefault.test.ts` and
+  `MemoryLearningReview.test.tsx` verify that no learning checkbox/header is
+  needed, that ambiguous inferences are reviewable, and that memory recall can
+  still be disabled independently.
+- Manual: without configuring a learning setting, say a stable preference,
+  allow the automatic second model request to finish, reopen Memories, and
+  confirm provenance and active status. Test an ambiguous inferred preference
+  and confirm it requires approval. Test delete/clear while extraction is in
+  flight. Verify the UI discloses additional provider usage.
+- Measure **additional Gemini tokens and charges** separately from visible
+  response time; record false-positive and missed-memory rates from representative
+  everyday scenarios. See [verification](verification.md) for completed checks.

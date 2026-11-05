@@ -1,6 +1,9 @@
 package com.chomiii.chat;
 
 import com.chomiii.agent.AgentInstructions;
+import com.chomiii.memory.MemoryService;
+import com.chomiii.memory.MemoryLearningService;
+import java.util.ArrayList;
 import com.chomiii.provider.ChatProvider;
 import com.chomiii.provider.ProviderCatalog;
 import com.chomiii.provider.ProviderFailure;
@@ -18,8 +21,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.TransactionException;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Service
@@ -29,22 +35,32 @@ public class ChatStreamService {
     private static final int MAX_REPLY_CHARS = 16_000;
     private final ChatTurnStore store;
     private final ConversationRepository conversations;
+    private final MemoryService memories;
+    private final MemoryLearningService learning;
     private final ProviderCatalog catalog;
     private final List<ChatProvider> providers;
     private final ExecutorService executor;
     private final Semaphore slots = new Semaphore(8);
     private final ConcurrentHashMap<UUID, Active> active = new ConcurrentHashMap<>();
 
-    public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, ProviderCatalog catalog,
-            List<ChatProvider> providers, ExecutorService chatExecutor) {
+    public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
+            MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
+            @Qualifier("chatExecutor") ExecutorService chatExecutor) {
         this.store = store;
         this.conversations = conversations;
+        this.memories = memories;
+        this.learning = learning;
         this.catalog = catalog;
         this.providers = List.copyOf(providers);
         this.executor = chatExecutor;
     }
 
     public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request, String key) {
+        return start(conversation, owner, request, key, true);
+    }
+
+    public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request,
+            String key, boolean useMemory) {
         if (key == null || key.isBlank() || key.length() > 512) {
             throw new ChatApiException(HttpStatus.BAD_REQUEST, "Enter a Gemini API key.");
         }
@@ -57,6 +73,14 @@ public class ChatStreamService {
             throw new ChatApiException(HttpStatus.TOO_MANY_REQUESTS, "Too many generations are in progress.");
         }
         long requestStartedNanos = System.nanoTime();
+        // The memory revision is captured BEFORE the user's turn is stored, as
+        // part of the originating turn. Any deletion, correction or clear that
+        // overlaps this turn (while the reply is being generated, or even between
+        // this read and the turn being persisted) increments it, so the
+        // background extraction scheduled later can prove whether its learning is
+        // still aligned with the user's memory. If the optional memory store
+        // cannot be reached, the turn proceeds and simply never learns.
+        final Long memoryRevision = turnRevision(memories, owner);
         ChatTurnStore.Pending pending;
         try {
             pending = store.begin(conversation, owner, request.requestId(), request.content().strip());
@@ -65,8 +89,21 @@ public class ChatStreamService {
             throw exception;
         }
         long storeReadyNanos = System.nanoTime();
-        ChatProvider.ChatInput input = new ChatProvider.ChatInput(request.model(), AGENT_INSTRUCTIONS.systemPrompt(),
-                ContextWindow.select(pending.history(), request.content().strip(), 20, 16_000));
+        // Retrieval is an optional, owner-scoped source of untrusted context.
+        // Reserve its budget BEFORE selecting history so the full model input
+        // stays within the established message and character bounds.
+        String memoryContext = useMemory ? retrievalContext(memories, owner, request.content()) : "";
+        boolean hasMemory = !memoryContext.isBlank();
+        int memoryChars = hasMemory ? memoryContext.length() : 0;
+        List<ChatProvider.Message> messages = new ArrayList<>(
+                ContextWindow.select(pending.history(), request.content().strip(),
+                        hasMemory ? 19 : 20, 16_000 - memoryChars));
+        if (hasMemory) {
+            messages.add(messages.size() - 1,
+                    new ChatProvider.Message(ChatProvider.Role.USER, memoryContext));
+        }
+        ChatProvider.ChatInput input = new ChatProvider.ChatInput(request.model(),
+                AGENT_INSTRUCTIONS.systemPrompt(), List.copyOf(messages));
         long contextReadyNanos = System.nanoTime();
         var emitter = new SseEmitter(130_000L);
         var generation = new Active(owner, conversation);
@@ -76,8 +113,8 @@ public class ChatStreamService {
         emitter.onTimeout(generation::cancelUnlessFinished);
         try {
             executor.execute(() -> run(request.requestId(), pending.assistantId(), owner, conversation,
-                    provider, input, key, generation, emitter, requestStartedNanos, storeReadyNanos,
-                    contextReadyNanos));
+                    provider, input, key, generation, emitter, memoryRevision, requestStartedNanos,
+                    storeReadyNanos, contextReadyNanos));
         } catch (RuntimeException exception) {
             active.remove(request.requestId(), generation);
             slots.release();
@@ -107,7 +144,7 @@ public class ChatStreamService {
     }
 
     private void run(UUID requestId, UUID assistantId, String owner, UUID conversation, ChatProvider provider,
-            ChatProvider.ChatInput input, String key, Active generation, SseEmitter emitter,
+            ChatProvider.ChatInput input, String key, Active generation, SseEmitter emitter, Long memoryRevision,
             long requestStartedNanos, long storeReadyNanos, long contextReadyNanos) {
         long workerStartedNanos = System.nanoTime();
         StringBuilder response = new StringBuilder();
@@ -188,6 +225,46 @@ public class ChatStreamService {
             active.remove(requestId, generation);
             slots.release();
             emitter.complete();
+            if ("complete".equals(outcome)) {
+                // Automatic, best-effort memory extraction is scheduled only AFTER the
+                // visible reply has completed. It uses an additional provider request
+                // but must not delay or change the completed chat response. It claims
+                // the revision captured at turn start, so a queued extraction cannot
+                // recreate content the user corrected or deleted in the meantime.
+                try {
+                    learning.schedule(owner, conversation, memoryRevision,
+                            input.messages().getLast().text(), provider, input.model(), key);
+                } catch (RuntimeException ignored) {
+                    log.debug("memory_learning scheduling unavailable");
+                }
+            }
+        }
+    }
+
+    /**
+     * Spring's transaction proxy may fail before MemoryService can catch a
+     * DataAccessException (e.g. CannotCreateTransactionException when the
+     * connection pool is exhausted). Retrieval is optional: chat proceeds
+     * without memory context instead of failing an otherwise valid request.
+     */
+    private static String retrievalContext(MemoryService memories, String owner, String question) {
+        try {
+            return memories.forChat(owner, question);
+        } catch (DataAccessException | TransactionException unavailable) {
+            return "";
+        }
+    }
+
+    /**
+     * Same optional-failure handling for the turn-start revision baseline: an
+     * unreadable store yields {@code null}, and such a turn never leaves a
+     * pending learning claim.
+     */
+    private static Long turnRevision(MemoryService memories, String owner) {
+        try {
+            return memories.revision(owner);
+        } catch (DataAccessException | TransactionException unavailable) {
+            return null;
         }
     }
 

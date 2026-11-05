@@ -1,5 +1,26 @@
 # Verification evidence
 
+## M2 PR #3 review, 2026-11-05
+
+The review fixed the missing session filter on memory endpoints. It also fixed
+a stale-learning race, bounded Gemini extraction time, and corrected memory
+panel loading and response validation. The original backend test run failed to
+compile because `ChatIdentityTest` lacked a `MemoryLearningService` import.
+With a disposable PostgreSQL database, the first full run exposed the missing
+session filter and an assertion that mixed chat and extraction requests.
+Both failures passed after the fixes.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Backend suite and package | PASS | `backend/mvnw.cmd package` against disposable PostgreSQL 17.11: 105 tests, 104 passed and the opt-in live Gemini test skipped. Flyway applied V1, V2, and V3. |
+| Memory and chat database tests | PASS | `mvnw.cmd -Dtest=MemoryDatabaseTest,ChatStreamDatabaseTest test`: 9 passed on PostgreSQL. Covers owner isolation, origin checks, approval, and stale learning after deletion or clear. |
+| Frontend unit tests | PASS | `npm run test`: 34 passed. A new stale-load test failed before the load-order fix and passed after it. |
+| Frontend checks | PASS | `npm ci`, `npm run lint`, `npm run typecheck`, and `npm run build`. `npm audit --audit-level=high` passed the high-severity gate; 7 moderate findings remain. |
+| Browser fixture tests | PASS | `npm run test:browser`: 8 passed. |
+| Browser and backend | PASS | `npm run test:browser:integration`: 2 passed against PostgreSQL; the opt-in live Gemini test was skipped. A browser saved, corrected, reloaded, and deleted a memory. A separate browser could not see it. |
+| MySQL and PostgreSQL Testcontainers | NOT RUN | MySQL verification was deferred to keep database setup short. Docker is unavailable, so the PostgreSQL Testcontainers Failsafe suite did not run. |
+| Live memory learning and cost | NOT RUN | No live Gemini extraction, learning accuracy study, or token-cost measurement was performed. |
+
 ## Local performance and UI follow-up, 2026-11-04
 
 The response-time target is **not met**. In the five-sample after run,
@@ -281,3 +302,38 @@ Green and observed: backend unit/MVC tests, MySQL integration, Flyway migrations
 M1.5 Java loader isolated smoke check (2026-11-04): Java 21 compilation and seven assertions passed on a recreated copy of the fetched `AgentInstructions.java` and `SYSTEM.md` source. This **does not** exercise the Maven/JUnit integration, the production classpath, or the frontend. Do not mark full CI or release gates green based on this result.
 
 M1.5 context-window isolated smoke check (2026-11-04): Java 21 compiled a recreated copy of the fetched `ContextWindow.java` plus a minimal `ChatProvider` type stub; **six assertions passed** (message budget, selection order, user role, oversized request rejection and interrupted-text exclusion). This is **not** repository Maven/JUnit execution.
+
+## M2 PR #3 under review — research and implementation status (2026-11-04)
+
+- **Research completed:** compared Agent Beacon, Mem0, Letta, Muse, OpenClaw
+  and OWASP memory/prompt-injection boundaries. The adopted first slice is
+  native JDBC/Flyway memory with explicit user saves and bounded retrieval;
+  [decision record](m2-research.md).
+- **Implemented on PR branch, pending review:** `V3__personal_memories.sql`,
+  `MemoryController`, `MemoryService`, `MemoryRepository`,
+  `MemorySelector`, chat context wiring, and a React Memories manager.
+  Post-response automatic memory extraction is now the default; a bounded
+  model output can propose direct facts or reviewable inferences, but the
+  assistant still cannot buy things
+  or access external services.
+- **Tests authored, not yet run:** unit selection/service tests, explicit
+  trust-boundary tests, real-DB CRUD and cross-owner isolation tests,
+  React memory manager and API parsing checks.
+- **Known gaps:** no signed-in accounts/cross-device sync, no automatic
+  cookie-expiry cleanup, no semantic memory or cross-turn inference,
+  incomplete deletion coverage for upstream provider/backups, no verified
+  multi-database migration, full UI or latency benchmarks.
+- **GitHub CI:** account billing prevents runner allocation. Do not
+  treat the workflow status as compiled/tested evidence.
+- **M2 is not certified complete.** This is an unmerged PR for review and further
+  verification, not a release or merge instruction.
+
+M2 PR #3 review follow-up: memory context length and its single additional message now count against the original 16,000-character/20-message chat budget. This is a static source review fix, **not a verified test run**.
+
+M2 automatic-learning change (2026-11-05): default-on queued post-reply
+Gemini extractor, evidence/confidence validation, suggested inference review,
+and revision-based stale-write protection are implemented on the PR branch.
+Parser, learning service, memory-state and frontend default/review tests were
+authored. **Neither full Maven nor frontend tests have been executed in this
+session**. The provider's reported confidence has not been empirically
+calibrated, and no live memory-learning benchmark has been run.

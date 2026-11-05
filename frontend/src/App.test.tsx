@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { healthUrl } from './health'
@@ -118,5 +118,40 @@ describe('the chomiii shell', () => {
       expect(screen.getByTestId('status')).toHaveAttribute('data-state', 'up'),
     )
     expect(vi.mocked(fetch)).toHaveBeenCalledWith('http://localhost:9000/health')
+  })
+
+  it('discloses automatic memory learning and its extra provider cost in the setup screen', async () => {
+    stubFetchTo(() => Promise.resolve(jsonResponse(
+      { status: 'UP', service: 'chomiii' },
+      200,
+    )))
+
+    render(<App />)
+
+    await waitFor(() =>
+      expect(screen.getByTestId('status')).toHaveAttribute('data-state', 'up'),
+    )
+    expect(screen.getByText(/AI provider again for memory extraction/)).toBeVisible()
+    expect(screen.getByText(/extra model tokens/)).toBeVisible()
+  })
+
+  it('discloses automatic memory learning before the first message in the chat view', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/health')) return jsonResponse({ status: 'UP', service: 'chomiii' }, 200)
+      if (url.endsWith('/chat/providers')) return jsonResponse([
+        { id: 'gemini', name: 'Gemini', defaultModel: 'gemini-3.5-flash-lite',
+          models: [{ id: 'gemini-3.5-flash-lite', name: 'Gemini Flash-Lite' }] },
+      ], 200)
+      if (url.endsWith('/conversations')) return jsonResponse([], 200)
+      throw new Error(`Unexpected request: ${url}`)
+    }))
+
+    render(<App />)
+    fireEvent.change(await screen.findByLabelText('Gemini API key'), { target: { value: 'k' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Start chatting' }))
+    await screen.findByText('What’s on your mind?')
+    expect(screen.getByText(/AI provider again for memory extraction/)).toBeVisible()
+    expect(screen.getByText(/extra model tokens/)).toBeVisible()
   })
 })

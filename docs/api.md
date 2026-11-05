@@ -1,4 +1,4 @@
-# M1 API reference
+# Chat and M2 memory API reference
 
 The browser calls `/api` on its own origin. JSON endpoints return JSON; errors
 before streaming use RFC 7807 `application/problem+json`. The health endpoint
@@ -66,6 +66,50 @@ fields without `messages`. The provider list contains entries such as
 The configured list does not guarantee a model is available to every key.
 When Google rejects a selected model, the backend returns an error rather
 than switching models.
+
+## M2 review PR: explicit personal memory endpoints
+
+Chomiii automatically learns potentially useful memories from eligible
+completed conversations. It may send the latest user message to the selected
+model again in a separate post-response extraction request. This behavior is
+documented and shown in the Memories UI; it uses additional API quota.
+No opt-in is required. Inferences remain suggestions until approved,
+and the user may inspect, edit, reject, or delete them. The browser-session
+cookie identifies the owner. A foreign memory ID returns `404`.
+
+| Method and path | Response | Purpose |
+| --- | --- | --- |
+| `GET /api/memories` | `200` array | List up to 100 memories saved by this browser-session owner. |
+| `POST /api/memories` | `201` memory | Save explicit `{"content":"My usual groceries are oats"}`. |
+| `PUT /api/memories/{id}` | `200` memory | Replace owned memory content. |
+| `POST /api/memories/{id}/approve` | `200` memory | Approve a tentative inferred memory for future recall. |
+| `DELETE /api/memories/{id}` | `204` | Hard-delete an owned memory record. |
+| `DELETE /api/memories` | `204` | Delete all memories for the current owner. |
+
+Entries have `id`, `content`, `source` (`user_explicit`, `conversation_fact`, or `inferred`),
+`status` (`active` or `suggested`), `confidence` (0–1), optional
+`sourceConversationId`, `createdAt` and `updatedAt`.
+The confidence is an uncalibrated model estimate; suggested memories are
+not used as chat context before approval. Content is trimmed and must contain
+**1–500 Java characters**; the owner is limited to **100 records**.
+The same Origin and cookie restrictions apply as for conversation mutations.
+
+Chat normally retrieves up to three relevant saved memories (bounded
+total context), added as *user-role context*, not as instructions.
+Set `X-Chomiii-Use-Memory: false` on a chat-stream request to skip
+memory retrieval for that turn. This is controlled by a visible checkbox
+in the PR frontend. Automatic learning happens server-side after eligible completed responses,
+without a client learning flag or opt-in header. `X-Chomiii-Learn-Memory`
+is **not used**. If enabled by eligibility checks, a second bounded Gemini
+request may use additional API quota. The `X-Chomiii-Use-Memory` header only
+controls **recall** of previously saved memories, not learning.
+The backend performs lexical relevance checks;
+it does not promise semantic search or successful recall of every fact.
+
+**Privacy:** relevant saved memory content is sent to the configured Gemini
+provider as part of the chat request. Deleting a memory removes its primary
+database row and prevents future retrieval, but does not erase previously
+sent requests, chat history, backups or an in-flight request.
 
 ## Send and stream a message
 

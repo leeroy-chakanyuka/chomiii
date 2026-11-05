@@ -28,6 +28,33 @@ tasks or long-term personal memory. Anonymous conversations belong to one browse
 between devices, and losing the cookie loses access to them. See
 [docs/roadmap.md](docs/roadmap.md) for later milestones.
 
+## M2 review PR: personal memories
+
+[PR #3](https://github.com/leeroy-chakanyuka/chomiii/pull/3) introduces
+a **Memories** panel where people can deliberately save, inspect, edit and
+delete preferences or commitments. The PR's backend stores owner-scoped memories (manually saved or learned
+after an optional post-reply extraction) in the existing database and selects
+up to three relevant **active** memories
+for future chats without another inference request. The chat screen has a
+**Use saved memories** checkbox to opt out of using saved facts.
+
+**Learning is automatic by default:** eligible completed messages may trigger
+an extra Gemini extraction call after the visible reply, using the configured
+model API key and additional tokens. No learning opt-in toggle or special
+request header is required. Directly supported user facts can be saved;
+uncertain inferences are held as reviewable suggestions. The Memories panel
+explains this and lets users review, correct, reject, and delete entries. This is **not**
+cross-device accounts, or
+permission to take actions. The existing anonymous cookie owns the saved
+records: losing it may lose access. Relevant memories sent to the model
+provider are subject to that provider's data handling; memory entries remain
+plaintext in the app database. Do not store passwords, access keys or payment
+details. Deleting a memory does not delete similar facts previously typed in
+chat messages or copies already supplied to a model provider.
+
+Read [M2 research](docs/m2-research.md), [design and limitations](docs/m2-design.md)
+and [verification](docs/verification.md) before treating M2 as complete.
+
 ## Product direction and context (M1.5)
 
 Chomiii is a **general-purpose personal assistant for everyday people**, not a

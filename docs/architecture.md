@@ -117,3 +117,36 @@ assistant, not the underlying implementation.
 
 See [product-vision.md](product-vision.md) and [agent-landscape.md](agent-landscape.md)
 for everyday-user requirements and the design lessons we intend to adopt.
+
+## M2 implementation under review (PR #3)
+
+[Memory research](m2-research.md) selects a small native service rather
+than Beacon/third-party memory infrastructure. The owner-scoped
+`personal_memories` Flyway V3 table stores explicit user-saved facts.
+`MemoryController` exposes inspectable CRUD, `MemoryService` enforces
+limits and ownership, and `MemorySelector` chooses a bounded number of
+lexically relevant facts. `ChatStreamService` supplies selected records
+as a **user-role context message** before the current request; these
+records are not part of the system prompt and grant no tool privileges.
+
+```mermaid
+flowchart LR
+    Panel["Memories panel"] --> Controller["MemoryController"]
+    Controller --> Memory["MemoryService"]
+    Memory --> DB["personal_memories, owner hash"]
+    Chat["ChatStreamService"] --> Memory
+    Memory -->|relevant user data| Provider["ChatProvider / Gemini"]
+```
+
+Memory identity currently follows the existing anonymous cookie, **not
+a named cross-device user**. Retrieval makes an indexed local DB read
+but no extra model call. The M2 acceptance and retention requirements
+are outlined in [M2 design](m2-design.md).
+
+The session filter also protects `/api/memories`, applying the same owner,
+origin, and no-store rules as conversation requests. Before storing a chat
+turn, the backend reads the owner's memory revision. Manual memory changes
+increment that revision, so an older extraction cannot restore a deleted or
+corrected memory. The separate extraction worker cancels its Gemini request
+after 120 seconds. A failed memory lookup leaves chat available without
+memory context.

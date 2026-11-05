@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { fetchHealth, type HealthState } from './health'
 import { useChat } from './useChat'
 import { MarkdownReply } from './MarkdownReply'
+import { MemoryPanel } from './MemoryPanel'
 
 export default function App() {
+  const [memoriesOpen, setMemoriesOpen] = useState(false)
   const [health, setHealth] = useState<HealthState>({ status: 'loading' })
   const chat = useChat()
   const scrollArea = useRef<HTMLDivElement>(null)
@@ -30,6 +32,9 @@ export default function App() {
         <p className="status" data-testid="status" data-state={health.status}>
           {health.status === 'loading' ? 'checking…' : health.status}
         </p>
+        <button type="button" className="text-button memories-shortcut"
+          aria-expanded={memoriesOpen} aria-controls="memories-dialog"
+          onClick={() => setMemoriesOpen(true)}>Memories</button>
         {chat.connected && <div className="topbar-actions">
           <span className="model-pill">Gemini · {chat.model}</span>
           <button type="button" className="text-button" onClick={chat.changeKey}>Change key or model</button>
@@ -37,6 +42,7 @@ export default function App() {
         </div>}
       </header>
 
+      {memoriesOpen && <MemoryPanel onClose={() => setMemoriesOpen(false)} />}
       {!chat.connected ? <section className="setup-panel">
         <p className="eyebrow">WELCOME TO CHOMI</p>
         <p className="setup-title">A little space to think out loud.</p>
@@ -69,6 +75,7 @@ export default function App() {
         </form>
         <p className="small-print">Get a key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>. Without Remember, your key stays in memory until you close this tab. Remember saves an encrypted copy in this browser profile so you can return without re-entering it. This is convenience storage, not protection against a compromised browser; another app served from the same local address and port could also access it. Google account limits or charges may apply.</p>
         {chat.history.length > 0 && <p className="small-print">Your conversations will be here when you reconnect with a key.</p>}
+        <p className="learning-note">Chomi learns automatically: an eligible message may be sent to your AI provider again for memory extraction after a completed reply, using extra model tokens on your key. Review, correct, or delete what Chomi learns in Memories.</p>
       </section> : <div className="workspace">
         <aside className="sidebar" aria-label="Conversations">
           <button type="button" className="new-chat" onClick={chat.newChat} disabled={chat.busy}>+ New chat</button>
@@ -93,6 +100,7 @@ export default function App() {
                 <p className="eyebrow">JUST THE TWO OF US</p>
                 <p className="empty-title">What’s on your mind?</p>
                 <p>Ask Chomi to explain something, explore an idea, or help you write. Your chat stays here for this browser session.</p>
+                <p className="learning-note">After a completed reply, Chomi may send your message to your AI provider again for memory extraction, using extra model tokens on your key. What it learns is kept in Memories, where you can correct or delete it.</p>
               </div>}
               {chat.messages.map((message) => <article className={`message ${message.role}`} key={message.id}>
                 <span className="speaker">{message.role === 'user' ? 'You' : 'Chomi'}</span>
@@ -124,7 +132,14 @@ export default function App() {
                 Stop generation
               </button> : <button type="submit" className="primary-button" disabled={!chat.input.trim()}>Send</button>}
             </form>
-            <p className="composer-hint">Enter to send · Shift+Enter for a new line</p>
+            <div className="composer-footer">
+              <p className="composer-hint">Enter to send · Shift+Enter for a new line</p>
+              <label className="memory-use-toggle">
+                <input type="checkbox" checked={chat.useMemory} disabled={chat.busy}
+                  onChange={event => chat.setUseMemory(event.target.checked)} />
+                Use saved memories
+              </label>
+            </div>
           </div>
         </section>
       </div>}
