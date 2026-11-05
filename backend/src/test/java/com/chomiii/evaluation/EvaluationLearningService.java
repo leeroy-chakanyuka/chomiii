@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 final class EvaluationLearningService extends MemoryLearningService {
-    record Submission(boolean submitted, boolean rejected) {}
+    record Submission(boolean submitted, boolean rejected, boolean revisionAvailable, long scheduledNanos) {}
     private final CountingExecutor worker;
     private final BlockingQueue<Submission> submissions = new java.util.concurrent.LinkedBlockingQueue<>();
 
@@ -30,7 +30,8 @@ final class EvaluationLearningService extends MemoryLearningService {
         try {
             super.schedule(owner, conversation, revision, text, provider, model, key);
         } finally {
-            submissions.add(new Submission(worker.submitted.get() > before, worker.rejected.get() > rejected));
+            submissions.add(new Submission(worker.submitted.get() > before, worker.rejected.get() > rejected, revision != null,
+                    System.nanoTime()));
         }
     }
 

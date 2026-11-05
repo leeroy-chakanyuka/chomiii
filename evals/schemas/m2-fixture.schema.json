@@ -3,13 +3,14 @@
   "title": "Chomiii synthetic evaluation fixture, version 1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "version", "description", "category", "difficulty", "inputType", "synthetic", "turns", "expectedMemories", "forbiddenMemories", "retrievalChecks", "lifecycle"],
+  "required": ["id", "version", "description", "category", "difficulty", "importance", "inputType", "synthetic", "turns", "expectedMemories", "forbiddenMemories", "retrievalChecks", "lifecycle"],
   "properties": {
     "id": {"type": "string", "minLength": 1},
     "version": {"const": 1},
     "description": {"type": "string", "minLength": 1},
     "category": {"enum": ["explicit-facts", "long-messages", "conversations", "corrections", "inferences", "negative", "lifecycle"]},
     "difficulty": {"enum": ["easy", "medium", "difficult"]},
+    "importance": {"enum": ["high", "medium", "low"]},
     "inputType": {"enum": ["single_message", "conversation", "pasted_transcript"]},
     "synthetic": {"const": true},
     "turns": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/turn"}},
@@ -17,7 +18,7 @@
     "forbiddenMemories": {"type": "array", "items": {"$ref": "#/$defs/forbidden"}},
     "retrievalChecks": {"type": "array", "items": {"$ref": "#/$defs/retrieval"}},
     "lifecycle": {"type": "array", "items": {"$ref": "#/$defs/action"}},
-    "planning": {"type": ["object", "null"], "description": "Reserved for the M3.1 evaluation contract."}
+    "planning": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/planning"}]}
   },
   "$defs": {
     "turn": {
@@ -28,7 +29,9 @@
         "role": {"enum": ["user", "assistant"]},
         "content": {"type": "string", "minLength": 1},
         "expectedEligibility": {"enum": ["eligible", "too_short", "too_long", "no_personal_language", "chat_rejected", null]},
-        "scriptedExtraction": {"type": ["object", "null"]}
+        "scriptedExtraction": {"type": ["object", "string", "null"]},
+        "targetChars": {"type": ["integer", "null"], "minimum": 1, "maximum": 12000},
+        "paddingText": {"type": ["string", "null"], "minLength": 1}
       },
       "allOf": [{"if": {"properties": {"role": {"const": "user"}}}, "then": {"required": ["expectedEligibility"], "properties": {"expectedEligibility": {"type": "string"}}}}]
     },
@@ -42,8 +45,9 @@
         "sourceTurnIds": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
         "kind": {"enum": ["explicit_fact", "inference"]},
         "importance": {"enum": ["high", "medium", "low"]},
-        "expectedStatus": {"enum": ["active", "suggested"]},
-        "inScope": {"type": "boolean"}
+        "expectedStatus": {"enum": ["active", "suggested", "absent"]},
+        "inScope": {"type": "boolean"},
+        "origin": {"enum": ["conversation", "manual_edit"]}
       }
     },
     "forbidden": {
@@ -60,6 +64,22 @@
         "afterTurnId": {"type": "string"},
         "operation": {"enum": ["approve", "edit", "delete", "clear", "other_owner", "delete_while_pending"]},
         "memoryId": {"type": ["string", "null"]}, "content": {"type": ["string", "null"]}
+      }
+    },
+    "planning": {
+      "type": "object", "additionalProperties": false,
+      "required": ["instruction", "oracleMemoryIds", "requiredGoals", "toolsAvailable", "missingInformation", "forbiddenActions", "requiredSteps"],
+      "properties": {
+        "instruction": {"type": "string", "minLength": 1},
+        "oracleMemoryIds": {"type": "array", "items": {"type": "string"}},
+        "requiredGoals": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "toolsAvailable": {"type": "array", "items": {"type": "string"}},
+        "missingInformation": {"type": "array", "items": {"type": "string"}},
+        "forbiddenActions": {"type": "array", "items": {"type": "string"}},
+        "requiredSteps": {"type": "array", "items": {"type": "object", "additionalProperties": false,
+          "required": ["id", "operation", "dependsOn", "requiresApproval"],
+          "properties": {"id": {"type": "string"}, "operation": {"type": "string"},
+            "dependsOn": {"type": "array", "items": {"type": "string"}}, "requiresApproval": {"type": "boolean"}}}}
       }
     }
   }

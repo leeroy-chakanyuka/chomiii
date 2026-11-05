@@ -1,0 +1,44 @@
+[
+  {
+    "id":"m2-long-0500","version":1,"description":"A preference buried in a 500-character message.","category":"long-messages","difficulty":"medium","importance":"high","inputType":"single_message","synthetic":true,
+    "turns":[{"id":"t1","role":"user","content":"I usually eat oats for breakfast. The afternoon was busy and the streets were noisy.\n\n","targetChars":500,"paddingText":"The fictional market had a long queue, then the sky became cloudy. ","expectedEligibility":"eligible","scriptedExtraction":{"memories":[{"content":"I usually eat oats for breakfast","kind":"fact","confidence":0.95,"evidence":"I usually eat oats for breakfast"}]}}],
+    "expectedMemories":[{"id":"breakfast","statement":"I usually eat oats for breakfast","aliases":[],"sourceTurnIds":["t1"],"kind":"explicit_fact","importance":"high","expectedStatus":"active","inScope":true}],"forbiddenMemories":[{"statement":"I dislike markets","reason":"The queue is a temporary observation.","category":"over_inference"}],"retrievalChecks":[{"query":"What do I usually eat for breakfast?","expectedMemoryIds":["breakfast"]}],"lifecycle":[]
+  },
+  {
+    "id":"m2-long-1000","version":1,"description":"A 1,000-character message with one recurring commitment.","category":"long-messages","difficulty":"medium","importance":"high","inputType":"single_message","synthetic":true,
+    "turns":[{"id":"t1","role":"user","content":"My weekly class meets on Thursday evenings. Today the fictional cafe changed its chairs.\n\n","targetChars":1000,"paddingText":"The street was quiet; a bus arrived and several people crossed the road. ","expectedEligibility":"eligible","scriptedExtraction":{"memories":[{"content":"My weekly class meets on Thursday evenings","kind":"fact","confidence":0.95,"evidence":"My weekly class meets on Thursday evenings"}]}}],
+    "expectedMemories":[{"id":"class","statement":"My weekly class meets on Thursday evenings","aliases":[],"sourceTurnIds":["t1"],"kind":"explicit_fact","importance":"high","expectedStatus":"active","inScope":true}],"forbiddenMemories":[{"statement":"I dislike cafe chairs","reason":"The observation does not state a preference.","category":"unsupported"}],"retrievalChecks":[{"query":"When is my weekly class?","expectedMemoryIds":["class"]}],"lifecycle":[]
+  },
+  {
+    "id":"m2-long-1800","version":1,"description":"An 1,800-character message with a durable transport preference.","category":"long-messages","difficulty":"difficult","importance":"high","inputType":"single_message","synthetic":true,
+    "turns":[{"id":"t1","role":"user","content":"I prefer the train for my usual commute. Yesterday the fictional park was crowded.\n\n","targetChars":1800,"paddingText":"A shop closed early, the pavement was wet, and the afternoon passed without incident. ","expectedEligibility":"eligible","scriptedExtraction":{"memories":[{"content":"I prefer the train for my usual commute","kind":"fact","confidence":0.96,"evidence":"I prefer the train for my usual commute"}]}}],
+    "expectedMemories":[{"id":"train","statement":"I prefer the train for my usual commute","aliases":[],"sourceTurnIds":["t1"],"kind":"explicit_fact","importance":"high","expectedStatus":"active","inScope":true}],"forbiddenMemories":[{"statement":"I dislike parks","reason":"A single crowded park is not a durable preference.","category":"over_inference"}],"retrievalChecks":[{"query":"What train do I prefer for my commute?","expectedMemoryIds":["train"]}],"lifecycle":[]
+  },
+  {
+    "id":"m2-long-2000","version":1,"description":"The extractor accepts a message at its 2,000-character boundary.","category":"long-messages","difficulty":"difficult","importance":"high","inputType":"single_message","synthetic":true,
+    "turns":[{"id":"t1","role":"user","content":"I usually read novels on Sunday afternoons.\n\n","targetChars":2000,"paddingText":"The fictional street had a bakery, a small park, and a quiet bookshop. ","expectedEligibility":"eligible","scriptedExtraction":{"memories":[{"content":"I usually read novels on Sunday afternoons","kind":"fact","confidence":0.95,"evidence":"I usually read novels on Sunday afternoons"}]}}],
+    "expectedMemories":[{"id":"reading","statement":"I usually read novels on Sunday afternoons","aliases":[],"sourceTurnIds":["t1"],"kind":"explicit_fact","importance":"medium","expectedStatus":"active","inScope":true}],"forbiddenMemories":[{"statement":"I own a bookshop","reason":"The bookshop was only a setting.","category":"unsupported"}],"retrievalChecks":[{"query":"When do I usually read novels?","expectedMemoryIds":["reading"]}],"lifecycle":[]
+  },
+  {
+    "id":"m2-long-2001","version":1,"description":"A useful fact is skipped just above the extraction boundary.","category":"long-messages","difficulty":"difficult","importance":"high","inputType":"single_message","synthetic":true,
+    "turns":[{"id":"t1","role":"user","content":"I usually read novels on Sunday afternoons.\n\n","targetChars":2001,"paddingText":"The fictional street had a bakery, a small park, and a quiet bookshop. ","expectedEligibility":"too_long","scriptedExtraction":{"memories":[]}}],
+    "expectedMemories":[{"id":"reading","statement":"I usually read novels on Sunday afternoons","aliases":[],"sourceTurnIds":["t1"],"kind":"explicit_fact","importance":"medium","expectedStatus":"active","inScope":false}],"forbiddenMemories":[{"statement":"I own a bookshop","reason":"The setting does not establish ownership.","category":"unsupported"}],"retrievalChecks":[{"query":"When do I usually read novels?","expectedMemoryIds":["reading"]}],"lifecycle":[]
+  },
+  {
+    "id":"m2-long-chat-limit","version":1,"description":"A message above the 8,000-character chat boundary is rejected before a provider call.","category":"long-messages","difficulty":"difficult","importance":"high","inputType":"single_message","synthetic":true,
+    "turns":[{"id":"t1","role":"user","content":"My regular lunch includes beans and rice.\n\n","targetChars":8100,"paddingText":"This fictional note describes a quiet street and an ordinary afternoon. ","expectedEligibility":"chat_rejected","scriptedExtraction":{"memories":[]}}],
+    "expectedMemories":[{"id":"lunch","statement":"My regular lunch includes beans and rice","aliases":[],"sourceTurnIds":["t1"],"kind":"explicit_fact","importance":"medium","expectedStatus":"active","inScope":false}],"forbiddenMemories":[{"statement":"I never eat anything else","reason":"One regular lunch is not exclusive.","category":"over_inference"}],"retrievalChecks":[],"lifecycle":[]
+  },
+  {
+    "id":"m2-long-capacity","version":1,"description":"Six useful facts in one eligible message exceed the two-candidate capacity.","category":"long-messages","difficulty":"difficult","importance":"high","inputType":"single_message","synthetic":true,
+    "turns":[{"id":"t1","role":"user","content":"My regular breakfast is oats. I usually travel by bicycle. I volunteer on Tuesdays. My project is learning pottery. I prefer appointments after ten. My usual groceries include milk.\n\n","targetChars":1500,"paddingText":"The fictional afternoon was cloudy and a bus passed a quiet market. ","expectedEligibility":"eligible","scriptedExtraction":{"memories":[{"content":"My regular breakfast is oats","kind":"fact","confidence":0.95,"evidence":"My regular breakfast is oats"},{"content":"I usually travel by bicycle","kind":"fact","confidence":0.95,"evidence":"I usually travel by bicycle"}]}}],
+    "expectedMemories":[
+      {"id":"breakfast","statement":"My regular breakfast is oats","aliases":[],"sourceTurnIds":["t1"],"kind":"explicit_fact","importance":"high","expectedStatus":"active","inScope":true},
+      {"id":"bicycle","statement":"I usually travel by bicycle","aliases":[],"sourceTurnIds":["t1"],"kind":"explicit_fact","importance":"high","expectedStatus":"active","inScope":true},
+      {"id":"volunteer","statement":"I volunteer on Tuesdays","aliases":[],"sourceTurnIds":["t1"],"kind":"explicit_fact","importance":"medium","expectedStatus":"active","inScope":false},
+      {"id":"pottery","statement":"My project is learning pottery","aliases":[],"sourceTurnIds":["t1"],"kind":"explicit_fact","importance":"medium","expectedStatus":"active","inScope":false},
+      {"id":"appointment","statement":"I prefer appointments after ten","aliases":[],"sourceTurnIds":["t1"],"kind":"explicit_fact","importance":"medium","expectedStatus":"active","inScope":false},
+      {"id":"groceries","statement":"My usual groceries include milk","aliases":[],"sourceTurnIds":["t1"],"kind":"explicit_fact","importance":"medium","expectedStatus":"active","inScope":false}
+    ],"forbiddenMemories":[{"statement":"I dislike markets","reason":"The market is unrelated background.","category":"unsupported"}],"retrievalChecks":[{"query":"What is my regular breakfast?","expectedMemoryIds":["breakfast"]}],"lifecycle":[]
+  }
+]

@@ -1,5 +1,31 @@
 # Verification evidence
 
+## M2 evaluation harness, 2026-11-05
+
+The evaluation branch is based on M2 commit `720cb5f`. It adds 40 synthetic
+fixtures and test-scoped runner, scoring, reporting, judge, and manual-review
+code. It does not change production memory behavior. The prior M2 baseline was
+not rerun for this work at the owner's request.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Offline harness | PASS | `backend/mvnw.cmd -Dtest=com.chomiii.evaluation.*Test test`: 48 tests, 46 passed and 2 opt-in entry points skipped. The generated offline report completed 40 fixtures. |
+| Repeated selection | PASS | `mvnw.cmd -Dtest=EvaluationSuiteTest -Deval.category=long-messages -Deval.repetitions=3 test`: 21 scripted case runs completed. |
+| Manual review | PASS | `ManualReviewCliTest` read a generated review template and wrote a separate report without provider calls. |
+| PostgreSQL integration | PASS | On disposable PostgreSQL 17.11, `mvnw.cmd -Dtest=EvaluationSuiteTest,BudgetedEvaluationDatabaseTest -Deval.mode=integration -Deval.category=lifecycle test`: 2 JUnit tests passed and the report completed 11 lifecycle fixtures. |
+| MySQL integration | PASS | The same command passed against disposable MySQL 8.0.43, with 11 lifecycle fixtures. Both database runs applied V1–V3 and verified the call-budget test. |
+| Database target safety | PASS | Both runs supplied deliberately incorrect `SPRING_DATASOURCE_URL` and `SPRING_FLYWAY_URL` overrides. Flyway and the application connected to the validated disposable database instead. |
+| External model evaluation | NOT RUN | No live Gemini or external judge calls were enabled. The independent judge adapter was tested against a local HTTP fixture only. |
+| Independent implementation review | NOT RUN | No independent reviewer was dispatched. |
+
+The full offline report is a scripted pipeline check, not a Gemini score. It
+demonstrates that the current parser can accept an unsupported claim when the
+supplied quote appears in the user message, and that exact duplicate checking
+does not suppress a paraphrased duplicate. Scripted correction cases also leave
+older contradictory facts active. These observations do not establish how often
+Gemini produces such candidates. No live precision, recall, grounding, latency,
+token cost, or release-gate result is claimed.
+
 ## M2 PR #3 review, 2026-11-05
 
 The review fixed the missing session filter on memory endpoints. It also fixed

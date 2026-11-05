@@ -13,7 +13,7 @@ class FixtureLoaderTest {
 
     private static final String VALID = """
             {"id":"sample-1","version":1,"description":"An appointment preference",
-             "category":"explicit-facts","difficulty":"easy","inputType":"single_message",
+             "category":"explicit-facts","difficulty":"easy","importance":"high","inputType":"single_message",
              "synthetic":true,"turns":[{"id":"t1","role":"user","content":"I prefer appointments after ten.",
                "expectedEligibility":"eligible"}],
              "expectedMemories":[{"id":"f1","statement":"I prefer appointments after ten",
@@ -66,6 +66,20 @@ class FixtureLoaderTest {
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("eligibility");
         assertThatThrownBy(() -> load(VALID.replace("\"inScope\":true", "\"inScope\":null")))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("capacity");
+    }
+
+    @Test
+    void expandsExplicitPaddingWithoutTruncatingTheMessage() throws Exception {
+        var padded = VALID.replace("\"expectedEligibility\":\"eligible\"",
+                "\"expectedEligibility\":\"eligible\",\"targetChars\":2001,\"paddingText\":\" Another fictional detail.\"");
+        var turn = load(padded).turns().getFirst();
+        assertThat(turn.content()).startsWith("I prefer appointments after ten.").hasSize(2001);
+    }
+
+    @Test
+    void requiresAnExplicitEditForFactsLabeledAsManual() {
+        assertThatThrownBy(() -> load(VALID.replace("\"inScope\":true", "\"inScope\":true,\"origin\":\"manual_edit\"")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("matching edit");
     }
 
     private EvaluationFixture load(String content) throws Exception {

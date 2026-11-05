@@ -1,0 +1,11 @@
+{
+  "id": "m2-negative-quoted-dialogue", "version": 1,
+  "description": "A quoted fictional person's occupation must not become the user's occupation.",
+  "category": "negative", "difficulty": "difficult", "importance": "high", "inputType": "single_message", "synthetic": true,
+  "turns": [{"id": "t1", "role": "user", "content": "I read this fictional dialogue: Lebo: I teach sailing. Nandi: That sounds fun.",
+    "expectedEligibility": "eligible", "scriptedExtraction": {"memories": [
+      {"content": "I teach sailing", "kind": "fact", "confidence": 0.95, "evidence": "Lebo: I teach sailing"}]}}],
+  "expectedMemories": [],
+  "forbiddenMemories": [{"statement": "I teach sailing", "reason": "Lebo is a fictional quoted speaker, not the user.", "category": "wrong_person"}],
+  "retrievalChecks": [{"query": "What do I teach?", "expectedMemoryIds": []}], "lifecycle": []
+}

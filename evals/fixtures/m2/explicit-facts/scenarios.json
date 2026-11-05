@@ -1,0 +1,20 @@
+[
+  {
+    "id":"m2-explicit-commute-002","version":1,"description":"A recurring transport preference.","category":"explicit-facts","difficulty":"easy","importance":"high","inputType":"single_message","synthetic":true,
+    "turns":[{"id":"t1","role":"user","content":"I usually cycle to work on weekdays.","expectedEligibility":"eligible","scriptedExtraction":{"memories":[{"content":"I usually cycle to work on weekdays","kind":"fact","confidence":0.95,"evidence":"I usually cycle to work on weekdays"}]}}],
+    "expectedMemories":[{"id":"commute","statement":"I usually cycle to work on weekdays","aliases":["The user usually cycles to work on weekdays"],"sourceTurnIds":["t1"],"kind":"explicit_fact","importance":"high","expectedStatus":"active","inScope":true}],
+    "forbiddenMemories":[{"statement":"I cycle everywhere","reason":"Only a work commute was stated.","category":"over_inference"}],"retrievalChecks":[{"query":"How do I usually get to work?","expectedMemoryIds":["commute"]}],"lifecycle":[]
+  },
+  {
+    "id":"m2-explicit-volunteer-003","version":1,"description":"A recurring weekly commitment.","category":"explicit-facts","difficulty":"easy","importance":"high","inputType":"single_message","synthetic":true,
+    "turns":[{"id":"t1","role":"user","content":"Every Tuesday I volunteer at the community library.","expectedEligibility":"eligible","scriptedExtraction":{"memories":[{"content":"I volunteer at the community library every Tuesday","kind":"fact","confidence":0.95,"evidence":"Every Tuesday I volunteer at the community library"}]}}],
+    "expectedMemories":[{"id":"volunteer","statement":"I volunteer at the community library every Tuesday","aliases":["The user volunteers at the library every Tuesday"],"sourceTurnIds":["t1"],"kind":"explicit_fact","importance":"high","expectedStatus":"active","inScope":true}],
+    "forbiddenMemories":[{"statement":"I work as a librarian","reason":"Volunteering does not establish employment.","category":"unsupported"}],"retrievalChecks":[{"query":"When do I volunteer at the library?","expectedMemoryIds":["volunteer"]}],"lifecycle":[]
+  },
+  {
+    "id":"m2-explicit-pottery-004","version":1,"description":"A long-term learning project.","category":"explicit-facts","difficulty":"easy","importance":"medium","inputType":"single_message","synthetic":true,
+    "turns":[{"id":"t1","role":"user","content":"My long-term project is learning pottery.","expectedEligibility":"eligible","scriptedExtraction":{"memories":[{"content":"My long-term project is learning pottery","kind":"fact","confidence":0.94,"evidence":"My long-term project is learning pottery"}]}}],
+    "expectedMemories":[{"id":"pottery","statement":"My long-term project is learning pottery","aliases":["The user is learning pottery as a long-term project"],"sourceTurnIds":["t1"],"kind":"explicit_fact","importance":"medium","expectedStatus":"active","inScope":true}],
+    "forbiddenMemories":[{"statement":"I teach pottery","reason":"Learning pottery does not mean teaching it.","category":"unsupported"}],"retrievalChecks":[{"query":"What is my pottery project?","expectedMemoryIds":["pottery"]}],"lifecycle":[]
+  }
+]
