@@ -75,6 +75,7 @@ export default function App() {
         </form>
         <p className="small-print">Get a key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>. Without Remember, your key stays in memory until you close this tab. Remember saves an encrypted copy in this browser profile so you can return without re-entering it. This is convenience storage, not protection against a compromised browser; another app served from the same local address and port could also access it. Google account limits or charges may apply.</p>
         {chat.history.length > 0 && <p className="small-print">Your conversations will be here when you reconnect with a key.</p>}
+        <p className="learning-note">Chomi learns automatically: an eligible message may be sent to your AI provider again for memory extraction after a completed reply, using extra model tokens on your key. Review, correct, or delete what Chomi learns in Memories.</p>
       </section> : <div className="workspace">
         <aside className="sidebar" aria-label="Conversations">
           <button type="button" className="new-chat" onClick={chat.newChat} disabled={chat.busy}>+ New chat</button>
@@ -99,6 +100,7 @@ export default function App() {
                 <p className="eyebrow">JUST THE TWO OF US</p>
                 <p className="empty-title">What’s on your mind?</p>
                 <p>Ask Chomi to explain something, explore an idea, or help you write. Your chat stays here for this browser session.</p>
+                <p className="learning-note">After a completed reply, Chomi may send your message to your AI provider again for memory extraction, using extra model tokens on your key. What it learns is kept in Memories, where you can correct or delete it.</p>
               </div>}
               {chat.messages.map((message) => <article className={`message ${message.role}`} key={message.id}>
                 <span className="speaker">{message.role === 'user' ? 'You' : 'Chomi'}</span>

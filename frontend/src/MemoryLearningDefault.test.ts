@@ -4,7 +4,7 @@ import { sendMessage } from './chatApi'
 afterEach(() => { vi.unstubAllGlobals() })
 
 it('automatically learns on the backend without any browser opt-in header', async () => {
-  const fetchMock = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) =>
+  const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () =>
     new Response(new ReadableStream<Uint8Array>({
       start(controller) {
         controller.enqueue(new TextEncoder().encode(

@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
@@ -43,10 +44,10 @@ class ChatStreamDatabaseTest {
     @Test
     void streamsAndStoresTwoTurnsWithEarlierRolesAndNoUnrelatedHistory() throws Exception {
         when(provider.id()).thenReturn("gemini");
-        List<ChatProvider.ChatInput> sent = new ArrayList<>();
+        List<ChatProvider.ChatInput> sent = new CopyOnWriteArrayList<>();
         when(provider.open(any(), anyString())).thenAnswer(invocation -> {
             ChatProvider.ChatInput input = invocation.getArgument(0);
-            sent.add(input);
+            if (!input.systemInstruction().contains("memory-extraction")) sent.add(input);
             return new ChatProvider.Generation() {
                 @Override public void stream(Consumer<String> delta) {
                     delta.accept("From ");

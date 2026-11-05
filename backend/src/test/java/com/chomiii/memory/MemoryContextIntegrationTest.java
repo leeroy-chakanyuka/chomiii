@@ -40,6 +40,7 @@ class MemoryContextIntegrationTest {
         }).when(learning).schedule(
                 org.mockito.ArgumentMatchers.eq("owner"),
                 org.mockito.ArgumentMatchers.eq(conversation),
+                org.mockito.ArgumentMatchers.anyLong(),
                 org.mockito.ArgumentMatchers.eq(userText),
                 org.mockito.ArgumentMatchers.any(ChatProvider.class),
                 org.mockito.ArgumentMatchers.eq("gemini-3.5-flash-lite"),
@@ -65,6 +66,7 @@ class MemoryContextIntegrationTest {
             org.mockito.Mockito.verify(learning).schedule(
                     org.mockito.ArgumentMatchers.eq("owner"),
                     org.mockito.ArgumentMatchers.eq(conversation),
+                    org.mockito.ArgumentMatchers.anyLong(),
                     org.mockito.ArgumentMatchers.eq(userText),
                     org.mockito.ArgumentMatchers.eq(provider),
                     org.mockito.ArgumentMatchers.eq("gemini-3.5-flash-lite"),

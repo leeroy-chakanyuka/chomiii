@@ -13,21 +13,27 @@ export interface PersonalMemory {
 
 const root = () => healthUrl().replace(/\/health$/, '')
 
+const sources = ['user_explicit', 'conversation_fact', 'inferred'] as const
+const statuses = ['active', 'suggested'] as const
+
 function parseMemory(value: unknown): PersonalMemory {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new Error('Invalid memory response.')
   }
   const v = value as Record<string, unknown>
   if (typeof v.id !== 'string' || typeof v.content !== 'string'
-    || !['user_explicit', 'conversation_fact', 'inferred'].includes(String(v.source))
+    || !sources.includes(v.source as typeof sources[number])
+    || !statuses.includes(v.status as typeof statuses[number])
+    || typeof v.confidence !== 'number'
+    || !Number.isFinite(v.confidence) || v.confidence < 0 || v.confidence > 1
     || typeof v.createdAt !== 'string'
     || typeof v.updatedAt !== 'string') {
     throw new Error('Invalid memory response.')
   }
   return { id: v.id as string, content: v.content as string,
     source: v.source as PersonalMemory['source'],
-    status: v.status === 'suggested' ? 'suggested' : 'active',
-    confidence: typeof v.confidence === 'number' && v.confidence >= 0 && v.confidence <= 1 ? v.confidence : 1,
+    status: v.status as PersonalMemory['status'],
+    confidence: v.confidence,
     sourceConversationId: typeof v.sourceConversationId === 'string' ? v.sourceConversationId : null,
     createdAt: v.createdAt as string, updatedAt: v.updatedAt as string }
 }
@@ -39,7 +45,8 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
   if (!response.ok) {
     let title: unknown
     try { title = (await response.json() as { title?: unknown }).title } catch { /* empty response */ }
-    throw new Error(typeof title === 'string' ? title : 'Could not update memories.')
+    const fallback = init?.method ? 'Could not update memories.' : 'Could not load memories.'
+    throw new Error(typeof title === 'string' ? title : fallback)
   }
   return response
 }

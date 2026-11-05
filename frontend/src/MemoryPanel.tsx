@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { addMemory, approveMemory, clearMemories, listMemories, removeMemory, updateMemory, type PersonalMemory } from './memoryApi'
 
 function errorText(error: unknown): string {
@@ -8,26 +8,36 @@ function errorText(error: unknown): string {
 export function MemoryPanel({ onClose }: { onClose: () => void }) {
   const [items, setItems] = useState<PersonalMemory[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [working, setWorking] = useState(false)
   const [error, setError] = useState('')
   const [content, setContent] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
+  const loadVersion = useRef(0)
 
   useEffect(() => {
-    let active = true
-    listMemories().then(found => {
-      if (active) setItems(found)
-    }).catch(reason => {
-      if (active) setError(errorText(reason))
-    }).finally(() => {
-      if (active) setLoading(false)
-    })
-    return () => { active = false }
+    const version = loadVersion
+    void load()
+    return () => { version.current++ }
   }, [])
 
+  async function load() {
+    const version = ++loadVersion.current
+    setLoadError('')
+    setLoading(true)
+    try {
+      const found = await listMemories()
+      if (version === loadVersion.current) setItems(found)
+    } catch (reason) {
+      if (version === loadVersion.current) setLoadError(errorText(reason))
+    } finally {
+      if (version === loadVersion.current) setLoading(false)
+    }
+  }
+
   async function save() {
-    if (working || !content.trim()) return
+    if (working || loading || loadError || !content.trim()) return
     setWorking(true)
     setError('')
     try {
@@ -101,7 +111,10 @@ export function MemoryPanel({ onClose }: { onClose: () => void }) {
       </p>
       <p className="memory-intro">
         Memories belong to this browser session, not an account. If you lose its session cookie,
-        you may lose access to these memories. Do not save passwords or payment details.
+        you may lose access to these memories. Deleting a memory here does not erase copies
+        already sent to your AI provider, or kept in other transcripts or backups. Learning is
+        probabilistic: a learned fact can be wrong — look it over. Do not save passwords
+        or payment details.
       </p>
       <form className="memory-form" onSubmit={event => { event.preventDefault(); void save() }}>
         <label htmlFor="new-memory">What should Chomi remember?</label>
@@ -110,17 +123,25 @@ export function MemoryPanel({ onClose }: { onClose: () => void }) {
           placeholder="e.g. My usual grocery order includes oats and milk." disabled={working} />
         <div className="memory-actions">
           <small>{content.length}/500</small>
-          <button type="submit" className="memory-save" disabled={working || !content.trim()}>Save memory</button>
+          <button type="submit" className="memory-save"
+            disabled={working || loading || loadError !== '' || !content.trim()}>Save memory</button>
         </div>
       </form>
       {error && <p role="alert" className="memory-error">{error}</p>}
-      {loading ? <p>Loading memories…</p> : <>
+      {loading ? <p>Loading memories…</p> : loadError ? <>
+        <p role="alert" className="memory-error">{loadError}</p>
+        <div className="memory-actions">
+          <small>The saved list is unknown until it loads again.</small>
+          <button type="button" onClick={() => void load()}>Retry</button>
+        </div>
+      </> : <>
         <div className="memory-header">
           <h3>{items.length} {items.length === 1 ? 'memory' : 'memories'} (including suggestions)</h3>
           {items.length > 0 && <button type="button" className="text-button memory-danger"
             disabled={working} onClick={() => void clear()}>Delete all</button>}
         </div>
-        {items.length === 0 ? <p className="memory-empty">Nothing saved yet. Chomi will not invent your preferences.</p>
+        {items.length === 0
+          ? <p className="memory-empty">Nothing saved yet.</p>
           : <ul className="memory-list">{items.map(item => <li className="memory-item" key={item.id}>
             {editing === item.id ? <>
               <label className="visually-hidden" htmlFor={'edit-' + item.id}>Edit saved memory</label>

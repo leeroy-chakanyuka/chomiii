@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.chomiii.provider.ChatProvider;
+import com.chomiii.memory.MemoryLearningService;
 import com.chomiii.memory.MemoryService;
 import com.chomiii.provider.ProviderCatalog;
 import java.util.List;

@@ -74,8 +74,9 @@ Tests are authored in the PR. **None should be reported as passing without execu
   change learning defaults in the code. The Memories panel discloses what
   Chomiii does and shows all saved and suggested items.
 - Every manual memory mutation increments `browser_sessions.memory_revision`.
-  Background learning captures that revision and discards stale pending writes
-  if the user has since corrected, deleted, or cleared memories.
+  Chat captures that revision before storing the turn. Background learning
+  discards the result if the user has since corrected, deleted, or cleared
+  memories. The extraction worker cancels a Gemini request after 120 seconds.
 - The extra inference incurs **separate model usage and cost**, which must
   be explained in the UI; it is not a free background feature. Error,
   cancellation, and queue-saturation paths fail without affecting the reply.

@@ -4,10 +4,10 @@
 
 ## Product grounding
 
-- **What:** Let Chomiii remember a user-approved preference or commitment across conversations, recall it when relevant, and allow the user to inspect, correct or delete it.
+- **What:** Let Chomiii remember a preference or commitment across conversations, recall it when relevant, and allow the user to inspect, correct or delete it.
 - **Why:** Repeating "my usual groceries" or recurring priorities in every new chat defeats the purpose of a personal assistant.
 - **For whom:** Everyday mobile-first people who want continuity without learning memory frameworks, paying for another platform, or surrendering control.
-- **Success:** Owner isolation, explicit consent, provenance, practical recall, correction/deletion, no fabricated memories, and no inferred fact silently promoted to confirmed, bounded first-token overhead, and honest limitations.
+- **Success:** Owner isolation, transparency, provenance, practical recall, correction and deletion, reviewable inferences, bounded first-token overhead, and honest limitations. Memory accuracy must be evaluated with real conversations.
 
 ## What we investigated
 
@@ -29,9 +29,9 @@
 - Explicitly stated, evidence-backed facts (model confidence >=0.88) may be saved as active memories. Lower-confidence facts and inferences remain `suggested` until the person approves them. All can be edited or deleted. The model cannot directly write database records.
 - Up to 100 entries per browser-session owner, 500 characters each, with UUID, source (`user_explicit`, `conversation_fact`, or `inferred`), status (`active` or `suggested`), confidence, source conversation, and timestamps.
 - `/api/memories` read/create/update/delete/clear with consistent error handling. All SQL queries filter by the server-established owner hash, never a model-supplied identifier.
-- Send only at most three locally selected, relevant memories to the model, capped at ~1,400 Java characters in **user-role context**, not trusted system instructions; zero embedding requests and zero extra model calls. A user can disable memory use for a chat turn.
+- Send only at most three locally selected, relevant memories to the model, capped at ~1,400 Java characters in **user-role context**, not trusted system instructions. Recall needs no embedding or additional model request. A user can disable memory use for a chat turn.
 - No separate provider or cloud memory account; no additional Maven/npm dependencies.
-- The browser UI is the source of truth for "remembering": saving through the manager is what creates a record. Mere model text saying "I'll remember" cannot create a memory.
+- Memory records come from manual saves or post-reply learning. Model text saying "I'll remember" does not by itself create a record.
 
 ## What this slice cannot yet guarantee
 
@@ -45,7 +45,7 @@
 
 ## Why this is a sensible first step
 
-A modest, auditable memory row with an explicit write path is better than sophisticated memory that invents facts, remembers private information without approval or leaks across people. We can replace the retrieval algorithm later behind a stable owner-checked service.
+A small memory row with owner-scoped writes and provenance is easier to inspect and correct than a more complex store. The extractor can still miss facts, invent them, or store sensitive information. Its accuracy and privacy need evaluation with real conversations.
 
 ## Release criteria still required
 

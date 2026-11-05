@@ -90,9 +90,7 @@ class MemoryDatabaseTest {
     void inferenceMustBeReviewedBeforeItCanEnterChatContext() throws Exception {
         String first = session();
         String stranger = session();
-        String token = first.substring(first.indexOf('=') + 1);
-        String owner = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
-                .digest(token.getBytes(StandardCharsets.US_ASCII)));
+        String owner = owner(first);
         UUID conversation = UUID.randomUUID();
         memories.learn(owner, conversation, 0L, "I might prefer weekend groceries",
                 "inferred", 0.75);
@@ -107,6 +105,35 @@ class MemoryDatabaseTest {
                 first, null).getBody().path("status").asText()).isEqualTo("active");
         assertThat(memories.forChat(owner, "What are my groceries?"))
                 .contains("weekend groceries");
+    }
+
+    @Test
+    void deletingOrClearingPreventsEarlierLearningFromRestoringMemories() throws Exception {
+        String cookie = session();
+        String owner = owner(cookie);
+        String content = "My usual groceries are milk and oats";
+        String id = request(HttpMethod.POST, "/api/memories", cookie,
+                "{\"content\":\"" + content + "\"}").getBody().path("id").asText();
+        long beforeDelete = memories.revision(owner);
+
+        assertThat(request(HttpMethod.DELETE, "/api/memories/" + id, cookie, null).getStatusCode())
+                .isEqualTo(HttpStatus.NO_CONTENT);
+        memories.learn(owner, UUID.randomUUID(), beforeDelete, content, "conversation_fact", 0.95);
+        assertThat(request(HttpMethod.GET, "/api/memories", cookie, null).getBody()).hasSize(0);
+
+        long afterDelete = memories.revision(owner);
+        memories.learn(owner, UUID.randomUUID(), afterDelete, content, "conversation_fact", 0.95);
+        assertThat(request(HttpMethod.GET, "/api/memories", cookie, null).getBody()).hasSize(1);
+        assertThat(request(HttpMethod.DELETE, "/api/memories", cookie, null).getStatusCode())
+                .isEqualTo(HttpStatus.NO_CONTENT);
+        memories.learn(owner, UUID.randomUUID(), afterDelete, content, "conversation_fact", 0.95);
+        assertThat(request(HttpMethod.GET, "/api/memories", cookie, null).getBody()).hasSize(0);
+    }
+
+    private String owner(String cookie) throws Exception {
+        String token = cookie.substring(cookie.indexOf('=') + 1);
+        return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(token.getBytes(StandardCharsets.US_ASCII)));
     }
 
     private String session() {

@@ -127,8 +127,7 @@ Manually test a newly saved "usual groceries" memory across two conversations,
 correction/deletion, disabled memory recall, a second session, and a live
 Gemini model's use of the selected fact.
 
-All tests in this PR are **authored, not independently executed** until their
-actual output is recorded in [verification](verification.md).
+The results of executed PR tests are recorded in [verification](verification.md).
 
 ## Additional M2 automatic-learning checks
 
@@ -146,4 +145,4 @@ actual output is recorded in [verification](verification.md).
   flight. Verify the UI discloses additional provider usage.
 - Measure **additional Gemini tokens and charges** separately from visible
   response time; record false-positive and missed-memory rates from representative
-  everyday scenarios. Nothing above is a claimed passing run.
+  everyday scenarios. See [verification](verification.md) for completed checks.

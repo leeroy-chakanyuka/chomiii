@@ -13,7 +13,7 @@ public class SessionConfiguration {
             @Value("${chomiii.session.secure:false}") boolean secure,
             @Value("${chomiii.public-origin:http://localhost:5173}") String origin) {
         var registration = new FilterRegistrationBean<>(new AnonymousSessionFilter(jdbc, secure, origin));
-        registration.addUrlPatterns("/api/conversations/*");
+        registration.addUrlPatterns("/api/conversations/*", "/api/memories/*");
         return registration;
     }
 }

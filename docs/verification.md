@@ -1,5 +1,26 @@
 # Verification evidence
 
+## M2 PR #3 review, 2026-11-05
+
+The review fixed the missing session filter on memory endpoints. It also fixed
+a stale-learning race, bounded Gemini extraction time, and corrected memory
+panel loading and response validation. The original backend test run failed to
+compile because `ChatIdentityTest` lacked a `MemoryLearningService` import.
+With a disposable PostgreSQL database, the first full run exposed the missing
+session filter and an assertion that mixed chat and extraction requests.
+Both failures passed after the fixes.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Backend suite and package | PASS | `backend/mvnw.cmd package` against disposable PostgreSQL 17.11: 105 tests, 104 passed and the opt-in live Gemini test skipped. Flyway applied V1, V2, and V3. |
+| Memory and chat database tests | PASS | `mvnw.cmd -Dtest=MemoryDatabaseTest,ChatStreamDatabaseTest test`: 9 passed on PostgreSQL. Covers owner isolation, origin checks, approval, and stale learning after deletion or clear. |
+| Frontend unit tests | PASS | `npm run test`: 34 passed. A new stale-load test failed before the load-order fix and passed after it. |
+| Frontend checks | PASS | `npm ci`, `npm run lint`, `npm run typecheck`, and `npm run build`. `npm audit --audit-level=high` passed the high-severity gate; 7 moderate findings remain. |
+| Browser fixture tests | PASS | `npm run test:browser`: 8 passed. |
+| Browser and backend | PASS | `npm run test:browser:integration`: 2 passed against PostgreSQL; the opt-in live Gemini test was skipped. A browser saved, corrected, reloaded, and deleted a memory. A separate browser could not see it. |
+| MySQL and PostgreSQL Testcontainers | NOT RUN | MySQL verification was deferred to keep database setup short. Docker is unavailable, so the PostgreSQL Testcontainers Failsafe suite did not run. |
+| Live memory learning and cost | NOT RUN | No live Gemini extraction, learning accuracy study, or token-cost measurement was performed. |
+
 ## Local performance and UI follow-up, 2026-11-04
 
 The response-time target is **not met**. In the five-sample after run,

@@ -41,6 +41,7 @@ a { color: #165a50; text-underline-offset: 3px; }
 .primary-button:hover:not(:disabled) { background: #105244; }
 .setup-panel .primary-button { margin-top: 18px; width: 100%; }
 .small-print { color: #5b6963; line-height: 1.55; font-size: 13px; margin: 22px 0 0; }
+.learning-note { color: #4d6658; line-height: 1.55; font-size: 13px; margin: 14px 0 0; }
 .error { margin: 8px 0; color: #a32f2b; background: #fff2ef; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.4; }
 
 .workspace { min-height: 0; flex: 1; display: flex; }
@@ -144,3 +145,6 @@ a { color: #165a50; text-underline-offset: 3px; }
 .composer-footer { row-gap: 6px; }
 .composer-footer .memory-use-toggle { white-space: nowrap; }
 .memory-item .memory-save { background: #176b57; color: white; border-color: #176b57; }
+
+/* M2: automatic-learning disclosure kept visible while chatting, not only in the panel. */
+.empty-state .learning-note { margin-top: 20px; max-width: 520px; }
