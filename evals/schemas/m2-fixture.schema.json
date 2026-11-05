@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Chomiii synthetic evaluation fixture, version 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "version", "description", "category", "difficulty", "inputType", "synthetic", "turns", "expectedMemories", "forbiddenMemories", "retrievalChecks", "lifecycle"],
+  "properties": {
+    "id": {"type": "string", "minLength": 1},
+    "version": {"const": 1},
+    "description": {"type": "string", "minLength": 1},
+    "category": {"enum": ["explicit-facts", "long-messages", "conversations", "corrections", "inferences", "negative", "lifecycle"]},
+    "difficulty": {"enum": ["easy", "medium", "difficult"]},
+    "inputType": {"enum": ["single_message", "conversation", "pasted_transcript"]},
+    "synthetic": {"const": true},
+    "turns": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/turn"}},
+    "expectedMemories": {"type": "array", "items": {"$ref": "#/$defs/expected"}},
+    "forbiddenMemories": {"type": "array", "items": {"$ref": "#/$defs/forbidden"}},
+    "retrievalChecks": {"type": "array", "items": {"$ref": "#/$defs/retrieval"}},
+    "lifecycle": {"type": "array", "items": {"$ref": "#/$defs/action"}},
+    "planning": {"type": ["object", "null"], "description": "Reserved for the M3.1 evaluation contract."}
+  },
+  "$defs": {
+    "turn": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "role", "content"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "role": {"enum": ["user", "assistant"]},
+        "content": {"type": "string", "minLength": 1},
+        "expectedEligibility": {"enum": ["eligible", "too_short", "too_long", "no_personal_language", "chat_rejected", null]},
+        "scriptedExtraction": {"type": ["object", "null"]}
+      },
+      "allOf": [{"if": {"properties": {"role": {"const": "user"}}}, "then": {"required": ["expectedEligibility"], "properties": {"expectedEligibility": {"type": "string"}}}}]
+    },
+    "expected": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "statement", "aliases", "sourceTurnIds", "kind", "importance", "expectedStatus", "inScope"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "statement": {"type": "string", "minLength": 1},
+        "aliases": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "sourceTurnIds": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "kind": {"enum": ["explicit_fact", "inference"]},
+        "importance": {"enum": ["high", "medium", "low"]},
+        "expectedStatus": {"enum": ["active", "suggested"]},
+        "inScope": {"type": "boolean"}
+      }
+    },
+    "forbidden": {
+      "type": "object", "additionalProperties": false, "required": ["statement", "reason", "category"],
+      "properties": {"statement": {"type": "string", "minLength": 1}, "reason": {"type": "string", "minLength": 1}, "category": {"type": "string", "minLength": 1}}
+    },
+    "retrieval": {
+      "type": "object", "additionalProperties": false, "required": ["query", "expectedMemoryIds"],
+      "properties": {"query": {"type": "string", "minLength": 1}, "expectedMemoryIds": {"type": "array", "items": {"type": "string"}}}
+    },
+    "action": {
+      "type": "object", "additionalProperties": false, "required": ["afterTurnId", "operation"],
+      "properties": {
+        "afterTurnId": {"type": "string"},
+        "operation": {"enum": ["approve", "edit", "delete", "clear", "other_owner", "delete_while_pending"]},
+        "memoryId": {"type": ["string", "null"]}, "content": {"type": ["string", "null"]}
+      }
+    }
+  }
+}
