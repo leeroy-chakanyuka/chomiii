@@ -17,7 +17,7 @@ flowchart LR
 ## Data and trust invariants
 
 - `browser_sessions.owner_hash` (established in a secure HttpOnly cookie filter) owns each memory row by foreign key. Every read, update and delete includes `owner_hash`; clients cannot supply or override it.
-- `source=user_explicit` means a person saved it manually. With **Learn from chats** enabled, a separate post-response extraction call can create `conversation_fact` (high confidence, active) or `inferred` (`suggested` until approved). These values carry a source-conversation reference, model-reported confidence, and timestamp. No model has direct database permissions.
+- `source=user_explicit` means a person saved it manually. By default, a separate post-response extraction call can create `conversation_fact` (high confidence, active) or `inferred` (`suggested` until approved). These values carry a source-conversation reference, model-reported confidence, and timestamp. No model has direct database permissions.
 - Hard limit 100 entries, 500 characters each; creating new entries locks the owner row before counting to prevent simultaneous writes from bypassing the limit.
 - Editing replaces content; deletion removes the row; clear-all is owner scoped. The frontend asks for confirmation before bulk deletion. Updates do not leave an independent copy/history in this memory table.
 - The model never receives credentials to query the memory store. The backend chooses at most three relevant memories under a strict character budget; their characters and one message slot are **reserved before** the recent chat window is assembled. The model receives them as **user-context data** before the current request, not as privileged system instructions.
@@ -26,7 +26,7 @@ flowchart LR
 ## Product flow
 
 1. Open **Memories** in the app (even while not connected to an AI key).
-2. Enable **Learn from chats** once, then naturally say "My usual groceries are milk and oats." After the reply, a bounded extractor may save an evidence-backed fact without asking for another manual save. The user can alternatively save it explicitly.
+2. Naturally say "My usual groceries are milk and oats." After the completed reply, an automatic bounded extractor may save an evidence-backed fact without requiring a manual save. The user can also manually add a fact or correct what was learned.
 3. Start a new chat and ask "What are my usual groceries?" A local selector may include that saved fact in the next model request.
 4. Correct it in the manager; future requests see the updated entry. Delete it or clear all; future context retrieval no longer includes that memory.
 5. Untick **Use saved memories** in chat to keep the saved entries out of that request. The setting is a browser-local preference, not a server-controlled memory read permission for external actors.
@@ -53,10 +53,11 @@ Tests are authored in the PR. **None should be reported as passing without execu
 
 ## Automatic memory capture: staged interpretation
 
-- Chat remains the primary interaction. With opt-in enabled, a **second**
-  provider request happens **after** a successful streamed reply, on a
-  separate single-worker executor with a bounded queue; ordinary requests do
-  not call the extractor.
+- Chat remains the primary interaction. Learning is **automatic by default**:
+  eligible completed replies can schedule a **second provider request** on a
+  separate single-worker executor with a bounded queue. First-token streaming
+  does not wait for extraction; short or ineligible messages are skipped.
+  There is no client learning flag or mandatory opt-in step.
 - Only the latest user's eligible message is considered, not full transcripts
   or model-generated replies. The extractor asks for at most two small items.
   It must return source-evidence strings that occur in the user turn, a kind,
@@ -67,9 +68,11 @@ Tests are authored in the PR. **None should be reported as passing without execu
   until approved). Review happens in the Memories panel. Users can correct,
   reject, or clear any entry. A manual edit promotes the corrected text to an
   explicit, active memory.
-- Two independent preferences are shown in chat: **Use saved memories** for
-  retrieval and **Learn from chats** for optional extraction. Learning starts
-  disabled until the person enables it; the choice is remembered locally.
+- The chat has one **Use saved memories** control for recall. Learning happens
+  automatically after eligible completed replies, even if recall was disabled
+  for that turn; the two behaviors should not be confused. Self-hosters can
+  change learning defaults in the code. The Memories panel discloses what
+  Chomiii does and shows all saved and suggested items.
 - Every manual memory mutation increments `browser_sessions.memory_revision`.
   Background learning captures that revision and discards stale pending writes
   if the user has since corrected, deleted, or cleared memories.

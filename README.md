@@ -38,9 +38,12 @@ up to three relevant **active** memories
 for future chats without another inference request. The chat screen has a
 **Use saved memories** checkbox to opt out of using saved facts.
 
-Learning requires a one-time **Learn from chats** opt-in and may use additional
-Gemini tokens after the reply. Directly supported personal facts can be
-saved; weak inferences are marked as suggestions for review. This is **not**
+**Learning is automatic by default:** eligible completed messages may trigger
+an extra Gemini extraction call after the visible reply, using the configured
+model API key and additional tokens. No learning opt-in toggle or special
+request header is required. Directly supported user facts can be saved;
+uncertain inferences are held as reviewable suggestions. The Memories panel
+explains this and lets users review, correct, reject, and delete entries. This is **not**
 cross-device accounts, or
 permission to take actions. The existing anonymous cookie owns the saved
 records: losing it may lose access. Relevant memories sent to the model

@@ -69,10 +69,12 @@ than switching models.
 
 ## M2 review PR: explicit personal memory endpoints
 
-A person may save a memory manually **or opt in once to learn from chats**.
-Eligible completed turns can be sent to the selected model in a separate
-post-response extraction request. The app does not secretly save every message.
-Tentative inferences are suggestions until approved. The browser-session
+Chomiii automatically learns potentially useful memories from eligible
+completed conversations. It may send the latest user message to the selected
+model again in a separate post-response extraction request. This behavior is
+documented and shown in the Memories UI; it uses additional API quota.
+No opt-in is required. Inferences remain suggestions until approved,
+and the user may inspect, edit, reject, or delete them. The browser-session
 cookie identifies the owner. A foreign memory ID returns `404`.
 
 | Method and path | Response | Purpose |
@@ -96,10 +98,11 @@ Chat normally retrieves up to three relevant saved memories (bounded
 total context), added as *user-role context*, not as instructions.
 Set `X-Chomiii-Use-Memory: false` on a chat-stream request to skip
 memory retrieval for that turn. This is controlled by a visible checkbox
-in the PR frontend. Set `X-Chomiii-Learn-Memory: true` only after the user enables
-**Learn from chats**. It may schedule a second, bounded Gemini request after
-a successful completed reply. The header is intentionally absent unless
-opted in. Learning and recall are independently controlled.
+in the PR frontend. Automatic learning happens server-side after eligible completed responses,
+without a client learning flag or opt-in header. `X-Chomiii-Learn-Memory`
+is **not used**. If enabled by eligibility checks, a second bounded Gemini
+request may use additional API quota. The `X-Chomiii-Use-Memory` header only
+controls **recall** of previously saved memories, not learning.
 The backend performs lexical relevance checks;
 it does not promise semantic search or successful recall of every fact.
 

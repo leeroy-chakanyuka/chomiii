@@ -291,7 +291,7 @@ M1.5 context-window isolated smoke check (2026-11-04): Java 21 compiled a recrea
 - **Implemented on PR branch, pending review:** `V3__personal_memories.sql`,
   `MemoryController`, `MemoryService`, `MemoryRepository`,
   `MemorySelector`, chat context wiring, and a React Memories manager.
-  The user may opt in to post-response automatic memory extraction; a bounded
+  Post-response automatic memory extraction is now the default; a bounded
   model output can propose direct facts or reviewable inferences, but the
   assistant still cannot buy things
   or access external services.
@@ -309,10 +309,10 @@ M1.5 context-window isolated smoke check (2026-11-04): Java 21 compiled a recrea
 
 M2 PR #3 review follow-up: memory context length and its single additional message now count against the original 16,000-character/20-message chat budget. This is a static source review fix, **not a verified test run**.
 
-M2 automatic-learning change (2026-11-05): opt-in, queued post-reply
+M2 automatic-learning change (2026-11-05): default-on queued post-reply
 Gemini extractor, evidence/confidence validation, suggested inference review,
 and revision-based stale-write protection are implemented on the PR branch.
-Parser, learning service, memory-state and frontend opt-in/review tests were
+Parser, learning service, memory-state and frontend default/review tests were
 authored. **Neither full Maven nor frontend tests have been executed in this
 session**. The provider's reported confidence has not been empirically
 calibrated, and no live memory-learning benchmark has been run.

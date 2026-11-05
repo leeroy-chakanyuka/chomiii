@@ -89,7 +89,7 @@ are in [agent-architecture-plan.md](agent-architecture-plan.md).
 ## M2 — Memory
 
 **Current M2 review:** [PR #3](https://github.com/leeroy-chakanyuka/chomiii/pull/3)
-now includes optional automatic extraction after a completed chat, evidence
+now includes automatic extraction by default after eligible completed chats, evidence
 checks, user review of inferred candidates, and a save/list/correct/delete/
 approve/clear UI and SQL store,
 plus relevant lower-trust context. The [research decision](m2-research.md)

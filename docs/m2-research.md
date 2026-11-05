@@ -25,7 +25,7 @@
 
 **Build the first M2 memory store inside the existing Java 21 + JDBC + Flyway application.** Use the same PostgreSQL/MySQL setup, owner checks, HTTP API, and ordinary React UI.
 
-- Explicit manual saves **plus opt-in, best-effort learning from conversations**. A user enables **Learn from chats** once; an eligible completed turn can trigger one separate Gemini extraction call AFTER the visible reply. The request is bounded, isolated from chat workers, and carries no system privileges. This uses extra model quota.
+- Manual saves **plus automatic, best-effort learning from conversations by default**. An eligible completed turn can trigger a separate bounded Gemini extraction request AFTER the visible reply, isolated from chat workers. No front-end learning opt-in or request header is required. This uses additional API quota; the app discloses it in the Memories panel.
 - Explicitly stated, evidence-backed facts (model confidence >=0.88) may be saved as active memories. Lower-confidence facts and inferences remain `suggested` until the person approves them. All can be edited or deleted. The model cannot directly write database records.
 - Up to 100 entries per browser-session owner, 500 characters each, with UUID, source (`user_explicit`, `conversation_fact`, or `inferred`), status (`active` or `suggested`), confidence, source conversation, and timestamps.
 - `/api/memories` read/create/update/delete/clear with consistent error handling. All SQL queries filter by the server-established owner hash, never a model-supplied identifier.
@@ -40,7 +40,7 @@
 - **Deletion boundaries:** Deleting a memory removes the primary DB row; it does **not** erase a similar fact previously typed in chat history, a provider request already sent, infrastructure backups, or logs maintained externally. Clear disclosures and operational retention are required.
 - **Search quality:** Current retrieval is lexical with limited normalization. Paraphrases, conflicting facts, chronology and indirect references may be missed. Benchmark ordinary-user scenarios before adding embeddings, rerankers or extraction.
 - **At-rest protection:** Memory strings are plain database content, as are current chat transcripts; do not store passwords, keys or payment details. Encryption/key management is a future privacy requirement before collecting high-risk user data.
-- **Consent boundary:** Manual saving explicitly opts into storing that entry; automatic learning needs the separate **Learn from chats** opt-in (off by default). Opted-in turns can send a second extraction request to the selected Gemini provider after the reply. Relevant active memories are forwarded to that provider on future chat requests unless the user disables recall.
+- **User control and disclosure:** Conversation learning is an openly documented default behavior, not a per-user opt-in. After a qualifying completed reply, the latest user message may be transmitted again to the selected Gemini provider for extraction. Relevant active memories are forwarded for future chats unless the user disables **Use saved memories**. Users can see, edit, approve/reject and delete memories. Self-hosters can modify this open-source behavior; the application should never claim its heuristics are guaranteed accurate.
 - **No agent action:** This PR does not send emails, order groceries, schedule work, take real-world actions, or persist cross-app identity.
 
 ## Why this is a sensible first step
@@ -53,16 +53,17 @@ A modest, auditable memory row with an explicit write path is better than sophis
 2. Explicit memory CRUD and chat recall work in a real browser against both supported databases, with cross-owner isolation tests.
 3. Benchmark memory-enabled vs disabled p50/p95 first-visible text latency; no "free" performance claim.
 4. Choose account identity/retention lifecycle for production, implement orphan cleanup and define deletion/backups policy.
-5. User-study evidence for whether opt-in automatic learning, review, rejection, and bounded lexical recall are natural and accurate; measure false positives and added model cost.
+5. User-study evidence for whether default automatic learning, review, rejection, and bounded lexical recall are accurate and understandable; measure false positives and additional model cost.
 
 **Conclusion:** choose a small native M2 implementation **now**, keep Mem0/Letta techniques as future options, and keep Beacon for engineering telemetry rather than consumer memory.
 
 ## Follow-up decision: automatic learning (2026-11-05)
 
 Product review established that users should **not have to manually curate every memory**.
-The first implementation therefore makes extraction automatic **after a one-time opt-in**,
-without removing the Memory panel. A second model request is made only after a
-completed, eligible chat turn, from a separate bounded executor. A strict JSON
+The first implementation therefore makes extraction automatic **by default**,
+without removing the Memory panel. A separate model request is made only after a
+completed, eligible chat turn, from a bounded executor. No opt-in checkbox
+or client authorization header is needed to learn. A strict JSON
 parser checks confidence, source kind, evidence quoted from the current user
 message, response length, and an initial sensitive-content exclusion list.
 This filter is intentionally conservative and does **not** constitute a proven
@@ -72,8 +73,9 @@ invalidates older pending writes.
 
 The **confidence score is a model estimate, not a calibrated probability**.
 Direct facts and tentative inferences have separate states; tentative entries
-are not passed to the answer model until reviewed. The person can turn
-learning off independently of turning recall off.
+are not passed to the answer model until reviewed. The person can manage and delete learned memories and can disable **recall** for
+a particular chat. There is no separate learning toggle in the default product;
+fork maintainers can adapt the behavior in source.
 
 Known limits: the single-turn extractor cannot reliably infer preferences across
 several conversations; queued in-memory work can be lost on restart; extra
