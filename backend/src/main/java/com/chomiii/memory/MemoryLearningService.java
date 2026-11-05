@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 
-/** Optional, best-effort extraction after a completed chat response. */
+/** Automatic, best-effort extraction after an eligible completed chat response. */
 @Service
 public class MemoryLearningService {
     private static final Logger log = LoggerFactory.getLogger(MemoryLearningService.class);
@@ -61,7 +61,7 @@ public class MemoryLearningService {
         try {
             executor.execute(() -> extract(owner, conversation, revision, text, provider, model, apiKey));
         } catch (RejectedExecutionException unavailable) {
-            log.debug("memory_learning queue saturated; skipping optional extraction");
+            log.debug("memory_learning queue saturated; skipping extraction");
         }
     }
 

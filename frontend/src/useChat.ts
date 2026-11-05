@@ -18,10 +18,6 @@ export function useChat() {
   const [useMemory, setUseMemory] = useState(() => {
     try { return window.localStorage.getItem('chomiii:use-memory') !== 'false' } catch { return true }
   })
-  const [learnMemory, setLearnMemory] = useState(() => {
-    // A one-time, visible opt-in is required before additional paid model calls.
-    try { return window.localStorage.getItem('chomiii:learn-memory') === 'true' } catch { return false }
-  })
   const [key, setKey] = useState('')
   const [remember, setRemember] = useState(false)
   const [connecting, setConnecting] = useState(false)
@@ -44,11 +40,6 @@ export function useChat() {
   useEffect(() => {
     try { window.localStorage.setItem('chomiii:use-memory', String(useMemory)) } catch { /* storage may be unavailable */ }
   }, [useMemory])
-
-  useEffect(() => {
-    try { window.localStorage.setItem('chomiii:learn-memory', String(learnMemory)) }
-    catch { /* optional local preference */ }
-  }, [learnMemory])
 
   useEffect(() => {
     if (!streamed || startedAt.current === null || firstVisibleMeasured.current
@@ -193,7 +184,7 @@ export function useChat() {
       const abort = new AbortController()
       running.current = { conversationId, requestId, abort }
       await sendMessage({ conversationId, requestId, content, provider, model, apiKey: key,
-        signal: abort.signal, useMemory, learnMemory, onEvent(event) {
+        signal: abort.signal, useMemory, onEvent(event) {
           if (event.kind === 'delta') setStreamed((previous) => previous + event.text)
           if (event.kind === 'error') streamError = event.message
           if ((event.kind === 'complete' || event.kind === 'error') && startedAt.current !== null
@@ -247,7 +238,6 @@ export function useChat() {
   return {
     catalog, history, loading, connected, connecting, key, setKey, remember, setRemember, provider, setProvider, model, setModel,
     selectedId, messages, input, setInput, streamed, busy, error, useMemory, setUseMemory,
-    learnMemory, setLearnMemory,
     connect, changeKey, removeKey, newChat, switchChat, removeChat, submit, stop,
   }
 }

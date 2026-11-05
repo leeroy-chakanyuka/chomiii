@@ -91,12 +91,13 @@ export function MemoryPanel({ onClose }: { onClose: () => void }) {
         <button type="button" className="text-button" onClick={onClose} aria-label="Close memories">Close</button>
       </div>
       <p className="memory-intro">
-        Enable "Learn from chats" near the chat box to let Chomi pick up useful facts automatically.
-        This can make an additional Gemini request after each eligible chat reply, using your API key
-        and some extra model quota. Clear personal facts can be saved; uncertain inferences stay
-        here as suggestions until you approve them. You can also add, correct or delete anything.
-        Relevant active memories are sent to your selected AI provider when used for chat.
-        Learning never grants permission to access apps or spend money.
+        Chomi automatically learns selected useful facts from conversations. After an eligible
+        completed reply, it may send your message to your selected AI provider again to extract
+        memories, using additional model tokens and your API key.
+        Clear personal facts may become active memories; uncertain inferences stay here
+        as suggestions until you approve them. You can inspect, correct, reject or delete
+        what Chomi remembers. Relevant active memories may be sent to your AI provider
+        in future chats. Learning never grants permission to access apps or spend money.
       </p>
       <p className="memory-intro">
         Memories belong to this browser session, not an account. If you lose its session cookie,

@@ -35,10 +35,8 @@ public class ChatStreamController {
             @RequestAttribute(AnonymousSessionFilter.OWNER_ATTRIBUTE) String owner,
             @RequestHeader("X-Gemini-Api-Key") String key,
             @RequestHeader(value = "X-Chomiii-Use-Memory", required = false) String useMemory,
-            @RequestHeader(value = "X-Chomiii-Learn-Memory", required = false) String learnMemory,
             @Valid @RequestBody MessageRequest request) {
-        return chat.start(id, owner, request, key,
-                !"false".equalsIgnoreCase(useMemory), "true".equalsIgnoreCase(learnMemory));
+        return chat.start(id, owner, request, key, !"false".equalsIgnoreCase(useMemory));
     }
 
     @PostMapping("/{requestId}/cancel")

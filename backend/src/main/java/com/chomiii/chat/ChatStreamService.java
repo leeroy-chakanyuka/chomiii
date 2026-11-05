@@ -54,16 +54,11 @@ public class ChatStreamService {
     }
 
     public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request, String key) {
-        return start(conversation, owner, request, key, true, false);
+        return start(conversation, owner, request, key, true);
     }
 
     public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request,
             String key, boolean useMemory) {
-        return start(conversation, owner, request, key, useMemory, false);
-    }
-
-    public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request,
-            String key, boolean useMemory, boolean learnFromChat) {
         if (key == null || key.isBlank() || key.length() > 512) {
             throw new ChatApiException(HttpStatus.BAD_REQUEST, "Enter a Gemini API key.");
         }
@@ -109,7 +104,7 @@ public class ChatStreamService {
         try {
             executor.execute(() -> run(request.requestId(), pending.assistantId(), owner, conversation,
                     provider, input, key, generation, emitter, requestStartedNanos, storeReadyNanos,
-                    contextReadyNanos, learnFromChat));
+                    contextReadyNanos));
         } catch (RuntimeException exception) {
             active.remove(request.requestId(), generation);
             slots.release();
@@ -140,8 +135,7 @@ public class ChatStreamService {
 
     private void run(UUID requestId, UUID assistantId, String owner, UUID conversation, ChatProvider provider,
             ChatProvider.ChatInput input, String key, Active generation, SseEmitter emitter,
-            long requestStartedNanos, long storeReadyNanos, long contextReadyNanos,
-            boolean learnFromChat) {
+            long requestStartedNanos, long storeReadyNanos, long contextReadyNanos) {
         long workerStartedNanos = System.nanoTime();
         StringBuilder response = new StringBuilder();
         long[] firstDeltaNanos = {0L};
@@ -221,9 +215,10 @@ public class ChatStreamService {
             active.remove(requestId, generation);
             slots.release();
             emitter.complete();
-            if ("complete".equals(outcome) && learnFromChat) {
-                // Completed replies remain independent of additional, paid extraction calls.
-                // Best effort only: no memory learning error may change response delivery.
+            if ("complete".equals(outcome)) {
+                // Automatic, best-effort memory extraction is scheduled only AFTER the
+                // visible reply has completed. It uses an additional provider request
+                // but must not delay or change the completed chat response.
                 try {
                     learning.schedule(owner, conversation, input.messages().getLast().text(),
                             provider, input.model(), key);
