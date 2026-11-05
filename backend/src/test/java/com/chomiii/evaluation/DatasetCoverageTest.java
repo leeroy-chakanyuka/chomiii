@@ -20,15 +20,26 @@ class DatasetCoverageTest {
     @Test
     void containsSyntheticCasesAcrossAllRequiredCategoriesAndLengthBoundaries() throws Exception {
         var fixtures = new FixtureLoader().loadAll(Path.of("..", "evals", "fixtures", "m2"));
-        assertThat(fixtures.size()).isGreaterThanOrEqualTo(30);
+        assertThat(fixtures.size()).isGreaterThanOrEqualTo(150);
         Map<String, Long> counts = fixtures.stream().map(EvaluationFixture::category)
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
-        for (String category : new String[]{"explicit-facts", "long-messages", "conversations", "corrections", "inferences", "negative"}) {
-            assertThat(counts.getOrDefault(category, 0L)).as(category).isGreaterThanOrEqualTo(4);
-        }
-        assertThat(counts.getOrDefault("lifecycle", 0L)).isGreaterThanOrEqualTo(6);
+        Map<String, Long> minimums = Map.of(
+                "explicit-facts", 24L, "long-messages", 15L, "conversations", 24L,
+                "corrections", 24L, "inferences", 16L, "negative", 26L, "lifecycle", 21L);
+        minimums.forEach((category, minimum) -> assertThat(counts.getOrDefault(category, 0L))
+                .as(category).isGreaterThanOrEqualTo(minimum));
         assertThat(fixtures).flatExtracting(EvaluationFixture::turns)
                 .extracting(turn -> turn.content().length()).contains(500, 1000, 1800, 2000, 2001, 8100);
         assertThat(fixtures).allMatch(fixture -> Boolean.TRUE.equals(fixture.synthetic()));
+        assertThat(fixtures.stream().filter(fixture -> fixture.id().startsWith("m2-adversarial-")).count())
+                .isEqualTo(110);
+        assertThat(fixtures.stream().filter(fixture -> fixture.turns().stream()
+                .filter(turn -> "user".equals(turn.role())).count() >= 3).count())
+                .isGreaterThanOrEqualTo(40);
+        assertThat(fixtures.stream().filter(fixture -> fixture.expectedMemories().size() >= 3).count())
+                .isGreaterThanOrEqualTo(20);
+        assertThat(fixtures.stream().filter(fixture -> fixture.forbiddenMemories().stream()
+                .anyMatch(memory -> "wrong_person".equals(memory.category()))).count())
+                .isGreaterThanOrEqualTo(60);
     }
 }
