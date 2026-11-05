@@ -1,0 +1,416 @@
+[
+  {
+    "id": "m2-adversarial-long-commute-1500",
+    "version": 1,
+    "description": "Exact 1500-character user turn with a relevant fact buried inside repetitive unrelated journal noise.",
+    "category": "long-messages",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I prefer to plan my commute with a map before leaving. I am pasting a long and deliberately disorganized project journal. Some entries are other people's examples and some are routine logistics. The durable preference is the first sentence; later repeated prose is only filler to test the extraction boundary.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer to plan my commute with a map before leaving.",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I prefer to plan my commute with a map before leaving."
+            }
+          ]
+        },
+        "targetChars": 1500,
+        "paddingText": " My notes contain a timetable, scattered labels, and an example from a colleague, but these lines are not additional personal commitments. "
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "durable",
+        "statement": "I prefer to plan my commute with a map before leaving.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "My colleague's examples are my own permanent routines",
+        "reason": "Unattributed filler is not a personal preference.",
+        "category": "wrong_person"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What is my preference regarding commute?",
+        "expectedMemoryIds": [
+          "durable"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-long-crafts-1750",
+    "version": 1,
+    "description": "Exact 1750-character user turn with a relevant fact buried inside repetitive unrelated journal noise.",
+    "category": "long-messages",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I usually sort my art materials before a workshop. I am pasting a long and deliberately disorganized project journal. Some entries are other people's examples and some are routine logistics. The durable preference is the first sentence; later repeated prose is only filler to test the extraction boundary.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I usually sort my art materials before a workshop.",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I usually sort my art materials before a workshop."
+            }
+          ]
+        },
+        "targetChars": 1750,
+        "paddingText": " My notes contain a timetable, scattered labels, and an example from a colleague, but these lines are not additional personal commitments. "
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "durable",
+        "statement": "I usually sort my art materials before a workshop.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "My colleague's examples are my own permanent routines",
+        "reason": "Unattributed filler is not a personal preference.",
+        "category": "wrong_person"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What is my preference regarding crafts?",
+        "expectedMemoryIds": [
+          "durable"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-long-reading-1900",
+    "version": 1,
+    "description": "Exact 1900-character user turn with a relevant fact buried inside repetitive unrelated journal noise.",
+    "category": "long-messages",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I prefer reading long articles on a tablet in the evening. I am pasting a long and deliberately disorganized project journal. Some entries are other people's examples and some are routine logistics. The durable preference is the first sentence; later repeated prose is only filler to test the extraction boundary.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer reading long articles on a tablet in the evening.",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I prefer reading long articles on a tablet in the evening."
+            }
+          ]
+        },
+        "targetChars": 1900,
+        "paddingText": " My notes contain a timetable, scattered labels, and an example from a colleague, but these lines are not additional personal commitments. "
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "durable",
+        "statement": "I prefer reading long articles on a tablet in the evening.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "My colleague's examples are my own permanent routines",
+        "reason": "Unattributed filler is not a personal preference.",
+        "category": "wrong_person"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What is my preference regarding reading?",
+        "expectedMemoryIds": [
+          "durable"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-long-coding-1999",
+    "version": 1,
+    "description": "Exact 1999-character user turn with a relevant fact buried inside repetitive unrelated journal noise.",
+    "category": "long-messages",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I usually run focused tests before submitting a code review. I am pasting a long and deliberately disorganized project journal. Some entries are other people's examples and some are routine logistics. The durable preference is the first sentence; later repeated prose is only filler to test the extraction boundary.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I usually run focused tests before submitting a code review.",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I usually run focused tests before submitting a code review."
+            }
+          ]
+        },
+        "targetChars": 1999,
+        "paddingText": " My notes contain a timetable, scattered labels, and an example from a colleague, but these lines are not additional personal commitments. "
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "durable",
+        "statement": "I usually run focused tests before submitting a code review.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "My colleague's examples are my own permanent routines",
+        "reason": "Unattributed filler is not a personal preference.",
+        "category": "wrong_person"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What is my preference regarding coding?",
+        "expectedMemoryIds": [
+          "durable"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-long-notes-2000",
+    "version": 1,
+    "description": "Exact 2000-character user turn with a relevant fact buried inside repetitive unrelated journal noise.",
+    "category": "long-messages",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I prefer keeping structured notes with short headings. I am pasting a long and deliberately disorganized project journal. Some entries are other people's examples and some are routine logistics. The durable preference is the first sentence; later repeated prose is only filler to test the extraction boundary.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer keeping structured notes with short headings.",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I prefer keeping structured notes with short headings."
+            }
+          ]
+        },
+        "targetChars": 2000,
+        "paddingText": " My notes contain a timetable, scattered labels, and an example from a colleague, but these lines are not additional personal commitments. "
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "durable",
+        "statement": "I prefer keeping structured notes with short headings.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "My colleague's examples are my own permanent routines",
+        "reason": "Unattributed filler is not a personal preference.",
+        "category": "wrong_person"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What is my preference regarding notes?",
+        "expectedMemoryIds": [
+          "durable"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-long-books-2001",
+    "version": 1,
+    "description": "Exact 2001-character user turn with a relevant fact buried inside repetitive unrelated journal noise.",
+    "category": "long-messages",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I usually borrow reference books from a public library. I am pasting a long and deliberately disorganized project journal. Some entries are other people's examples and some are routine logistics. The durable preference is the first sentence; later repeated prose is only filler to test the extraction boundary.",
+        "expectedEligibility": "too_long",
+        "scriptedExtraction": {
+          "memories": []
+        },
+        "targetChars": 2001,
+        "paddingText": " My notes contain a timetable, scattered labels, and an example from a colleague, but these lines are not additional personal commitments. "
+      }
+    ],
+    "expectedMemories": [],
+    "forbiddenMemories": [
+      {
+        "statement": "My colleague's examples are my own permanent routines",
+        "reason": "Unattributed filler is not a personal preference.",
+        "category": "wrong_person"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What is my preference regarding books?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-long-routes-8001",
+    "version": 1,
+    "description": "Exact 8001-character user turn with a relevant fact buried inside repetitive unrelated journal noise.",
+    "category": "long-messages",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I prefer checking transit routes the night before travel. I am pasting a long and deliberately disorganized project journal. Some entries are other people's examples and some are routine logistics. The durable preference is the first sentence; later repeated prose is only filler to test the extraction boundary.",
+        "expectedEligibility": "chat_rejected",
+        "scriptedExtraction": {
+          "memories": []
+        },
+        "targetChars": 8001,
+        "paddingText": " My notes contain a timetable, scattered labels, and an example from a colleague, but these lines are not additional personal commitments. "
+      }
+    ],
+    "expectedMemories": [],
+    "forbiddenMemories": [
+      {
+        "statement": "My colleague's examples are my own permanent routines",
+        "reason": "Unattributed filler is not a personal preference.",
+        "category": "wrong_person"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What is my preference regarding routes?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-long-photos-8100",
+    "version": 1,
+    "description": "Exact 8100-character user turn with a relevant fact buried inside repetitive unrelated journal noise.",
+    "category": "long-messages",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I keep my photography drafts in separate dated folders. I am pasting a long and deliberately disorganized project journal. Some entries are other people's examples and some are routine logistics. The durable preference is the first sentence; later repeated prose is only filler to test the extraction boundary.",
+        "expectedEligibility": "chat_rejected",
+        "scriptedExtraction": {
+          "memories": []
+        },
+        "targetChars": 8100,
+        "paddingText": " My notes contain a timetable, scattered labels, and an example from a colleague, but these lines are not additional personal commitments. "
+      }
+    ],
+    "expectedMemories": [],
+    "forbiddenMemories": [
+      {
+        "statement": "My colleague's examples are my own permanent routines",
+        "reason": "Unattributed filler is not a personal preference.",
+        "category": "wrong_person"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What is my preference regarding photos?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  }
+]
