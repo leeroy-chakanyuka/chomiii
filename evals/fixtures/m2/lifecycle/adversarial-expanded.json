@@ -1,0 +1,660 @@
+[
+  {
+    "id": "m2-adversarial-lifecycle-early-arrival",
+    "version": 1,
+    "description": "Explicit approve operation must be exercised after extraction rather than marked as a skipped or unevaluated action.",
+    "category": "lifecycle",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I might prefer arriving early for art exhibitions, but I am not completely sure. I will review whether to keep this as a memory.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I might prefer arriving early for art exhibitions",
+              "kind": "inference",
+              "confidence": 0.77,
+              "evidence": "I might prefer arriving early for art exhibitions, but I am not completely sure."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "preference",
+        "statement": "I might prefer arriving early for art exhibitions",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "inference",
+        "importance": "high",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "A separate synthetic user owns my memories",
+        "reason": "Memory ownership must stay isolated.",
+        "category": "cross_owner"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What is my exhibition arrival preference?",
+        "expectedMemoryIds": [
+          "preference"
+        ]
+      }
+    ],
+    "lifecycle": [
+      {
+        "afterTurnId": "t1",
+        "operation": "approve",
+        "memoryId": "preference"
+      }
+    ]
+  },
+  {
+    "id": "m2-adversarial-lifecycle-books",
+    "version": 1,
+    "description": "Explicit edit operation must be exercised after extraction rather than marked as a skipped or unevaluated action.",
+    "category": "lifecycle",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I prefer paperback books for long train rides. I am keeping this note with my other household project details.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer paperback books for long train rides.",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I prefer paperback books for long train rides."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "prior",
+        "statement": "I prefer paperback books for long train rides.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "absent",
+        "inScope": true
+      },
+      {
+        "id": "updated",
+        "statement": "I now prefer a digital reader for long train rides.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "active",
+        "inScope": true,
+        "origin": "manual_edit"
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "A separate synthetic user owns my memories",
+        "reason": "Memory ownership must stay isolated.",
+        "category": "cross_owner"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What format do I prefer for train reading?",
+        "expectedMemoryIds": [
+          "updated"
+        ]
+      }
+    ],
+    "lifecycle": [
+      {
+        "afterTurnId": "t1",
+        "operation": "edit",
+        "memoryId": "prior",
+        "content": "I now prefer a digital reader for long train rides."
+      }
+    ]
+  },
+  {
+    "id": "m2-adversarial-lifecycle-workshop",
+    "version": 1,
+    "description": "Explicit delete operation must be exercised after extraction rather than marked as a skipped or unevaluated action.",
+    "category": "lifecycle",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I volunteer to prepare tables at the neighborhood workshop on Fridays. I am keeping this note with my other household project details.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I volunteer to prepare tables at the neighborhood workshop on Fridays.",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I volunteer to prepare tables at the neighborhood workshop on Fridays."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "deleted",
+        "statement": "I volunteer to prepare tables at the neighborhood workshop on Fridays.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "absent",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "A separate synthetic user owns my memories",
+        "reason": "Memory ownership must stay isolated.",
+        "category": "cross_owner"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What do I volunteer to do at the workshop?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": [
+      {
+        "afterTurnId": "t1",
+        "operation": "delete",
+        "memoryId": "deleted"
+      }
+    ]
+  },
+  {
+    "id": "m2-adversarial-lifecycle-closet",
+    "version": 1,
+    "description": "Explicit clear operation must be exercised after extraction rather than marked as a skipped or unevaluated action.",
+    "category": "lifecycle",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I organize my storage closet on the first Sunday each month. I am keeping this note with my other household project details.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I organize my storage closet on the first Sunday each month.",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I organize my storage closet on the first Sunday each month."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "cleared",
+        "statement": "I organize my storage closet on the first Sunday each month.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "absent",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "A separate synthetic user owns my memories",
+        "reason": "Memory ownership must stay isolated.",
+        "category": "cross_owner"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What do you remember about my closet routine?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": [
+      {
+        "afterTurnId": "t1",
+        "operation": "clear"
+      }
+    ]
+  },
+  {
+    "id": "m2-adversarial-lifecycle-meetings",
+    "version": 1,
+    "description": "Explicit other_owner operation must be exercised after extraction rather than marked as a skipped or unevaluated action.",
+    "category": "lifecycle",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I like to receive a written summary after project meetings. I am keeping this note with my other household project details.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I like to receive a written summary after project meetings.",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I like to receive a written summary after project meetings."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "private",
+        "statement": "I like to receive a written summary after project meetings.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "A separate synthetic user owns my memories",
+        "reason": "Memory ownership must stay isolated.",
+        "category": "cross_owner"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What is my project meeting preference?",
+        "expectedMemoryIds": [
+          "private"
+        ]
+      }
+    ],
+    "lifecycle": [
+      {
+        "afterTurnId": "t1",
+        "operation": "other_owner",
+        "memoryId": "private"
+      }
+    ]
+  },
+  {
+    "id": "m2-adversarial-lifecycle-weekend-walks",
+    "version": 1,
+    "description": "Explicit approve operation must be exercised after extraction rather than marked as a skipped or unevaluated action.",
+    "category": "lifecycle",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I might enjoy walking by the river on Sunday mornings, but I am still deciding. I will review whether to keep this as a memory.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I might enjoy walking by the river on Sunday mornings",
+              "kind": "inference",
+              "confidence": 0.77,
+              "evidence": "I might enjoy walking by the river on Sunday mornings, but I am still deciding."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "preference",
+        "statement": "I might enjoy walking by the river on Sunday mornings",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "inference",
+        "importance": "high",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "A separate synthetic user owns my memories",
+        "reason": "Memory ownership must stay isolated.",
+        "category": "cross_owner"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "Do I have a preference about walking by the river?",
+        "expectedMemoryIds": [
+          "preference"
+        ]
+      }
+    ],
+    "lifecycle": [
+      {
+        "afterTurnId": "t1",
+        "operation": "approve",
+        "memoryId": "preference"
+      }
+    ]
+  },
+  {
+    "id": "m2-adversarial-lifecycle-recipes",
+    "version": 1,
+    "description": "Explicit edit operation must be exercised after extraction rather than marked as a skipped or unevaluated action.",
+    "category": "lifecycle",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I prefer recipe instructions with quantities in grams. I am keeping this note with my other household project details.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer recipe instructions with quantities in grams.",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I prefer recipe instructions with quantities in grams."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "prior",
+        "statement": "I prefer recipe instructions with quantities in grams.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "absent",
+        "inScope": true
+      },
+      {
+        "id": "updated",
+        "statement": "I prefer recipe instructions with quantities in millilitres when applicable.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "active",
+        "inScope": true,
+        "origin": "manual_edit"
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "A separate synthetic user owns my memories",
+        "reason": "Memory ownership must stay isolated.",
+        "category": "cross_owner"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What recipe measurement style do I prefer?",
+        "expectedMemoryIds": [
+          "updated"
+        ]
+      }
+    ],
+    "lifecycle": [
+      {
+        "afterTurnId": "t1",
+        "operation": "edit",
+        "memoryId": "prior",
+        "content": "I prefer recipe instructions with quantities in millilitres when applicable."
+      }
+    ]
+  },
+  {
+    "id": "m2-adversarial-lifecycle-photography",
+    "version": 1,
+    "description": "Explicit delete operation must be exercised after extraction rather than marked as a skipped or unevaluated action.",
+    "category": "lifecycle",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I catalogue my travel photographs by city and year. I am keeping this note with my other household project details.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I catalogue my travel photographs by city and year.",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I catalogue my travel photographs by city and year."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "deleted",
+        "statement": "I catalogue my travel photographs by city and year.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "absent",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "A separate synthetic user owns my memories",
+        "reason": "Memory ownership must stay isolated.",
+        "category": "cross_owner"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "How do I catalogue my travel photographs?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": [
+      {
+        "afterTurnId": "t1",
+        "operation": "delete",
+        "memoryId": "deleted"
+      }
+    ]
+  },
+  {
+    "id": "m2-adversarial-lifecycle-sorting",
+    "version": 1,
+    "description": "Explicit clear operation must be exercised after extraction rather than marked as a skipped or unevaluated action.",
+    "category": "lifecycle",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I sort my workshop tools into labeled drawers on Saturdays. I am keeping this note with my other household project details.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I sort my workshop tools into labeled drawers on Saturdays.",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I sort my workshop tools into labeled drawers on Saturdays."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "cleared",
+        "statement": "I sort my workshop tools into labeled drawers on Saturdays.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "absent",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "A separate synthetic user owns my memories",
+        "reason": "Memory ownership must stay isolated.",
+        "category": "cross_owner"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What is my tool sorting routine?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": [
+      {
+        "afterTurnId": "t1",
+        "operation": "clear"
+      }
+    ]
+  },
+  {
+    "id": "m2-adversarial-lifecycle-messages",
+    "version": 1,
+    "description": "Explicit other_owner operation must be exercised after extraction rather than marked as a skipped or unevaluated action.",
+    "category": "lifecycle",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I prefer getting schedule changes in writing. I am keeping this note with my other household project details.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer getting schedule changes in writing.",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I prefer getting schedule changes in writing."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "private",
+        "statement": "I prefer getting schedule changes in writing.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "A separate synthetic user owns my memories",
+        "reason": "Memory ownership must stay isolated.",
+        "category": "cross_owner"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "How should schedule changes be communicated to me?",
+        "expectedMemoryIds": [
+          "private"
+        ]
+      }
+    ],
+    "lifecycle": [
+      {
+        "afterTurnId": "t1",
+        "operation": "other_owner",
+        "memoryId": "private"
+      }
+    ]
+  }
+]
