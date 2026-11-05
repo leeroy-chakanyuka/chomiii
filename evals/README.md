@@ -165,10 +165,50 @@ provider calls. Unresolved decisions remain ungraded.
 
 The [fixture schema](schemas/m2-fixture.schema.json) describes each versioned
 case. `FixtureLoader` also checks linked IDs, lifecycle operations, and planning
-dependencies. The dataset currently contains 40 fixtures: 4 explicit-fact,
-7 long-message, 4 conversation, 4 correction, 4 inference, 6 negative, and
-11 lifecycle cases. `DatasetCoverageTest` checks the category minimums and the
+dependencies. The dataset now contains **150 entirely fictional fixtures**: 24 explicit-fact,
+15 long-message, 24 conversation, 24 correction, 16 inference, 26 negative, and
+21 lifecycle cases. The original 40 cases are preserved unchanged. Another
+110 adversarial cases are in the `adversarial-expanded.json` files in each
+category. `DatasetCoverageTest` checks category minimums and the
 500, 1,000, 1,800, 2,000, 2,001, and 8,100-character boundaries.
+
+### Adversarial corpus
+
+The expanded cases intentionally mix valid evidence with distractions instead
+of relying on short, single-fact declarations:
+
+- Three durable facts in one message compete for the two-candidate extraction
+  limit; the third remains annotated as out-of-scope for capacity scoring.
+- Interleaved multi-turn conversations contain repeated preferences, quoted
+  first-person text from other speakers, assistant acknowledgements, and
+  irrelevant factual detail.
+- A revised preference should supersede the original, not survive alongside it.
+  These deliberately difficult scenarios can expose a known M2 limitation; a
+  scripted replay's quality finding is not automatically a harness failure.
+- Quoted or hypothetical first-person speech, prompt-injection examples, and
+  third-party facts should not be attributed to the actual user.
+- Uncertain preferences remain suggestions rather than becoming permanent
+  habits, while isolated incidents and fictional plans should not be remembered.
+- Length cases exercise 1,500, 1,750, 1,900, 1,999, 2,000, 2,001, 8,001
+  and 8,100 characters with exact filler expansion.
+- Lifecycle cases require executed approve, edit, delete, clear, or cross-owner
+  isolation behavior rather than accepting an unexercised/skipped action.
+
+**Important:** These are stress cases and failure detectors, not 110
+independent measurements of live model quality. Some scripted extractions are
+deliberately wrong to check whether the memory pipeline rejects unsupported
+facts. The fixture's expected/forbidden facts are the human-authored oracle;
+they must not be inferred from the scripted model output. No actual users,
+credentials, or real-world actions are included.
+
+For a representative offline sample run from `backend/`:
+
+```powershell
+.\mvnw.cmd "-Dtest=EvaluationSuiteTest" "-Deval.fixture=m2-adversarial-schedule-dense" test
+.\mvnw.cmd "-Dtest=EvaluationSuiteTest" "-Deval.fixture=m2-adversarial-software-revision" test
+.\mvnw.cmd "-Dtest=EvaluationSuiteTest" "-Deval.fixture=m2-adversarial-lifecycle-books" test
+```
+
 
 Long fixtures may specify `targetChars` and `paddingText`. The loader preserves
 the complete authored prefix and appends fictional filler to the explicit Java
