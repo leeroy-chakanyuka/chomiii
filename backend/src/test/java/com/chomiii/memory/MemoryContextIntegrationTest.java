@@ -24,6 +24,55 @@ import static org.mockito.ArgumentMatchers.anyString;
 
 class MemoryContextIntegrationTest {
     @Test
+    void completedChatSchedulesLearningByDefaultWithoutAnyOptIn() throws Exception {
+        ChatTurnStore store = mock(ChatTurnStore.class);
+        UUID conversation = UUID.randomUUID();
+        String userText = "My usual groceries are oats and milk.";
+        when(store.begin(any(), anyString(), any(), anyString()))
+                .thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
+        MemoryService memories = mock(MemoryService.class);
+        when(memories.forChat(anyString(), anyString())).thenReturn("");
+        MemoryLearningService learning = mock(MemoryLearningService.class);
+        CountDownLatch learningScheduled = new CountDownLatch(1);
+        org.mockito.Mockito.doAnswer(call -> {
+            learningScheduled.countDown();
+            return null;
+        }).when(learning).schedule(
+                org.mockito.ArgumentMatchers.eq("owner"),
+                org.mockito.ArgumentMatchers.eq(conversation),
+                org.mockito.ArgumentMatchers.eq(userText),
+                org.mockito.ArgumentMatchers.any(ChatProvider.class),
+                org.mockito.ArgumentMatchers.eq("gemini-3.5-flash-lite"),
+                org.mockito.ArgumentMatchers.eq("test-key"));
+        ChatProvider provider = new ChatProvider() {
+            @Override public String id() { return "gemini"; }
+            @Override public Generation open(ChatInput input, String key) {
+                return new Generation() {
+                    @Override public void stream(Consumer<String> delta) { delta.accept("Got it."); }
+                    @Override public void close() {}
+                };
+            }
+        };
+        try (var executor = Executors.newSingleThreadExecutor()) {
+            ChatStreamService chat = new ChatStreamService(
+                    store, mock(ConversationRepository.class), memories, learning,
+                    new ProviderCatalog(List.of("gemini-3.5-flash-lite")),
+                    List.of(provider), executor);
+            // The normal four-argument chat entrypoint has no memory-learning flag.
+            chat.start(conversation, "owner", new ChatStreamController.MessageRequest(
+                    UUID.randomUUID(), "gemini", "gemini-3.5-flash-lite", userText), "test-key");
+            assertThat(learningScheduled.await(10, TimeUnit.SECONDS)).isTrue();
+            org.mockito.Mockito.verify(learning).schedule(
+                    org.mockito.ArgumentMatchers.eq("owner"),
+                    org.mockito.ArgumentMatchers.eq(conversation),
+                    org.mockito.ArgumentMatchers.eq(userText),
+                    org.mockito.ArgumentMatchers.eq(provider),
+                    org.mockito.ArgumentMatchers.eq("gemini-3.5-flash-lite"),
+                    org.mockito.ArgumentMatchers.eq("test-key"));
+        }
+    }
+
+    @Test
     void explicitOptOutDoesNotQueryOrSendPersonalMemory() throws Exception {
         ChatTurnStore store = mock(ChatTurnStore.class);
         when(store.begin(any(), anyString(), any(), anyString()))
