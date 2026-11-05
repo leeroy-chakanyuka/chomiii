@@ -1,0 +1,596 @@
+[
+  {
+    "id": "m2-adversarial-inference-weekend-plans",
+    "version": 1,
+    "description": "Uncertainty must remain reviewable instead of becoming a definite standing preference.",
+    "category": "inferences",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I might start visiting the farmer's market every other weekend, but I have not committed to it.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I might visit the farmer's market every other weekend",
+              "kind": "inference",
+              "confidence": 0.76,
+              "evidence": "I might start visiting the farmer's mark"
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "tentative",
+        "statement": "I might visit the farmer's market every other weekend",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "inference",
+        "importance": "high",
+        "expectedStatus": "suggested",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I always visit the farmer's market every weekend",
+        "reason": "The source contains uncertainty, one-off behavior, or a fictional scenario rather than a stable commitment.",
+        "category": "over_inference"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What can you reliably say about my weekend-plans preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-inference-calendar",
+    "version": 1,
+    "description": "Uncertainty must remain reviewable instead of becoming a definite standing preference.",
+    "category": "inferences",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I may prefer paper planners to calendar apps, though I am still comparing them.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I might prefer paper planners to calendar apps",
+              "kind": "inference",
+              "confidence": 0.76,
+              "evidence": "I may prefer paper planners to calendar "
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "tentative",
+        "statement": "I might prefer paper planners to calendar apps",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "inference",
+        "importance": "high",
+        "expectedStatus": "suggested",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I only use paper planners",
+        "reason": "The source contains uncertainty, one-off behavior, or a fictional scenario rather than a stable commitment.",
+        "category": "over_inference"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What can you reliably say about my calendar preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-inference-morning-work",
+    "version": 1,
+    "description": "Uncertainty must remain reviewable instead of becoming a definite standing preference.",
+    "category": "inferences",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I think I may work better with an early planning session, although I have tried it just twice.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I might prefer an early planning session",
+              "kind": "inference",
+              "confidence": 0.76,
+              "evidence": "I think I may work better with an early "
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "tentative",
+        "statement": "I might prefer an early planning session",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "inference",
+        "importance": "high",
+        "expectedStatus": "suggested",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I always start work early",
+        "reason": "The source contains uncertainty, one-off behavior, or a fictional scenario rather than a stable commitment.",
+        "category": "over_inference"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What can you reliably say about my morning-work preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-inference-film",
+    "version": 1,
+    "description": "Uncertainty must remain reviewable instead of becoming a definite standing preference.",
+    "category": "inferences",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I might enjoy foreign-language films more than documentaries, but I am undecided.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I might enjoy foreign-language films more than documentaries",
+              "kind": "inference",
+              "confidence": 0.76,
+              "evidence": "I might enjoy foreign-language films mor"
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "tentative",
+        "statement": "I might enjoy foreign-language films more than documentaries",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "inference",
+        "importance": "high",
+        "expectedStatus": "suggested",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I dislike all documentaries",
+        "reason": "The source contains uncertainty, one-off behavior, or a fictional scenario rather than a stable commitment.",
+        "category": "over_inference"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What can you reliably say about my film preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-inference-coffee",
+    "version": 1,
+    "description": "Uncertainty must remain reviewable instead of becoming a definite standing preference.",
+    "category": "inferences",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I suspect I might prefer decaf coffee in the afternoon, but I have not tested it consistently.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I might prefer decaf coffee in the afternoon",
+              "kind": "inference",
+              "confidence": 0.76,
+              "evidence": "I suspect I might prefer decaf coffee in"
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "tentative",
+        "statement": "I might prefer decaf coffee in the afternoon",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "inference",
+        "importance": "high",
+        "expectedStatus": "suggested",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I never drink caffeinated coffee",
+        "reason": "The source contains uncertainty, one-off behavior, or a fictional scenario rather than a stable commitment.",
+        "category": "over_inference"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What can you reliably say about my coffee preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-inference-train",
+    "version": 1,
+    "description": "Uncertainty must remain reviewable instead of becoming a definite standing preference.",
+    "category": "inferences",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am considering using a commuter train on Fridays, but it is only an option at this stage.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I might use a commuter train on Fridays",
+              "kind": "inference",
+              "confidence": 0.76,
+              "evidence": "I am considering using a commuter train "
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "tentative",
+        "statement": "I might use a commuter train on Fridays",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "inference",
+        "importance": "high",
+        "expectedStatus": "suggested",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I take the commuter train every Friday",
+        "reason": "The source contains uncertainty, one-off behavior, or a fictional scenario rather than a stable commitment.",
+        "category": "over_inference"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What can you reliably say about my train preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-inference-cycling",
+    "version": 1,
+    "description": "One-off behavior or fictional intent cannot be promoted to a stable personal fact.",
+    "category": "inferences",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I rented a bicycle once yesterday; I have not decided whether I will ever cycle to work.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I cycle to work regularly",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I rented a bicycle once yesterday; I hav"
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [],
+    "forbiddenMemories": [
+      {
+        "statement": "I cycle to work regularly",
+        "reason": "The source contains uncertainty, one-off behavior, or a fictional scenario rather than a stable commitment.",
+        "category": "over_inference"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What can you reliably say about my cycling preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-inference-gardening",
+    "version": 1,
+    "description": "One-off behavior or fictional intent cannot be promoted to a stable personal fact.",
+    "category": "inferences",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I watched a video about growing cacti and wondered if it could be a hobby, nothing more.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I grow cacti as a hobby",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I watched a video about growing cacti an"
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [],
+    "forbiddenMemories": [
+      {
+        "statement": "I grow cacti as a hobby",
+        "reason": "The source contains uncertainty, one-off behavior, or a fictional scenario rather than a stable commitment.",
+        "category": "over_inference"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What can you reliably say about my gardening preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-inference-language",
+    "version": 1,
+    "description": "One-off behavior or fictional intent cannot be promoted to a stable personal fact.",
+    "category": "inferences",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I tried one Japanese lesson as an experiment and have no ongoing study plan.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I study Japanese each week",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I tried one Japanese lesson as an experi"
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [],
+    "forbiddenMemories": [
+      {
+        "statement": "I study Japanese each week",
+        "reason": "The source contains uncertainty, one-off behavior, or a fictional scenario rather than a stable commitment.",
+        "category": "over_inference"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What can you reliably say about my language preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-inference-music",
+    "version": 1,
+    "description": "One-off behavior or fictional intent cannot be promoted to a stable personal fact.",
+    "category": "inferences",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I attended a single live jazz show last Saturday; that is not evidence of a favourite genre.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer live jazz concerts",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I attended a single live jazz show last "
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [],
+    "forbiddenMemories": [
+      {
+        "statement": "I prefer live jazz concerts",
+        "reason": "The source contains uncertainty, one-off behavior, or a fictional scenario rather than a stable commitment.",
+        "category": "over_inference"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What can you reliably say about my music preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-inference-travel",
+    "version": 1,
+    "description": "One-off behavior or fictional intent cannot be promoted to a stable personal fact.",
+    "category": "inferences",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I bookmarked a sailing course for a fictional character I am writing, not for myself.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I intend to learn sailing",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I bookmarked a sailing course for a fict"
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [],
+    "forbiddenMemories": [
+      {
+        "statement": "I intend to learn sailing",
+        "reason": "The source contains uncertainty, one-off behavior, or a fictional scenario rather than a stable commitment.",
+        "category": "over_inference"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What can you reliably say about my travel preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-inference-food",
+    "version": 1,
+    "description": "One-off behavior or fictional intent cannot be promoted to a stable personal fact.",
+    "category": "inferences",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I sampled one spicy noodle dish at a friend's house and do not know if I liked it.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I love spicy noodles",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I sampled one spicy noodle dish at a fri"
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [],
+    "forbiddenMemories": [
+      {
+        "statement": "I love spicy noodles",
+        "reason": "The source contains uncertainty, one-off behavior, or a fictional scenario rather than a stable commitment.",
+        "category": "over_inference"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What can you reliably say about my food preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  }
+]
