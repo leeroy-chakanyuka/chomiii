@@ -58,4 +58,33 @@ class MemorySelectorTest {
         assertThat(MemorySelector.select(List.of(d, c, b, a), "What do you remember about me?"))
                 .containsExactly(d, c, b);
     }
+
+    @Test
+    void findsTacoPreferenceWithoutRepeatingTheSameWordsInTheRequest() {
+        var food = memory("I like mild tacos with salsa", 12);
+        var location = memory("I live in Goodwood", 13);
+        var unrelated = memory("I prefer science fiction movies", 14);
+        assertThat(MemorySelector.selectForPlanning(List.of(unrelated, location, food),
+                "I am hungry and need dinner tonight"))
+                .contains(food, location).doesNotContain(unrelated);
+    }
+
+    @Test
+    void connectsInterviewAndCalendarContextAcrossTopics() {
+        var career = memory("I am interviewing for a junior developer job", 13);
+        var calendar = memory("I have a meeting on Friday", 14);
+        var unrelated = memory("I like tennis", 15);
+        assertThat(MemorySelector.selectForPlanning(List.of(unrelated, calendar, career),
+                "Please plan around my software interview"))
+                .contains(career, calendar).doesNotContain(unrelated);
+    }
+
+    @Test
+    void genericQueriesStillDoNotLeakUnrelatedPersonalContext() {
+        var place = memory("I live in Goodwood", 12);
+        var food = memory("I like mild tacos", 13);
+        assertThat(MemorySelector.selectForPlanning(List.of(place, food), "Explain a sorting algorithm"))
+                .isEmpty();
+    }
+
 }
