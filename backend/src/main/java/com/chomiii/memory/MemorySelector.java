@@ -57,9 +57,15 @@ public final class MemorySelector {
         Set<MemoryTopics.Topic> savedTopics = MemoryTopics.detect(memory.content());
         long topic = interests.stream().filter(savedTopics::contains)
                 .filter(item -> item != MemoryTopics.Topic.PERSONAL).count();
+        // Adjacent context matters: dining needs a location; interviews often affect a calendar.
+        int supporting = 0;
+        if (interests.contains(MemoryTopics.Topic.FOOD) && savedTopics.contains(MemoryTopics.Topic.LOCATION)) supporting++;
+        if (interests.contains(MemoryTopics.Topic.WORK) && savedTopics.contains(MemoryTopics.Topic.CALENDAR)) supporting++;
+        if (interests.contains(MemoryTopics.Topic.CALENDAR) && savedTopics.contains(MemoryTopics.Topic.WORK)) supporting++;
+        if (interests.contains(MemoryTopics.Topic.STUDY) && savedTopics.contains(MemoryTopics.Topic.CALENDAR)) supporting++;
         // A topic match may recall "I like tacos" for "find dinner", even with zero shared words.
         // Personal-preference-only matches are too broad and remain lexical.
-        return exact * 10 + (int) topic * 3;
+        return exact * 10 + (int) topic * 3 + supporting;
     }
 
     private static Set<String> words(String input) {
