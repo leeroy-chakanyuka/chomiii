@@ -55,6 +55,9 @@ class PlanParserTest {
     void rejectsObviousClaimsThatAProposedExternalActionAlreadyHappened() {
         rejects(VALID.replace("Find the meeting and propose a change.", "I have already sent the email."));
         rejects(VALID.replace("Find the meeting and propose a change.", "Your meeting has been rescheduled."));
+        rejects(VALID.replace("After ten in the morning", "I have already sent the email."));
+        rejects(VALID.replace("Preferred time", "I have already sent the email."));
+        rejects(VALID.replace("Which meeting?", "Your meeting has been rescheduled."));
     }
 
     @Test

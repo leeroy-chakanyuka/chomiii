@@ -50,8 +50,8 @@ public final class PlanParser {
     }
 
     private Plan validate(Draft draft, Set<UUID> authorizedMemoryIds, Set<String> allowedCapabilities) {
-        String goal = proposalText(draft.goal(), 300);
-        String summary = proposalText(draft.summary(), 1_000);
+        String goal = text(draft.goal(), 300);
+        String summary = text(draft.summary(), 1_000);
         limit(draft.memoryReferences(), 5);
         limit(draft.constraints(), 10);
         limit(draft.missingInformation(), 5);
@@ -69,7 +69,7 @@ public final class PlanParser {
         Map<String, DraftStep> steps = new java.util.LinkedHashMap<>();
         for (DraftStep step : draft.steps()) {
             id(step.id());
-            proposalText(step.title(), 300);
+            text(step.title(), 300);
             CapabilityCatalog.get(step.capability());
             if (!allowedCapabilities.contains(step.capability())) throw invalid();
             limit(step.dependsOn(), 10);
@@ -141,11 +141,7 @@ public final class PlanParser {
 
     private static String text(String value, int max) {
         if (value == null || value.isBlank() || value.length() > max) throw invalid();
-        return value.strip();
-    }
-
-    private static String proposalText(String value, int max) {
-        String clean = text(value, max);
+        String clean = value.strip();
         if (COMPLETION_CLAIM.matcher(clean).find()) throw invalid();
         return clean;
     }
