@@ -8,12 +8,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Bounded local retrieval, no provider API or embedding call before streaming.
- * False negatives are possible; this intentionally avoids pretending to have
- * semantic search. Retrieval is a relevance hint, not user authorization.
+ * Local hybrid lexical/topic retrieval: no embedding request on the chat critical path.
+ * Topic matching covers simple paraphrases; it is not general semantic understanding.
  */
 public final class MemorySelector {
-    private static final int MAX_RESULTS = 3;
+    private static final int MAX_CHAT_RESULTS = 3;
+    private static final int MAX_PLANNING_RESULTS = 6;
     private static final Set<String> STOPWORDS = Set.of(
             "what", "which", "where", "when", "have", "with", "that",
             "this", "your", "mine", "about", "could", "would", "should",
@@ -23,24 +23,43 @@ public final class MemorySelector {
     private MemorySelector() {}
 
     public static List<PersonalMemory> select(List<PersonalMemory> available, String query) {
+        return rank(available, query, MAX_CHAT_RESULTS);
+    }
+
+    public static List<PersonalMemory> selectForPlanning(List<PersonalMemory> available, String query) {
+        return rank(available, query, MAX_PLANNING_RESULTS);
+    }
+
+    private static List<PersonalMemory> rank(List<PersonalMemory> available, String query, int limit) {
+        if (available == null || available.isEmpty()) return List.of();
         String normalized = query == null ? "" : query.toLowerCase(Locale.ROOT);
         if (normalized.contains("what do you remember")
                 || normalized.contains("what have you saved")
                 || normalized.contains("what do you know about me")) {
-            return available.stream().limit(MAX_RESULTS).toList();
+            return available.stream().sorted(Comparator.comparing(PersonalMemory::updatedAt).reversed())
+                    .limit(limit).toList();
         }
         Set<String> keywords = words(normalized);
-        if (keywords.isEmpty()) return List.of();
+        Set<MemoryTopics.Topic> interests = MemoryTopics.detect(normalized);
+        if (keywords.isEmpty() && interests.isEmpty()) return List.of();
         return available.stream()
-                .map(memory -> new Match(memory, relevance(words(memory.content()), keywords)))
+                .map(memory -> new Match(memory, relevance(memory, keywords, interests)))
                 .filter(match -> match.score() > 0)
                 .sorted(Comparator.comparingInt(Match::score).reversed()
                         .thenComparing(match -> match.memory().updatedAt(), Comparator.reverseOrder()))
-                .limit(MAX_RESULTS).map(Match::memory).toList();
+                .limit(limit).map(Match::memory).toList();
     }
 
-    private static int relevance(Set<String> content, Set<String> query) {
-        return (int) query.stream().filter(content::contains).count();
+    private static int relevance(PersonalMemory memory, Set<String> query,
+            Set<MemoryTopics.Topic> interests) {
+        Set<String> saved = words(memory.content());
+        int exact = (int) query.stream().filter(saved::contains).count();
+        Set<MemoryTopics.Topic> savedTopics = MemoryTopics.detect(memory.content());
+        long topic = interests.stream().filter(savedTopics::contains)
+                .filter(item -> item != MemoryTopics.Topic.PERSONAL).count();
+        // A topic match may recall "I like tacos" for "find dinner", even with zero shared words.
+        // Personal-preference-only matches are too broad and remain lexical.
+        return exact * 10 + (int) topic * 3;
     }
 
     private static Set<String> words(String input) {
