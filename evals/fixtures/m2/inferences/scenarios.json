@@ -1,0 +1,22 @@
+[
+  {
+    "id":"m2-inference-one-coffee","version":1,"description":"One purchase does not establish a daily routine.","category":"inferences","difficulty":"medium","importance":"high","inputType":"single_message","synthetic":true,
+    "turns":[{"id":"t1","role":"user","content":"I bought coffee yesterday while waiting for the bus.","expectedEligibility":"eligible","scriptedExtraction":{"memories":[{"content":"I drink coffee every morning","kind":"fact","confidence":0.95,"evidence":"I bought coffee yesterday"}]}}],
+    "expectedMemories":[],"forbiddenMemories":[{"statement":"I drink coffee every morning","reason":"A single purchase is not a recurring routine.","category":"over_inference"}],"retrievalChecks":[{"query":"What do I drink every morning?","expectedMemoryIds":[]}],"lifecycle":[]
+  },
+  {
+    "id":"m2-inference-wrong-person","version":1,"description":"A friend's goal must not become the user's goal.","category":"inferences","difficulty":"medium","importance":"high","inputType":"single_message","synthetic":true,
+    "turns":[{"id":"t1","role":"user","content":"My friend wants to learn Java. I am helping her choose a course.","expectedEligibility":"eligible","scriptedExtraction":{"memories":[{"content":"I am learning Java","kind":"fact","confidence":0.95,"evidence":"My friend wants to learn Java"}]}}],
+    "expectedMemories":[],"forbiddenMemories":[{"statement":"I am learning Java","reason":"The friend is the learner.","category":"wrong_person"}],"retrievalChecks":[{"query":"What am I learning?","expectedMemoryIds":[]}],"lifecycle":[]
+  },
+  {
+    "id":"m2-inference-uncertain-walks","version":1,"description":"An uncertain preference stays reviewable.","category":"inferences","difficulty":"medium","importance":"high","inputType":"single_message","synthetic":true,
+    "turns":[{"id":"t1","role":"user","content":"Maybe I like early morning walks, but I am not sure.","expectedEligibility":"eligible","scriptedExtraction":{"memories":[{"content":"I might like early morning walks","kind":"inference","confidence":0.75,"evidence":"I like early morning walks"}]}}],
+    "expectedMemories":[{"id":"walks","statement":"I might like early morning walks","aliases":[],"sourceTurnIds":["t1"],"kind":"inference","importance":"medium","expectedStatus":"suggested","inScope":true}],"forbiddenMemories":[{"statement":"I always walk early every morning","reason":"The preference is uncertain.","category":"over_inference"}],"retrievalChecks":[{"query":"When do I like morning walks?","expectedMemoryIds":[]}],"lifecycle":[]
+  },
+  {
+    "id":"m2-inference-temporary-book","version":1,"description":"A temporary plan must not become a permanent habit.","category":"inferences","difficulty":"easy","importance":"medium","inputType":"single_message","synthetic":true,
+    "turns":[{"id":"t1","role":"user","content":"I might read a novel tonight after dinner.","expectedEligibility":"eligible","scriptedExtraction":{"memories":[]}}],
+    "expectedMemories":[],"forbiddenMemories":[{"statement":"I always read after dinner","reason":"One possible plan is not a routine.","category":"over_inference"}],"retrievalChecks":[{"query":"What do I always do after dinner?","expectedMemoryIds":[]}],"lifecycle":[]
+  }
+]

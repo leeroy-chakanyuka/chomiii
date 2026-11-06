@@ -150,3 +150,15 @@ increment that revision, so an older extraction cannot restore a deleted or
 corrected memory. The separate extraction worker cancels its Gemini request
 after 120 seconds. A failed memory lookup leaves chat available without
 memory context.
+
+## Evaluation harness
+
+The evaluation code is test-scoped under `backend/src/test/java/com/chomiii/evaluation`.
+Versioned synthetic fixtures live in `evals/`. The same runner uses either an
+in-memory test store or the real Spring and JDBC services on an explicitly
+disposable local database. The database URL and Flyway target are pinned to the
+validated test database before Spring starts. A provider wrapper counts and
+limits opt-in live calls, while the scorer remains independent of the Gemini
+SDK. An optional separate-family judge or a human can review ambiguous matches.
+The planning fixture contract is validation only; it does not execute tools.
+See [evaluation instructions](../evals/README.md) for commands and limitations.

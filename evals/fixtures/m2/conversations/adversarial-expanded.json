@@ -1,0 +1,2722 @@
+[
+  {
+    "id": "m2-adversarial-schedule-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "My regular desk hours are 07:30 to 16:00 on weekdays. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "My regular desk hours are 07:30 to 16:00 on weekdays.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "My regular desk hours are 07:30 to 16:00 on weekdays."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer receiving meeting agendas the day before. I am also sorting old event flyers that describe someone else's timetable, which should not be mistaken for mine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer receiving meeting agendas the day before.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer receiving meeting agendas the day before."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My teammate works noon to eight.\" They also said, \"I work noon to eight.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: My regular desk hours are 07:30 to 16:00 on weekdays. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "My regular desk hours are 07:30 to 16:00 on weekdays.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "My regular desk hours are 07:30 to 16:00 on weekdays."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "My regular desk hours are 07:30 to 16:00 on weekdays.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer receiving meeting agendas the day before.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I work noon to eight.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "From next month my regular desk hours will be 09:00 to 17:30 on weekdays.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What are my regular work hours and meeting preferences?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-commute-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I usually take the train to my workshop on Tuesdays. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I usually take the train to my workshop on Tuesdays.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I usually take the train to my workshop on Tuesdays."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer a window seat when travelling long distances. I have several outdated notes in the same folder, so the date and the person attached to a claim matter.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer a window seat when travelling long distances.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer a window seat when travelling long distances."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My neighbor drives to the workshop daily.\" They also said, \"I drive to the workshop daily.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I usually take the train to my workshop on Tuesdays. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I usually take the train to my workshop on Tuesdays.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I usually take the train to my workshop on Tuesdays."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I usually take the train to my workshop on Tuesdays.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer a window seat when travelling long distances.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I drive to the workshop daily.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I will take the bus to my workshop on Tuesdays from December.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "How do I get to my workshop and what travel seat do I prefer?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-study-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I reserve Thursday evenings for learning database design. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I reserve Thursday evenings for learning database design.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I reserve Thursday evenings for learning database design."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I learn best by building small working examples. Some details in my pasted notes are examples rather than plans, and I do not want them treated as permanent commitments.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I learn best by building small working examples.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I learn best by building small working examples."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My classmate prefers memorizing slides.\" They also said, \"I prefer memorizing slides.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I reserve Thursday evenings for learning database design. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I reserve Thursday evenings for learning database design.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I reserve Thursday evenings for learning database design."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I reserve Thursday evenings for learning database design.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I learn best by building small working examples.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I prefer memorizing slides.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "Starting next term I will study database design on Saturday mornings instead.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I study database design and how do I like learning?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-language-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I practise conversational Italian every Monday evening. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I practise conversational Italian every Monday evening.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I practise conversational Italian every Monday evening."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer language exercises with audio examples. I am preparing a project handover, and some of the names and habits in these notes belong to other people.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer language exercises with audio examples.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer language exercises with audio examples."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My cousin studies Korean on Fridays.\" They also said, \"I study Korean on Fridays.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I practise conversational Italian every Monday evening. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I practise conversational Italian every Monday evening.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I practise conversational Italian every Monday evening."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I practise conversational Italian every Monday evening.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer language exercises with audio examples.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I study Korean on Fridays.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I am moving my Italian practice to Wednesday evenings.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I practise Italian and what exercise format helps me?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-reading-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I read historical mysteries during my train journey. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I read historical mysteries during my train journey.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I read historical mysteries during my train journey."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer borrowing books rather than buying new copies. I keep temporary errands and continuing preferences in the same notes, but they are not equally useful for long-term recall.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer borrowing books rather than buying new copies.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer borrowing books rather than buying new copies."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My roommate only reads sports biographies.\" They also said, \"I only read sports biographies.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I read historical mysteries during my train journey. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I read historical mysteries during my train journey.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I read historical mysteries during my train journey."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I read historical mysteries during my train journey.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer borrowing books rather than buying new copies.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I only read sports biographies.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I have switched to reading science essays during my train journey.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What do I read while travelling and how do I get books?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-cooking-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I normally make a lentil stew on Sundays. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I normally make a lentil stew on Sundays.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I normally make a lentil stew on Sundays."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer recipes with measurements in grams. I am also sorting old event flyers that describe someone else's timetable, which should not be mistaken for mine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer recipes with measurements in grams.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer recipes with measurements in grams."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My aunt serves lentil stew on Wednesdays.\" They also said, \"I cook lentil stew on Wednesdays.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I normally make a lentil stew on Sundays. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I normally make a lentil stew on Sundays.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I normally make a lentil stew on Sundays."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I normally make a lentil stew on Sundays.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer recipes with measurements in grams.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I cook lentil stew on Wednesdays.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I now make vegetable soup on Sundays instead of lentil stew.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What do I cook on Sundays and how should recipes be measured?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-gardening-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I water the balcony herbs every second morning. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I water the balcony herbs every second morning.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I water the balcony herbs every second morning."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer growing herbs in reusable clay pots. I have several outdated notes in the same folder, so the date and the person attached to a claim matter.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer growing herbs in reusable clay pots.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer growing herbs in reusable clay pots."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My landlord tends the roses once a week.\" They also said, \"I tend the roses every week.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I water the balcony herbs every second morning. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I water the balcony herbs every second morning.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I water the balcony herbs every second morning."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I water the balcony herbs every second morning.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer growing herbs in reusable clay pots.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I tend the roses every week.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I am watering the balcony herbs every evening during summer instead.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I tend the herbs and which pots do I like?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-photography-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I usually photograph street architecture at sunrise. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I usually photograph street architecture at sunrise.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I usually photograph street architecture at sunrise."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer editing photographs on a large monitor. Some details in my pasted notes are examples rather than plans, and I do not want them treated as permanent commitments.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer editing photographs on a large monitor.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer editing photographs on a large monitor."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My friend only shoots wildlife at night.\" They also said, \"I photograph wildlife every night.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I usually photograph street architecture at sunrise. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I usually photograph street architecture at sunrise.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I usually photograph street architecture at sunrise."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I usually photograph street architecture at sunrise.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer editing photographs on a large monitor.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I photograph wildlife every night.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I now photograph street architecture at dusk instead of sunrise.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I shoot architecture and where do I like editing?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-music-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I practise acoustic guitar for half an hour on Saturdays. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I practise acoustic guitar for half an hour on Saturdays.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I practise acoustic guitar for half an hour on Saturdays."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer learning songs from chord diagrams. I am preparing a project handover, and some of the names and habits in these notes belong to other people.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer learning songs from chord diagrams.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer learning songs from chord diagrams."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My flatmate plays drums before breakfast.\" They also said, \"I play drums before breakfast.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I practise acoustic guitar for half an hour on Saturdays. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I practise acoustic guitar for half an hour on Saturdays.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I practise acoustic guitar for half an hour on Saturdays."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I practise acoustic guitar for half an hour on Saturdays.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer learning songs from chord diagrams.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I play drums before breakfast.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I have moved my acoustic guitar practice to Sunday afternoons.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I practise guitar and how do I learn songs?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-volunteering-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I volunteer at the neighborhood library on the first Saturday of each month. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I volunteer at the neighborhood library on the first Saturday of each month.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I volunteer at the neighborhood library on the first Saturday of each month."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer helping to organize returned books. I keep temporary errands and continuing preferences in the same notes, but they are not equally useful for long-term recall.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer helping to organize returned books.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer helping to organize returned books."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My supervisor volunteers at an animal shelter.\" They also said, \"I volunteer at an animal shelter.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I volunteer at the neighborhood library on the first Saturday of each month. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I volunteer at the neighborhood library on the first Saturday of each month.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I volunteer at the neighborhood library on the first Saturday of each month."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I volunteer at the neighborhood library on the first Saturday of each month.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer helping to organize returned books.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I volunteer at an animal shelter.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I will volunteer at the library on the second Saturday of each month from January.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I volunteer and which task do I enjoy there?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-budgeting-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I review my household budget every payday. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I review my household budget every payday.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I review my household budget every payday."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer expense categories over transaction-by-transaction notes. I am also sorting old event flyers that describe someone else's timetable, which should not be mistaken for mine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer expense categories over transaction-by-transaction notes.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer expense categories over transaction-by-transaction notes."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My colleague tracks expenses in a paper ledger.\" They also said, \"I track expenses in a paper ledger.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I review my household budget every payday. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I review my household budget every payday.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I review my household budget every payday."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I review my household budget every payday.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer expense categories over transaction-by-transaction notes.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I track expenses in a paper ledger.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I will review my household budget on the first Sunday of the month instead.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I review my budget and how do I categorize expenses?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-software-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am building a Java backend for a recipe organizer. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I am building a Java backend for a recipe organizer.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I am building a Java backend for a recipe organizer."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer writing API tests before polishing the interface. I have several outdated notes in the same folder, so the date and the person attached to a claim matter.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer writing API tests before polishing the interface.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer writing API tests before polishing the interface."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My teammate is building a Python weather dashboard.\" They also said, \"I am building a Python weather dashboard.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I am building a Java backend for a recipe organizer. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I am building a Java backend for a recipe organizer.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I am building a Java backend for a recipe organizer."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I am building a Java backend for a recipe organizer.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer writing API tests before polishing the interface.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I am building a Python weather dashboard.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I am replacing the Java backend with a Kotlin backend for my recipe organizer.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "Which backend am I building and what is my test preference?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-running-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I usually go for an easy jog on Wednesday afternoons. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I usually go for an easy jog on Wednesday afternoons.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I usually go for an easy jog on Wednesday afternoons."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer routes with tree shade. Some details in my pasted notes are examples rather than plans, and I do not want them treated as permanent commitments.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer routes with tree shade.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer routes with tree shade."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My friend cycles along the waterfront on Sundays.\" They also said, \"I cycle along the waterfront on Sundays.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I usually go for an easy jog on Wednesday afternoons. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I usually go for an easy jog on Wednesday afternoons.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I usually go for an easy jog on Wednesday afternoons."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I usually go for an easy jog on Wednesday afternoons.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer routes with tree shade.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I cycle along the waterfront on Sundays.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I now go for an easy jog on Friday mornings instead.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I jog and what kind of route do I prefer?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-painting-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I paint small landscapes on rainy weekends. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I paint small landscapes on rainy weekends.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I paint small landscapes on rainy weekends."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer using reusable palettes when painting. I am preparing a project handover, and some of the names and habits in these notes belong to other people.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer using reusable palettes when painting.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer using reusable palettes when painting."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My instructor sketches portraits in charcoal.\" They also said, \"I sketch charcoal portraits.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I paint small landscapes on rainy weekends. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I paint small landscapes on rainy weekends.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I paint small landscapes on rainy weekends."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I paint small landscapes on rainy weekends.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer using reusable palettes when painting.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I sketch charcoal portraits.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I am painting abstract patterns instead of landscapes this season.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What kind of painting am I doing and which tools do I prefer?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-household-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I clean the kitchen thoroughly every Friday evening. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I clean the kitchen thoroughly every Friday evening.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I clean the kitchen thoroughly every Friday evening."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer unscented cleaning products. I keep temporary errands and continuing preferences in the same notes, but they are not equally useful for long-term recall.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer unscented cleaning products.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer unscented cleaning products."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My housemate cleans the bathroom on Tuesdays.\" They also said, \"I clean the bathroom on Tuesdays.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I clean the kitchen thoroughly every Friday evening. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I clean the kitchen thoroughly every Friday evening.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I clean the kitchen thoroughly every Friday evening."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I clean the kitchen thoroughly every Friday evening.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer unscented cleaning products.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I clean the bathroom on Tuesdays.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I am moving the thorough kitchen clean to Saturday mornings.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I clean the kitchen and which cleaning products do I prefer?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-events-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I coordinate a neighborhood games evening on the last Thursday of each month. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I coordinate a neighborhood games evening on the last Thursday of each month.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I coordinate a neighborhood games evening on the last Thursday of each month."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer sending event reminders by email. I am also sorting old event flyers that describe someone else's timetable, which should not be mistaken for mine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer sending event reminders by email.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer sending event reminders by email."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My co-organizer runs a Sunday chess club.\" They also said, \"I run a Sunday chess club.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I coordinate a neighborhood games evening on the last Thursday of each month. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I coordinate a neighborhood games evening on the last Thursday of each month.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I coordinate a neighborhood games evening on the last Thursday of each month."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I coordinate a neighborhood games evening on the last Thursday of each month.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer sending event reminders by email.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I run a Sunday chess club.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "The neighborhood games evening will move to the last Friday of each month.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When is the games evening and how do I send reminders?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-crafts-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I attend pottery workshops on Tuesday afternoons. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I attend pottery workshops on Tuesday afternoons.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I attend pottery workshops on Tuesday afternoons."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer making practical bowls rather than decorative figures. I have several outdated notes in the same folder, so the date and the person attached to a claim matter.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer making practical bowls rather than decorative figures.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer making practical bowls rather than decorative figures."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My teacher makes glass sculptures on weekends.\" They also said, \"I make glass sculptures on weekends.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I attend pottery workshops on Tuesday afternoons. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I attend pottery workshops on Tuesday afternoons.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I attend pottery workshops on Tuesday afternoons."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I attend pottery workshops on Tuesday afternoons.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer making practical bowls rather than decorative figures.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I make glass sculptures on weekends.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I have changed to pottery workshops on Thursday mornings.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I attend pottery and what do I like making?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-travel-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I usually plan weekend trips around train connections. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I usually plan weekend trips around train connections.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I usually plan weekend trips around train connections."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer staying near a public transport stop. Some details in my pasted notes are examples rather than plans, and I do not want them treated as permanent commitments.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer staying near a public transport stop.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer staying near a public transport stop."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My colleague rents cars for every trip.\" They also said, \"I rent cars for every trip.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I usually plan weekend trips around train connections. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I usually plan weekend trips around train connections.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I usually plan weekend trips around train connections."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I usually plan weekend trips around train connections.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer staying near a public transport stop.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I rent cars for every trip.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I now plan weekend trips around regional bus connections.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "How do I plan weekend transport and where do I like staying?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-workflows-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I check my open project tasks every morning before email. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I check my open project tasks every morning before email.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I check my open project tasks every morning before email."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer short pull requests with clear tests. I am preparing a project handover, and some of the names and habits in these notes belong to other people.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer short pull requests with clear tests.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer short pull requests with clear tests."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My lead checks team tasks only on Mondays.\" They also said, \"I check team tasks only on Mondays.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I check my open project tasks every morning before email. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I check my open project tasks every morning before email.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I check my open project tasks every morning before email."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I check my open project tasks every morning before email.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer short pull requests with clear tests.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I check team tasks only on Mondays.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I will check my open project tasks at the end of each workday instead.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I review tasks and what type of pull requests do I prefer?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-shopping-interleaved",
+    "version": 1,
+    "description": "A long conversation interleaves stable facts, another person's details, and a paraphrased repeat; repeated extraction may duplicate a memory.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I shop for pantry staples every second Saturday. I am mentioning it now because older notes show something different.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I shop for pantry staples every second Saturday.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I shop for pantry staples every second Saturday."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer comparing prices per kilogram. I keep temporary errands and continuing preferences in the same notes, but they are not equally useful for long-term recall.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer comparing prices per kilogram.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer comparing prices per kilogram."
+            }
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t3",
+        "role": "user",
+        "content": "I am quoting somebody else here, not describing myself: \"My sister shops for pantry staples on Thursdays.\" They also said, \"I shop for pantry staples on Thursdays.\"",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": []
+        }
+      },
+      {
+        "id": "a3",
+        "role": "assistant",
+        "content": "That makes sense. I will keep the source and timing separate."
+      },
+      {
+        "id": "t4",
+        "role": "user",
+        "content": "To restate my own arrangement precisely: I shop for pantry staples every second Saturday. The quote in the previous message was not my routine.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I shop for pantry staples every second Saturday.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I shop for pantry staples every second Saturday."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I shop for pantry staples every second Saturday.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer comparing prices per kilogram.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t2"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I shop for pantry staples on Thursdays.",
+        "reason": "Attribution belongs to a third party.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I will shop for pantry staples on the first Monday of each month.",
+        "reason": "No change of plan was asserted.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I shop for pantry staples and how do I compare prices?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      },
+      {
+        "query": "Can you list only my teammate's or friend's personal preferences?",
+        "expectedMemoryIds": []
+      }
+    ],
+    "lifecycle": []
+  }
+]

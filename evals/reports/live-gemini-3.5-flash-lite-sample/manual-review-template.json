@@ -1,0 +1,73 @@
+[ {
+  "fixtureId" : "m2-conversation-clarification",
+  "repetition" : 1,
+  "matches" : [ ],
+  "unsupported" : [ ],
+  "missingExpected" : [ ],
+  "contradictions" : [ ],
+  "wrongPersonAttributions" : [ ],
+  "overInferences" : [ ],
+  "answers" : [ ],
+  "needsHumanReview" : [ "fcb629cc-e422-4332-ae56-6c772c99fb8f" ],
+  "summary" : "Human review pending"
+}, {
+  "fixtureId" : "m2-correction-commute",
+  "repetition" : 1,
+  "matches" : [ ],
+  "unsupported" : [ ],
+  "missingExpected" : [ ],
+  "contradictions" : [ ],
+  "wrongPersonAttributions" : [ ],
+  "overInferences" : [ ],
+  "answers" : [ ],
+  "needsHumanReview" : [ "371ef693-c2de-4c9f-8e16-3606c2e01586", "9db5ad3b-4865-421f-843d-5cd4bd5628d6" ],
+  "summary" : "Human review pending"
+}, {
+  "fixtureId" : "m2-explicit-appointments-001",
+  "repetition" : 1,
+  "matches" : [ ],
+  "unsupported" : [ ],
+  "missingExpected" : [ ],
+  "contradictions" : [ ],
+  "wrongPersonAttributions" : [ ],
+  "overInferences" : [ ],
+  "answers" : [ ],
+  "needsHumanReview" : [ "51fa0591-9a9d-44b3-9a41-ae13c9afb4cd" ],
+  "summary" : "Human review pending"
+}, {
+  "fixtureId" : "m2-inference-uncertain-walks",
+  "repetition" : 1,
+  "matches" : [ ],
+  "unsupported" : [ ],
+  "missingExpected" : [ ],
+  "contradictions" : [ ],
+  "wrongPersonAttributions" : [ ],
+  "overInferences" : [ ],
+  "answers" : [ ],
+  "needsHumanReview" : [ ],
+  "summary" : "Human review pending"
+}, {
+  "fixtureId" : "m2-lifecycle-clear",
+  "repetition" : 1,
+  "matches" : [ ],
+  "unsupported" : [ ],
+  "missingExpected" : [ ],
+  "contradictions" : [ ],
+  "wrongPersonAttributions" : [ ],
+  "overInferences" : [ ],
+  "answers" : [ ],
+  "needsHumanReview" : [ ],
+  "summary" : "Human review pending"
+}, {
+  "fixtureId" : "m2-negative-hypothetical",
+  "repetition" : 1,
+  "matches" : [ ],
+  "unsupported" : [ ],
+  "missingExpected" : [ ],
+  "contradictions" : [ ],
+  "wrongPersonAttributions" : [ ],
+  "overInferences" : [ ],
+  "answers" : [ ],
+  "needsHumanReview" : [ ],
+  "summary" : "Human review pending"
+} ]

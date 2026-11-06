@@ -1,0 +1,1882 @@
+[
+  {
+    "id": "m2-adversarial-schedule-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. I am also sorting old event flyers that describe someone else's timetable, which should not be mistaken for mine. My regular desk hours are 07:30 to 16:00 on weekdays. My teammate works noon to eight. I prefer receiving meeting agendas the day before. I file my weekly notes in a blue notebook. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "My regular desk hours are 07:30 to 16:00 on weekdays.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "My regular desk hours are 07:30 to 16:00 on weekdays."
+            },
+            {
+              "content": "I prefer receiving meeting agendas the day before.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer receiving meeting agendas the day before."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "My regular desk hours are 07:30 to 16:00 on weekdays.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer receiving meeting agendas the day before.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I file my weekly notes in a blue notebook.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I work noon to eight.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "From next month my regular desk hours will be 09:00 to 17:30 on weekdays.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What are my regular work hours and meeting preferences?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-commute-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. I have several outdated notes in the same folder, so the date and the person attached to a claim matter. I usually take the train to my workshop on Tuesdays. My neighbor drives to the workshop daily. I prefer a window seat when travelling long distances. I check route changes on Sunday evenings. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I usually take the train to my workshop on Tuesdays.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I usually take the train to my workshop on Tuesdays."
+            },
+            {
+              "content": "I prefer a window seat when travelling long distances.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer a window seat when travelling long distances."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I usually take the train to my workshop on Tuesdays.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer a window seat when travelling long distances.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I check route changes on Sunday evenings.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I drive to the workshop daily.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I will take the bus to my workshop on Tuesdays from December.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "How do I get to my workshop and what travel seat do I prefer?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-study-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. Some details in my pasted notes are examples rather than plans, and I do not want them treated as permanent commitments. I reserve Thursday evenings for learning database design. My classmate prefers memorizing slides. I learn best by building small working examples. I review one tricky concept before each practice session. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I reserve Thursday evenings for learning database design.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I reserve Thursday evenings for learning database design."
+            },
+            {
+              "content": "I learn best by building small working examples.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I learn best by building small working examples."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I reserve Thursday evenings for learning database design.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I learn best by building small working examples.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I review one tricky concept before each practice session.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I prefer memorizing slides.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "Starting next term I will study database design on Saturday mornings instead.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I study database design and how do I like learning?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-language-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. I am preparing a project handover, and some of the names and habits in these notes belong to other people. I practise conversational Italian every Monday evening. My cousin studies Korean on Fridays. I prefer language exercises with audio examples. I keep a short vocabulary journal each week. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I practise conversational Italian every Monday evening.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I practise conversational Italian every Monday evening."
+            },
+            {
+              "content": "I prefer language exercises with audio examples.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer language exercises with audio examples."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I practise conversational Italian every Monday evening.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer language exercises with audio examples.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I keep a short vocabulary journal each week.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I study Korean on Fridays.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I am moving my Italian practice to Wednesday evenings.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I practise Italian and what exercise format helps me?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-reading-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. I keep temporary errands and continuing preferences in the same notes, but they are not equally useful for long-term recall. I read historical mysteries during my train journey. My roommate only reads sports biographies. I prefer borrowing books rather than buying new copies. I track completed books in a paper log. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I read historical mysteries during my train journey.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I read historical mysteries during my train journey."
+            },
+            {
+              "content": "I prefer borrowing books rather than buying new copies.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer borrowing books rather than buying new copies."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I read historical mysteries during my train journey.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer borrowing books rather than buying new copies.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I track completed books in a paper log.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I only read sports biographies.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I have switched to reading science essays during my train journey.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What do I read while travelling and how do I get books?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-cooking-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. I am also sorting old event flyers that describe someone else's timetable, which should not be mistaken for mine. I normally make a lentil stew on Sundays. My aunt serves lentil stew on Wednesdays. I prefer recipes with measurements in grams. I plan grocery quantities on Saturday afternoons. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I normally make a lentil stew on Sundays.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I normally make a lentil stew on Sundays."
+            },
+            {
+              "content": "I prefer recipes with measurements in grams.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer recipes with measurements in grams."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I normally make a lentil stew on Sundays.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer recipes with measurements in grams.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I plan grocery quantities on Saturday afternoons.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I cook lentil stew on Wednesdays.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I now make vegetable soup on Sundays instead of lentil stew.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What do I cook on Sundays and how should recipes be measured?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-gardening-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. I have several outdated notes in the same folder, so the date and the person attached to a claim matter. I water the balcony herbs every second morning. My landlord tends the roses once a week. I prefer growing herbs in reusable clay pots. I record how quickly each pot dries out. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I water the balcony herbs every second morning.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I water the balcony herbs every second morning."
+            },
+            {
+              "content": "I prefer growing herbs in reusable clay pots.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer growing herbs in reusable clay pots."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I water the balcony herbs every second morning.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer growing herbs in reusable clay pots.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I record how quickly each pot dries out.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I tend the roses every week.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I am watering the balcony herbs every evening during summer instead.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I tend the herbs and which pots do I like?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-photography-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. Some details in my pasted notes are examples rather than plans, and I do not want them treated as permanent commitments. I usually photograph street architecture at sunrise. My friend only shoots wildlife at night. I prefer editing photographs on a large monitor. I back up finished photographs every Friday. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I usually photograph street architecture at sunrise.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I usually photograph street architecture at sunrise."
+            },
+            {
+              "content": "I prefer editing photographs on a large monitor.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer editing photographs on a large monitor."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I usually photograph street architecture at sunrise.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer editing photographs on a large monitor.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I back up finished photographs every Friday.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I photograph wildlife every night.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I now photograph street architecture at dusk instead of sunrise.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I shoot architecture and where do I like editing?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-music-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. I am preparing a project handover, and some of the names and habits in these notes belong to other people. I practise acoustic guitar for half an hour on Saturdays. My flatmate plays drums before breakfast. I prefer learning songs from chord diagrams. I tune my guitar before each practice. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I practise acoustic guitar for half an hour on Saturdays.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I practise acoustic guitar for half an hour on Saturdays."
+            },
+            {
+              "content": "I prefer learning songs from chord diagrams.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer learning songs from chord diagrams."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I practise acoustic guitar for half an hour on Saturdays.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer learning songs from chord diagrams.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I tune my guitar before each practice.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I play drums before breakfast.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I have moved my acoustic guitar practice to Sunday afternoons.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I practise guitar and how do I learn songs?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-volunteering-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. I keep temporary errands and continuing preferences in the same notes, but they are not equally useful for long-term recall. I volunteer at the neighborhood library on the first Saturday of each month. My supervisor volunteers at an animal shelter. I prefer helping to organize returned books. I confirm my library shift each preceding Thursday. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I volunteer at the neighborhood library on the first Saturday of each month.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I volunteer at the neighborhood library on the first Saturday of each month."
+            },
+            {
+              "content": "I prefer helping to organize returned books.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer helping to organize returned books."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I volunteer at the neighborhood library on the first Saturday of each month.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer helping to organize returned books.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I confirm my library shift each preceding Thursday.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I volunteer at an animal shelter.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I will volunteer at the library on the second Saturday of each month from January.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I volunteer and which task do I enjoy there?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-budgeting-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. I am also sorting old event flyers that describe someone else's timetable, which should not be mistaken for mine. I review my household budget every payday. My colleague tracks expenses in a paper ledger. I prefer expense categories over transaction-by-transaction notes. I compare spending totals with my monthly plan. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I review my household budget every payday.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I review my household budget every payday."
+            },
+            {
+              "content": "I prefer expense categories over transaction-by-transaction notes.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer expense categories over transaction-by-transaction notes."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I review my household budget every payday.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer expense categories over transaction-by-transaction notes.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I compare spending totals with my monthly plan.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I track expenses in a paper ledger.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I will review my household budget on the first Sunday of the month instead.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I review my budget and how do I categorize expenses?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-software-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. I have several outdated notes in the same folder, so the date and the person attached to a claim matter. I am building a Java backend for a recipe organizer. My teammate is building a Python weather dashboard. I prefer writing API tests before polishing the interface. I keep API examples beside endpoint documentation. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I am building a Java backend for a recipe organizer.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I am building a Java backend for a recipe organizer."
+            },
+            {
+              "content": "I prefer writing API tests before polishing the interface.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer writing API tests before polishing the interface."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I am building a Java backend for a recipe organizer.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer writing API tests before polishing the interface.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I keep API examples beside endpoint documentation.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I am building a Python weather dashboard.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I am replacing the Java backend with a Kotlin backend for my recipe organizer.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "Which backend am I building and what is my test preference?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-running-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. Some details in my pasted notes are examples rather than plans, and I do not want them treated as permanent commitments. I usually go for an easy jog on Wednesday afternoons. My friend cycles along the waterfront on Sundays. I prefer routes with tree shade. I lay out my running kit the night before. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I usually go for an easy jog on Wednesday afternoons.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I usually go for an easy jog on Wednesday afternoons."
+            },
+            {
+              "content": "I prefer routes with tree shade.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer routes with tree shade."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I usually go for an easy jog on Wednesday afternoons.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer routes with tree shade.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I lay out my running kit the night before.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I cycle along the waterfront on Sundays.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I now go for an easy jog on Friday mornings instead.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I jog and what kind of route do I prefer?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-painting-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. I am preparing a project handover, and some of the names and habits in these notes belong to other people. I paint small landscapes on rainy weekends. My instructor sketches portraits in charcoal. I prefer using reusable palettes when painting. I clean my brushes immediately after a session. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I paint small landscapes on rainy weekends.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I paint small landscapes on rainy weekends."
+            },
+            {
+              "content": "I prefer using reusable palettes when painting.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer using reusable palettes when painting."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I paint small landscapes on rainy weekends.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer using reusable palettes when painting.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I clean my brushes immediately after a session.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I sketch charcoal portraits.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I am painting abstract patterns instead of landscapes this season.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What kind of painting am I doing and which tools do I prefer?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-household-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. I keep temporary errands and continuing preferences in the same notes, but they are not equally useful for long-term recall. I clean the kitchen thoroughly every Friday evening. My housemate cleans the bathroom on Tuesdays. I prefer unscented cleaning products. I check the cupboard supplies before shopping. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I clean the kitchen thoroughly every Friday evening.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I clean the kitchen thoroughly every Friday evening."
+            },
+            {
+              "content": "I prefer unscented cleaning products.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer unscented cleaning products."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I clean the kitchen thoroughly every Friday evening.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer unscented cleaning products.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I check the cupboard supplies before shopping.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I clean the bathroom on Tuesdays.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I am moving the thorough kitchen clean to Saturday mornings.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I clean the kitchen and which cleaning products do I prefer?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-events-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. I am also sorting old event flyers that describe someone else's timetable, which should not be mistaken for mine. I coordinate a neighborhood games evening on the last Thursday of each month. My co-organizer runs a Sunday chess club. I prefer sending event reminders by email. I keep a checklist for setting up the tables. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I coordinate a neighborhood games evening on the last Thursday of each month.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I coordinate a neighborhood games evening on the last Thursday of each month."
+            },
+            {
+              "content": "I prefer sending event reminders by email.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer sending event reminders by email."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I coordinate a neighborhood games evening on the last Thursday of each month.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer sending event reminders by email.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I keep a checklist for setting up the tables.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I run a Sunday chess club.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "The neighborhood games evening will move to the last Friday of each month.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When is the games evening and how do I send reminders?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-crafts-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. I have several outdated notes in the same folder, so the date and the person attached to a claim matter. I attend pottery workshops on Tuesday afternoons. My teacher makes glass sculptures on weekends. I prefer making practical bowls rather than decorative figures. I photograph each finished piece for a portfolio. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I attend pottery workshops on Tuesday afternoons.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I attend pottery workshops on Tuesday afternoons."
+            },
+            {
+              "content": "I prefer making practical bowls rather than decorative figures.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer making practical bowls rather than decorative figures."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I attend pottery workshops on Tuesday afternoons.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer making practical bowls rather than decorative figures.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I photograph each finished piece for a portfolio.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I make glass sculptures on weekends.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I have changed to pottery workshops on Thursday mornings.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I attend pottery and what do I like making?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-travel-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. Some details in my pasted notes are examples rather than plans, and I do not want them treated as permanent commitments. I usually plan weekend trips around train connections. My colleague rents cars for every trip. I prefer staying near a public transport stop. I pack a small notebook for travel ideas. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I usually plan weekend trips around train connections.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I usually plan weekend trips around train connections."
+            },
+            {
+              "content": "I prefer staying near a public transport stop.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer staying near a public transport stop."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I usually plan weekend trips around train connections.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer staying near a public transport stop.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I pack a small notebook for travel ideas.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I rent cars for every trip.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I now plan weekend trips around regional bus connections.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "How do I plan weekend transport and where do I like staying?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-workflows-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. I am preparing a project handover, and some of the names and habits in these notes belong to other people. I check my open project tasks every morning before email. My lead checks team tasks only on Mondays. I prefer short pull requests with clear tests. I write release notes as changes are merged. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I check my open project tasks every morning before email.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I check my open project tasks every morning before email."
+            },
+            {
+              "content": "I prefer short pull requests with clear tests.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer short pull requests with clear tests."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I check my open project tasks every morning before email.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer short pull requests with clear tests.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I write release notes as changes are merged.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I check team tasks only on Mondays.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I will check my open project tasks at the end of each workday instead.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I review tasks and what type of pull requests do I prefer?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-adversarial-shopping-dense",
+    "version": 1,
+    "description": "Three durable facts compete for a two-candidate extraction budget; quoted and third-party noise must not take priority.",
+    "category": "explicit-facts",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "single_message",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I am consolidating several messy notes with different owners and dates. I keep temporary errands and continuing preferences in the same notes, but they are not equally useful for long-term recall. I shop for pantry staples every second Saturday. My sister shops for pantry staples on Thursdays. I prefer comparing prices per kilogram. I keep a list of items that are running low. If I ever change the plan, I will say so explicitly; this last sentence is only hypothetical.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I shop for pantry staples every second Saturday.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I shop for pantry staples every second Saturday."
+            },
+            {
+              "content": "I prefer comparing prices per kilogram.",
+              "kind": "fact",
+              "confidence": 0.96,
+              "evidence": "I prefer comparing prices per kilogram."
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "main",
+        "statement": "I shop for pantry staples every second Saturday.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "secondary",
+        "statement": "I prefer comparing prices per kilogram.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "overflow",
+        "statement": "I keep a list of items that are running low.",
+        "aliases": [],
+        "sourceTurnIds": [
+          "t1"
+        ],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": false
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I shop for pantry staples on Thursdays.",
+        "reason": "The other person's habit is not the user's habit.",
+        "category": "wrong_person"
+      },
+      {
+        "statement": "I will shop for pantry staples on the first Monday of each month.",
+        "reason": "The proposed future update was not made by this message.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I shop for pantry staples and how do I compare prices?",
+        "expectedMemoryIds": [
+          "main",
+          "secondary"
+        ]
+      }
+    ],
+    "lifecycle": []
+  }
+]

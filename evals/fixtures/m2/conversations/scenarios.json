@@ -1,0 +1,297 @@
+[
+  {
+    "id": "m2-conversation-early-preference",
+    "version": 1,
+    "description": "An early preference followed by a reference in a later turn.",
+    "category": "conversations",
+    "difficulty": "medium",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I usually take the train to work on weekdays.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I usually take the train to work on weekdays",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I usually take the train to work on weekdays"
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "Understood. What are you planning?"
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "Can you help me plan that commute for next week?",
+        "expectedEligibility": "no_personal_language",
+        "scriptedExtraction": { "memories": [] }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "commute",
+        "statement": "I usually take the train to work on weekdays",
+        "aliases": [],
+        "sourceTurnIds": ["t1"],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I take the train every day",
+        "reason": "The statement is limited to weekdays.",
+        "category": "over_inference"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "What is my usual commute to work?",
+        "expectedMemoryIds": ["commute"]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-conversation-clarification",
+    "version": 1,
+    "description": "A useful constraint is supplied after a clarification.",
+    "category": "conversations",
+    "difficulty": "medium",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "Can you help organize a weekly class?",
+        "expectedEligibility": "no_personal_language",
+        "scriptedExtraction": { "memories": [] }
+      },
+      { "id": "a1", "role": "assistant", "content": "When is the class?" },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "My class is every Thursday evening.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "My class is every Thursday evening",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "My class is every Thursday evening"
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "class",
+        "statement": "My class is every Thursday evening",
+        "aliases": [],
+        "sourceTurnIds": ["t2"],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I teach the class",
+        "reason": "Attending a class does not imply teaching.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      { "query": "When is my class?", "expectedMemoryIds": ["class"] }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-conversation-gradual-project",
+    "version": 1,
+    "description": "A project and its schedule emerge in separate turns.",
+    "category": "conversations",
+    "difficulty": "medium",
+    "importance": "medium",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "My long-term project is learning pottery.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "My long-term project is learning pottery",
+              "kind": "fact",
+              "confidence": 0.94,
+              "evidence": "My long-term project is learning pottery"
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "How often do you practice?"
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I usually practice pottery on Saturdays.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I usually practice pottery on Saturdays",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I usually practice pottery on Saturdays"
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "project",
+        "statement": "My long-term project is learning pottery",
+        "aliases": [],
+        "sourceTurnIds": ["t1"],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "practice",
+        "statement": "I usually practice pottery on Saturdays",
+        "aliases": [],
+        "sourceTurnIds": ["t2"],
+        "kind": "explicit_fact",
+        "importance": "medium",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I am a professional potter",
+        "reason": "Learning does not imply a profession.",
+        "category": "unsupported"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I practice pottery?",
+        "expectedMemoryIds": ["practice", "project"]
+      }
+    ],
+    "lifecycle": []
+  },
+  {
+    "id": "m2-conversation-separated-constraints",
+    "version": 1,
+    "description": "Separate turns state a commitment and an appointment preference.",
+    "category": "conversations",
+    "difficulty": "difficult",
+    "importance": "high",
+    "inputType": "conversation",
+    "synthetic": true,
+    "turns": [
+      {
+        "id": "t1",
+        "role": "user",
+        "content": "I volunteer at the library every Tuesday.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I volunteer at the library every Tuesday",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I volunteer at the library every Tuesday"
+            }
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "content": "What about appointments?"
+      },
+      {
+        "id": "t2",
+        "role": "user",
+        "content": "I prefer appointments after ten in the morning.",
+        "expectedEligibility": "eligible",
+        "scriptedExtraction": {
+          "memories": [
+            {
+              "content": "I prefer appointments after ten in the morning",
+              "kind": "fact",
+              "confidence": 0.95,
+              "evidence": "I prefer appointments after ten in the morning"
+            }
+          ]
+        }
+      }
+    ],
+    "expectedMemories": [
+      {
+        "id": "volunteer",
+        "statement": "I volunteer at the library every Tuesday",
+        "aliases": [],
+        "sourceTurnIds": ["t1"],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "active",
+        "inScope": true
+      },
+      {
+        "id": "appointments",
+        "statement": "I prefer appointments after ten in the morning",
+        "aliases": [],
+        "sourceTurnIds": ["t2"],
+        "kind": "explicit_fact",
+        "importance": "high",
+        "expectedStatus": "active",
+        "inScope": true
+      }
+    ],
+    "forbiddenMemories": [
+      {
+        "statement": "I cannot work on Tuesdays",
+        "reason": "A volunteer commitment does not prove the whole day is unavailable.",
+        "category": "over_inference"
+      }
+    ],
+    "retrievalChecks": [
+      {
+        "query": "When do I prefer appointments?",
+        "expectedMemoryIds": ["appointments"]
+      }
+    ],
+    "lifecycle": []
+  }
+]

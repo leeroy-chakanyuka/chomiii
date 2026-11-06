@@ -1,0 +1,11 @@
+{
+  "id": "m2-negative-generic-001", "version": 1,
+  "description": "A general question contains no personal fact.",
+  "category": "negative", "difficulty": "easy", "importance": "medium", "inputType": "single_message", "synthetic": true,
+  "turns": [{"id": "t1", "role": "user", "content": "Explain how a bicycle gearbox works.",
+    "expectedEligibility": "no_personal_language", "scriptedExtraction": {"memories": []}}],
+  "expectedMemories": [],
+  "forbiddenMemories": [{"statement": "I own a bicycle", "reason": "A question does not establish ownership.", "category": "unsupported"}],
+  "retrievalChecks": [{"query": "What bicycle do I own?", "expectedMemoryIds": []}],
+  "lifecycle": []
+}

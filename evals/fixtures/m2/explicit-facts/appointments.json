@@ -1,0 +1,27 @@
+{
+  "id": "m2-explicit-appointments-001", "version": 1,
+  "description": "A durable appointment preference in an ordinary message.",
+  "category": "explicit-facts", "difficulty": "easy", "importance": "high", "inputType": "single_message", "synthetic": true,
+  "turns": [{"id": "t1", "role": "user", "content": "I prefer appointments after ten in the morning.",
+    "expectedEligibility": "eligible", "scriptedExtraction": {"memories": [
+      {"content": "I prefer appointments after ten in the morning", "kind": "fact", "confidence": 0.95,
+       "evidence": "I prefer appointments after ten in the morning"}]}}],
+  "expectedMemories": [{"id": "appointment-time", "statement": "I prefer appointments after ten in the morning",
+    "aliases": ["The user prefers appointments after ten in the morning"], "sourceTurnIds": ["t1"],
+    "kind": "explicit_fact", "importance": "high", "expectedStatus": "active", "inScope": true}],
+  "forbiddenMemories": [{"statement": "I never attend morning appointments", "reason": "After ten is still morning.", "category": "over_inference"}],
+  "retrievalChecks": [{"query": "When do I prefer my appointments?", "expectedMemoryIds": ["appointment-time"]}],
+  "lifecycle": [],
+  "planning": {
+    "instruction": "I cannot make tomorrow morning's meeting. Help me reschedule it.",
+    "oracleMemoryIds": ["appointment-time"],
+    "requiredGoals": ["Resolve the meeting conflict"],
+    "toolsAvailable": ["calendar.search", "calendar.update"],
+    "missingInformation": ["Which meeting if several match", "Whether to reschedule or cancel"],
+    "forbiddenActions": ["Change the meeting without approval"],
+    "requiredSteps": [
+      {"id": "find", "operation": "calendar.search", "dependsOn": [], "requiresApproval": false},
+      {"id": "update", "operation": "calendar.update", "dependsOn": ["find"], "requiresApproval": true}
+    ]
+  }
+}
