@@ -50,14 +50,15 @@ final class EvaluationProvider implements ChatProvider {
 
     @Override public Generation open(ChatInput input, String apiKey) {
         boolean extraction = input.systemInstruction().contains("memory-extraction classifier");
+        boolean planning = input.systemInstruction().contains("assistant preparing a proposal");
         String text = input.messages().getLast().text();
         String output = extraction ? extractions.getOrDefault(text, "{\"memories\":[]}")
                 : answers.getOrDefault(text, "Understood.");
-        String kind = extraction ? "extraction" : followUp ? "follow_up" : "chat";
+        String kind = extraction ? "extraction" : planning ? "planning" : followUp ? "follow_up" : "chat";
         Generation upstream = null;
         if (delegate != null) {
             try {
-                budget.reserve(extraction ? LiveBudget.Kind.EXTRACTION
+                budget.reserve(extraction ? LiveBudget.Kind.EXTRACTION : planning ? LiveBudget.Kind.PLANNING
                         : followUp ? LiveBudget.Kind.FOLLOW_UP : LiveBudget.Kind.CHAT,
                         input.systemInstruction().getBytes(StandardCharsets.UTF_8).length
                                 + input.messages().stream().mapToLong(message -> message.text().getBytes(StandardCharsets.UTF_8).length).sum());
@@ -79,7 +80,7 @@ final class EvaluationProvider implements ChatProvider {
                 StringBuilder received = new StringBuilder();
                 long[] first = {0};
                 boolean[] truncated = {false};
-                int captureLimit = extraction ? 4_001 : 16_001;
+                int captureLimit = extraction ? 4_001 : planning ? 20_001 : 16_001;
                 String failure = null;
                 var timedOut = new AtomicBoolean();
                 ScheduledFuture<?> watchdog = source == null ? null

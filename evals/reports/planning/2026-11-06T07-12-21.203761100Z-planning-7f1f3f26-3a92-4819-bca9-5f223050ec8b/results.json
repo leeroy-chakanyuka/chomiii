@@ -1,0 +1,260 @@
+[ {
+  "fixtureId" : "rambling-commute",
+  "category" : "rambling",
+  "repetition" : 1,
+  "condition" : "oracle",
+  "status" : "completed",
+  "error" : null,
+  "expectations" : {
+    "instruction" : "There's a lot going on. I was thinking about a movie and the weather, but ignore that. My work commute tomorrow might be interrupted by rain. Please help me make a backup plan for getting to work and work out what I should take with me. No booking anything.",
+    "oracleMemoryIds" : [ "commute" ],
+    "requiredGoals" : [ "Plan a backup work commute", "Prepare what to take" ],
+    "toolsAvailable" : [ "user.prepare" ],
+    "missingInformation" : [ "Weather and alternatives" ],
+    "forbiddenActions" : [ "Assume a booking" ],
+    "requiredSteps" : [ {
+      "id" : "prepare",
+      "operation" : "user.prepare",
+      "dependsOn" : [ ],
+      "requiresApproval" : false
+    } ]
+  },
+  "selectedMemories" : [ {
+    "id" : "6e1665b2-4bdb-396e-8813-e385a4119e7c",
+    "content" : "I usually cycle to work on weekdays",
+    "source" : "user_explicit",
+    "status" : "active",
+    "updatedAt" : "1970-01-01T00:00:00Z"
+  } ],
+  "memoryReplay" : null,
+  "plan" : {
+    "id" : "9d5d3bfc-243b-48c5-8f9d-986e83a4c215",
+    "goal" : "Prepare a backup commute plan and packing checklist for tomorrow in case of rain, without booking anything.",
+    "summary" : "The user wants a backup plan for their workday commute tomorrow due to anticipated rain, along with a list of items to bring. They usually cycle to work.",
+    "memoryReferences" : [ {
+      "id" : "6e1665b2-4bdb-396e-8813-e385a4119e7c",
+      "relevance" : "Indicates the user usually cycles to work, establishing the primary mode of transit being disrupted."
+    } ],
+    "constraints" : [ "No booking anything", "Prepare a backup plan for work commute tomorrow", "Determine what to take with" ],
+    "missingInformation" : [ {
+      "id" : "q1",
+      "question" : "What alternative public transit or travel options are available for your route tomorrow?",
+      "kind" : "planning",
+      "blocks" : [ "s2" ]
+    } ],
+    "steps" : [ {
+      "id" : "s1",
+      "title" : "Review alternative transportation options",
+      "capability" : "user.prepare",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "planned"
+    }, {
+      "id" : "s2",
+      "title" : "Select preferred backup transit method based on available options",
+      "capability" : "user.decide",
+      "dependsOn" : [ "s1" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s3",
+      "title" : "Draft rain gear and essentials packing checklist",
+      "capability" : "user.prepare",
+      "dependsOn" : [ "s2" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    } ],
+    "executed" : false
+  },
+  "providerOutput" : "{\n  \"goal\": \"Prepare a backup commute plan and packing checklist for tomorrow in case of rain, without booking anything.\",\n  \"summary\": \"The user wants a backup plan for their workday commute tomorrow due to anticipated rain, along with a list of items to bring. They usually cycle to work.\",\n  \"memoryReferences\": [\n    {\n      \"id\": \"6e1665b2-4bdb-396e-8813-e385a4119e7c\",\n      \"relevance\": \"Indicates the user usually cycles to work, establishing the primary mode of transit being disrupted.\"\n    }\n  ],\n  \"constraints\": [\n    \"No booking anything\",\n    \"Prepare a backup plan for work commute tomorrow\",\n    \"Determine what to take with\"\n  ],\n  \"missingInformation\": [\n    {\n      \"id\": \"q1\",\n      \"question\": \"What alternative public transit or travel options are available for your route tomorrow?\",\n      \"kind\": \"planning\",\n      \"blocks\": [\n        \"s2\"\n      ]\n    }\n  ],\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"Review alternative transportation options\",\n      \"capability\": \"user.prepare\",\n      \"dependsOn\": []\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"Select preferred backup transit method based on available options\",\n      \"capability\": \"user.decide\",\n      \"dependsOn\": [\n        \"s1\"\n      ]\n    },\n    {\n      \"id\": \"s3\",\n      \"title\": \"Draft rain gear and essentials packing checklist\",\n      \"capability\": \"user.prepare\",\n      \"dependsOn\": [\n        \"s2\"\n      ]\n    }\n  ]\n}",
+  "providerOutputTruncated" : false,
+  "contextMillis" : 160,
+  "providerAndValidationMillis" : 10370
+}, {
+  "fixtureId" : "rambling-commute",
+  "category" : "rambling",
+  "repetition" : 1,
+  "condition" : "actual_m2",
+  "status" : "completed",
+  "error" : null,
+  "expectations" : {
+    "instruction" : "There's a lot going on. I was thinking about a movie and the weather, but ignore that. My work commute tomorrow might be interrupted by rain. Please help me make a backup plan for getting to work and work out what I should take with me. No booking anything.",
+    "oracleMemoryIds" : [ "commute" ],
+    "requiredGoals" : [ "Plan a backup work commute", "Prepare what to take" ],
+    "toolsAvailable" : [ "user.prepare" ],
+    "missingInformation" : [ "Weather and alternatives" ],
+    "forbiddenActions" : [ "Assume a booking" ],
+    "requiredSteps" : [ {
+      "id" : "prepare",
+      "operation" : "user.prepare",
+      "dependsOn" : [ ],
+      "requiresApproval" : false
+    } ]
+  },
+  "selectedMemories" : [ {
+    "id" : "50747bd5-eb38-4c36-870e-d836442df6d1",
+    "content" : "I cycle to work on weekdays",
+    "source" : "conversation_fact",
+    "status" : "active",
+    "updatedAt" : "2026-11-06T07:13:21.640451Z"
+  } ],
+  "memoryReplay" : {
+    "fixtureId" : "m2-explicit-commute-002",
+    "mode" : "live",
+    "turns" : [ {
+      "turnId" : "t1",
+      "expectedEligibility" : "eligible",
+      "observedEligibility" : "eligible",
+      "extractionAttempted" : true,
+      "rawCandidates" : 1,
+      "acceptedCandidates" : 1,
+      "stored" : 1,
+      "validationOutcome" : "accepted_or_empty",
+      "rawOutput" : "```json\n{\n  \"memories\": [\n    {\n      \"content\": \"I cycle to work on weekdays\",\n      \"kind\": \"fact\",\n      \"confidence\": 0.95,\n      \"evidence\": \"cycle to work on weekdays\"\n    }\n  ]\n}\n```",
+      "rawOutputTruncated" : false,
+      "candidates" : [ {
+        "content" : "I cycle to work on weekdays",
+        "kind" : "fact",
+        "confidence" : 0.95,
+        "evidence" : "cycle to work on weekdays",
+        "literalEvidenceFound" : true,
+        "accepted" : true
+      } ],
+      "requestProcessingMillis" : 172,
+      "firstProviderTokenMillis" : 2351,
+      "mainCompletionMillis" : 2458,
+      "schedulingDelayMillis" : 5,
+      "extractionMillis" : 1528,
+      "failure" : null
+    } ],
+    "memories" : [ {
+      "id" : "50747bd5-eb38-4c36-870e-d836442df6d1",
+      "content" : "I cycle to work on weekdays",
+      "source" : "conversation_fact",
+      "status" : "active",
+      "confidence" : 0.95,
+      "sourceConversationId" : "ef7480f9-ec7e-4fa6-91f4-c234069e35d7"
+    } ],
+    "retrievals" : [ {
+      "id" : "retrieval-1",
+      "query" : "How do I usually get to work?",
+      "selectedMemoryIds" : [ "50747bd5-eb38-4c36-870e-d836442df6d1" ],
+      "expectedMemoryIds" : [ "commute" ],
+      "retrievalMillis" : 37,
+      "answer" : "Based on your saved memories, you usually cycle to work on weekdays.",
+      "contextAsUser" : true,
+      "memoryInSystem" : false,
+      "learnedAfterAnswer" : [ ],
+      "answerTruncated" : false,
+      "failure" : null
+    } ],
+    "lifecycle" : [ ],
+    "extractionScore" : {
+      "truePositives" : 0,
+      "falsePositives" : 0,
+      "falseNegatives" : 1,
+      "activeMatches" : 0,
+      "inScopeExpected" : 1,
+      "inScopeMatches" : 0,
+      "unreviewed" : 1,
+      "precision" : null,
+      "recall" : null,
+      "activeRecall" : null,
+      "withinCapacityRecall" : null,
+      "f1" : null,
+      "statusCorrect" : 0,
+      "statusAccuracy" : null,
+      "kindCorrect" : 0,
+      "kindAccuracy" : null,
+      "falsePositiveCategories" : { },
+      "classifiedFalsePositives" : [ ],
+      "disagreements" : [ ],
+      "matches" : [ ]
+    },
+    "score" : {
+      "truePositives" : 0,
+      "falsePositives" : 0,
+      "falseNegatives" : 1,
+      "activeMatches" : 0,
+      "inScopeExpected" : 1,
+      "inScopeMatches" : 0,
+      "unreviewed" : 1,
+      "precision" : null,
+      "recall" : null,
+      "activeRecall" : null,
+      "withinCapacityRecall" : null,
+      "f1" : null,
+      "statusCorrect" : 0,
+      "statusAccuracy" : null,
+      "kindCorrect" : 0,
+      "kindAccuracy" : null,
+      "falsePositiveCategories" : { },
+      "classifiedFalsePositives" : [ ],
+      "disagreements" : [ ],
+      "matches" : [ ]
+    },
+    "limitations" : [ "Candidate rejection and skipped-write reasons are not exposed by the application.", "Token usage and first visible browser text are not measured.", "Follow-up answers require independent or human grading." ]
+  },
+  "plan" : {
+    "id" : "74e60778-6a2d-4950-bf2a-c3ac340ebba1",
+    "goal" : "Create a backup commuting plan for tomorrow and a packing checklist in case of rain, recognizing the user normally cycles to work on weekdays.",
+    "summary" : "Prepare a backup commuting plan and packing list for tomorrow's work commute due to potential rain, taking into account the user's weekday cycling habit.",
+    "memoryReferences" : [ {
+      "id" : "50747bd5-eb38-4c36-870e-d836442df6d1",
+      "relevance" : "Establishes that the user normally cycles to work on weekdays."
+    } ],
+    "constraints" : [ "No booking anything", "Prepare a proposal, not performing actions" ],
+    "missingInformation" : [ {
+      "id" : "q1",
+      "question" : "What alternative transportation methods (e.g., public transit, driving, rideshare) are available for your commute?",
+      "kind" : "planning",
+      "blocks" : [ "s2" ]
+    }, {
+      "id" : "q2",
+      "question" : "What specific items do you need to pack for work (e.g., change of clothes, electronics, rain gear)?",
+      "kind" : "planning",
+      "blocks" : [ "s3" ]
+    } ],
+    "steps" : [ {
+      "id" : "s1",
+      "title" : "Review tomorrow's weather forecast and commuting requirements",
+      "capability" : "user.prepare",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "planned"
+    }, {
+      "id" : "s2",
+      "title" : "Draft alternative transit backup plan",
+      "capability" : "user.prepare",
+      "dependsOn" : [ "s1" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s3",
+      "title" : "Draft rainy-day packing checklist",
+      "capability" : "user.prepare",
+      "dependsOn" : [ "s1" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s4",
+      "title" : "Review and finalize backup commuting proposal with user",
+      "capability" : "user.decide",
+      "dependsOn" : [ "s2", "s3" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    } ],
+    "executed" : false
+  },
+  "providerOutput" : "{\"goal\":\"Create a backup commuting plan for tomorrow and a packing checklist in case of rain, recognizing the user normally cycles to work on weekdays.\",\"summary\":\"Prepare a backup commuting plan and packing list for tomorrow's work commute due to potential rain, taking into account the user's weekday cycling habit.\",\"memoryReferences\":[{\"id\":\"50747bd5-eb38-4c36-870e-d836442df6d1\",\"relevance\":\"Establishes that the user normally cycles to work on weekdays.\"}],\"constraints\":[\"No booking anything\",\"Prepare a proposal, not performing actions\"],\"missingInformation\":[{\"id\":\"q1\",\"question\":\"What alternative transportation methods (e.g., public transit, driving, rideshare) are available for your commute?\",\"kind\":\"planning\",\"blocks\":[\"s2\"]},{\"id\":\"q2\",\"question\":\"What specific items do you need to pack for work (e.g., change of clothes, electronics, rain gear)?\",\"kind\":\"planning\",\"blocks\":[\"s3\"]}],\"steps\":[{\"id\":\"s1\",\"title\":\"Review tomorrow's weather forecast and commuting requirements\",\"capability\":\"user.prepare\",\"dependsOn\":[]},{\"id\":\"s2\",\"title\":\"Draft alternative transit backup plan\",\"capability\":\"user.prepare\",\"dependsOn\":[\"s1\"]},{\"id\":\"s3\",\"title\":\"Draft rainy-day packing checklist\",\"capability\":\"user.prepare\",\"dependsOn\":[\"s1\"]},{\"id\":\"s4\",\"title\":\"Review and finalize backup commuting proposal with user\",\"capability\":\"user.decide\",\"dependsOn\":[\"s2\",\"s3\"]}]}",
+  "providerOutputTruncated" : false,
+  "contextMillis" : 0,
+  "providerAndValidationMillis" : 10865
+} ]

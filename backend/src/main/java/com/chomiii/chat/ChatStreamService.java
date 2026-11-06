@@ -3,6 +3,9 @@ package com.chomiii.chat;
 import com.chomiii.agent.AgentInstructions;
 import com.chomiii.memory.MemoryService;
 import com.chomiii.memory.MemoryLearningService;
+import com.chomiii.memory.PersonalMemory;
+import com.chomiii.planning.PlanningRouter;
+import com.chomiii.planning.PlanningService;
 import java.util.ArrayList;
 import com.chomiii.provider.ChatProvider;
 import com.chomiii.provider.ProviderCatalog;
@@ -32,6 +35,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class ChatStreamService {
     private static final Logger log = LoggerFactory.getLogger(ChatStreamService.class);
     private static final AgentInstructions AGENT_INSTRUCTIONS = new AgentInstructions();
+    private static final PlanningService PLANNING = new PlanningService();
     private static final int MAX_REPLY_CHARS = 16_000;
     private final ChatTurnStore store;
     private final ConversationRepository conversations;
@@ -92,18 +96,31 @@ public class ChatStreamService {
         // Retrieval is an optional, owner-scoped source of untrusted context.
         // Reserve its budget BEFORE selecting history so the full model input
         // stays within the established message and character bounds.
-        String memoryContext = useMemory ? retrievalContext(memories, owner, request.content()) : "";
-        boolean hasMemory = !memoryContext.isBlank();
-        int memoryChars = hasMemory ? memoryContext.length() : 0;
-        List<ChatProvider.Message> messages = new ArrayList<>(
-                ContextWindow.select(pending.history(), request.content().strip(),
-                        hasMemory ? 19 : 20, 16_000 - memoryChars));
-        if (hasMemory) {
-            messages.add(messages.size() - 1,
-                    new ChatProvider.Message(ChatProvider.Role.USER, memoryContext));
+        boolean plan = request.plan() != null ? request.plan() : PlanningRouter.matches(request.content());
+        List<PersonalMemory> planningMemories;
+        ChatProvider.ChatInput input;
+        try {
+            planningMemories = plan && useMemory ? planningMemories(memories, owner, request.content()) : List.of();
+            if (plan) {
+                input = PLANNING.input(request.model(), pending.history(), request.content().strip(), planningMemories);
+            } else {
+                String memoryContext = useMemory ? retrievalContext(memories, owner, request.content()) : "";
+                boolean hasMemory = !memoryContext.isBlank();
+                int memoryChars = hasMemory ? memoryContext.length() : 0;
+                List<ChatProvider.Message> messages = new ArrayList<>(
+                        ContextWindow.select(pending.history(), request.content().strip(),
+                                hasMemory ? 19 : 20, 16_000 - memoryChars));
+                if (hasMemory) {
+                    messages.add(messages.size() - 1,
+                            new ChatProvider.Message(ChatProvider.Role.USER, memoryContext));
+                }
+                input = new ChatProvider.ChatInput(request.model(), AGENT_INSTRUCTIONS.systemPrompt(), List.copyOf(messages));
+            }
+        } catch (RuntimeException failure) {
+            slots.release();
+            store.finish(conversation, owner, request.requestId(), pending.assistantId(), "", "failed");
+            throw new ChatApiException(HttpStatus.SERVICE_UNAVAILABLE, "Could not prepare the response. Try again.");
         }
-        ChatProvider.ChatInput input = new ChatProvider.ChatInput(request.model(),
-                AGENT_INSTRUCTIONS.systemPrompt(), List.copyOf(messages));
         long contextReadyNanos = System.nanoTime();
         var emitter = new SseEmitter(130_000L);
         var generation = new Active(owner, conversation);
@@ -114,7 +131,7 @@ public class ChatStreamService {
         try {
             executor.execute(() -> run(request.requestId(), pending.assistantId(), owner, conversation,
                     provider, input, key, generation, emitter, memoryRevision, requestStartedNanos,
-                    storeReadyNanos, contextReadyNanos));
+                    storeReadyNanos, contextReadyNanos, plan, planningMemories));
         } catch (RuntimeException exception) {
             active.remove(request.requestId(), generation);
             slots.release();
@@ -145,7 +162,8 @@ public class ChatStreamService {
 
     private void run(UUID requestId, UUID assistantId, String owner, UUID conversation, ChatProvider provider,
             ChatProvider.ChatInput input, String key, Active generation, SseEmitter emitter, Long memoryRevision,
-            long requestStartedNanos, long storeReadyNanos, long contextReadyNanos) {
+            long requestStartedNanos, long storeReadyNanos, long contextReadyNanos,
+            boolean planning, List<PersonalMemory> planningMemories) {
         long workerStartedNanos = System.nanoTime();
         StringBuilder response = new StringBuilder();
         long[] firstDeltaNanos = {0L};
@@ -175,7 +193,18 @@ public class ChatStreamService {
                         firstSentNanos[0] = System.nanoTime();
                     }
                 };
-                providerStream.stream(delta);
+                if (planning) {
+                    var plan = PLANNING.read(providerStream, planningMemories);
+                    if (generation.cancelled.get()) throw new CancellationException();
+                    String rendered = PLANNING.render(plan);
+                    if (rendered.length() > MAX_REPLY_CHARS) {
+                        throw new ChatApiException(HttpStatus.BAD_GATEWAY, "The plan was too large.");
+                    }
+                    send(emitter, "plan", plan);
+                    delta.accept(rendered);
+                } else {
+                    providerStream.stream(delta);
+                }
             }
             if (generation.cancelled.get()) {
                 throw new CancellationException();
@@ -194,9 +223,11 @@ public class ChatStreamService {
                     || exception instanceof ProviderFailure failure && failure.code() == ProviderFailure.Code.CANCELLED;
             outcome = interrupted ? "interrupted" : "failed";
             String code = interrupted ? "INTERRUPTED" : exception instanceof ProviderFailure failure
-                    ? failure.code().name() : exception instanceof ChatApiException ? "OUTPUT_LIMIT" : "UNAVAILABLE";
+                    ? failure.code().name() : planning && exception instanceof IllegalArgumentException ? "INVALID_PLAN"
+                    : exception instanceof ChatApiException ? "OUTPUT_LIMIT" : "UNAVAILABLE";
             String message = interrupted ? "Generation stopped." : exception instanceof ProviderFailure failure
-                    ? failure.getMessage() : "The response could not be completed.";
+                    ? failure.getMessage() : planning && exception instanceof IllegalArgumentException
+                    ? "Could not build a valid plan. Try again." : "The response could not be completed.";
             try {
                 store.finish(conversation, owner, requestId, assistantId, response.toString(),
                         interrupted ? "interrupted" : "failed");
@@ -252,6 +283,14 @@ public class ChatStreamService {
             return memories.forChat(owner, question);
         } catch (DataAccessException | TransactionException unavailable) {
             return "";
+        }
+    }
+
+    private static List<PersonalMemory> planningMemories(MemoryService memories, String owner, String question) {
+        try {
+            return memories.forPlanning(owner, question);
+        } catch (DataAccessException | TransactionException unavailable) {
+            return List.of();
         }
     }
 

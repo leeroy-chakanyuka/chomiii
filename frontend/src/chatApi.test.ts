@@ -37,4 +37,16 @@ describe('POST conversation stream', () => {
       (event) => events.push(event))
     expect(events.at(-1)).toEqual({ kind: 'error', code: 'INTERRUPTED', message: 'Generation stopped.', status: 'interrupted' })
   })
+
+  it('accepts a structured plan before its readable chat response', async () => {
+    const plan = { id: 'plan-1', goal: 'Prepare for the meeting', executed: false, steps: [] }
+    const bytes = new TextEncoder().encode(`event:plan\ndata:${JSON.stringify(plan)}\n\n`
+      + 'event:delta\ndata:{"text":"Proposed plan — nothing has been done yet"}\n\n'
+      + 'event:complete\ndata:{"messageId":"m","status":"complete"}\n\n')
+    const events: ChatEvent[] = []
+    await readEvents(new ReadableStream({ start(controller) { controller.enqueue(bytes); controller.close() } }),
+      (event) => events.push(event))
+    expect(events).toContainEqual({ kind: 'plan', plan })
+    expect(events).toContainEqual({ kind: 'delta', text: 'Proposed plan — nothing has been done yet' })
+  })
 })

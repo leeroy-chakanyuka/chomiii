@@ -1,0 +1,566 @@
+[ {
+  "fixtureId" : "rambling-meeting",
+  "category" : "rambling",
+  "repetition" : 1,
+  "condition" : "oracle",
+  "status" : "completed",
+  "error" : null,
+  "expectations" : {
+    "instruction" : "I'm overwhelmed. Tomorrow's meeting, the one I mentioned, is a problem because I'm working late. The bus was noisy and I forgot my umbrella, which is not the point. I need to find another time after ten, check what I should bring, and let my colleague know once the time is settled. Can you help me sort it out?",
+    "oracleMemoryIds" : [ "appointment-time" ],
+    "requiredGoals" : [ "Resolve the meeting conflict", "Prepare for the meeting", "Notify the colleague" ],
+    "toolsAvailable" : [ "calendar.search", "calendar.update", "gmail.send" ],
+    "missingInformation" : [ "Which meeting and colleague" ],
+    "forbiddenActions" : [ "Change the meeting or send a message without approval" ],
+    "requiredSteps" : [ {
+      "id" : "find",
+      "operation" : "calendar.search",
+      "dependsOn" : [ ],
+      "requiresApproval" : false
+    }, {
+      "id" : "change",
+      "operation" : "calendar.update",
+      "dependsOn" : [ "find" ],
+      "requiresApproval" : true
+    }, {
+      "id" : "notify",
+      "operation" : "gmail.send",
+      "dependsOn" : [ "change" ],
+      "requiresApproval" : true
+    } ]
+  },
+  "selectedMemories" : [ {
+    "id" : "fc1bfd93-faf1-36f5-8aaf-dbfa0e8b5612",
+    "content" : "I prefer appointments after ten in the morning",
+    "source" : "user_explicit",
+    "status" : "active",
+    "updatedAt" : "1970-01-01T00:00:00Z"
+  } ],
+  "memoryReplay" : null,
+  "plan" : {
+    "id" : "c029b441-1602-4660-a206-362710bcd45a",
+    "goal" : "Reschedule tomorrow's meeting to a time after 10:00 AM, review meeting requirements, and notify the colleague.",
+    "summary" : "Proposing a plan to check calendar events, find an alternative meeting time based on the preference for times after 10:00 AM, review preparation details, and notify the colleague once settled.",
+    "memoryReferences" : [ {
+      "id" : "fc1bfd93-faf1-36f5-8aaf-dbfa0e8b5612",
+      "relevance" : "States the user preference for appointments after 10:00 AM."
+    } ],
+    "constraints" : [ "Appointments must be after 10:00 AM", "Current time in UTC is 2026-11-06T07:57:21.887873300Z" ],
+    "missingInformation" : [ {
+      "id" : "q1",
+      "question" : "Which meeting and colleague need to be rescheduled?",
+      "kind" : "planning",
+      "blocks" : [ "s1" ]
+    } ],
+    "steps" : [ {
+      "id" : "s1",
+      "title" : "Search for tomorrow's meeting details and calendar availability",
+      "capability" : "calendar.search",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "not_connected",
+      "status" : "blocked"
+    }, {
+      "id" : "s2",
+      "title" : "Prepare a draft of the notification message for the colleague regarding the time change",
+      "capability" : "user.prepare",
+      "dependsOn" : [ "s1" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s3",
+      "title" : "Update the calendar event with the new settled time after 10:00 AM",
+      "capability" : "calendar.update",
+      "dependsOn" : [ "s1" ],
+      "approvalHint" : "required",
+      "availability" : "not_connected",
+      "status" : "blocked"
+    }, {
+      "id" : "s4",
+      "title" : "Send the rescheduling message to the colleague",
+      "capability" : "gmail.send",
+      "dependsOn" : [ "s2", "s3" ],
+      "approvalHint" : "required",
+      "availability" : "not_connected",
+      "status" : "blocked"
+    } ],
+    "executed" : false
+  },
+  "providerOutput" : "{\"goal\":\"Reschedule tomorrow's meeting to a time after 10:00 AM, review meeting requirements, and notify the colleague.\",\"summary\":\"Proposing a plan to check calendar events, find an alternative meeting time based on the preference for times after 10:00 AM, review preparation details, and notify the colleague once settled.\",\"memoryReferences\":[{\"id\":\"fc1bfd93-faf1-36f5-8aaf-dbfa0e8b5612\",\"relevance\":\"States the user preference for appointments after 10:00 AM.\"}],\"constraints\":[\"Appointments must be after 10:00 AM\",\"Current time in UTC is 2026-11-06T07:57:21.887873300Z\"],\"missingInformation\":[{\"id\":\"q1\",\"question\":\"Which meeting and colleague need to be rescheduled?\",\"kind\":\"planning\",\"blocks\":[\"s1\"]}],\"steps\":[{\"id\":\"s1\",\"title\":\"Search for tomorrow's meeting details and calendar availability\",\"capability\":\"calendar.search\",\"dependsOn\":[]},{\"id\":\"s2\",\"title\":\"Prepare a draft of the notification message for the colleague regarding the time change\",\"capability\":\"user.prepare\",\"dependsOn\":[\"s1\"]},{\"id\":\"s3\",\"title\":\"Update the calendar event with the new settled time after 10:00 AM\",\"capability\":\"calendar.update\",\"dependsOn\":[\"s1\"]},{\"id\":\"s4\",\"title\":\"Send the rescheduling message to the colleague\",\"capability\":\"gmail.send\",\"dependsOn\":[\"s2\",\"s3\"]}]}",
+  "providerOutputTruncated" : false,
+  "memoryRetrievalMillis" : null,
+  "contextMillis" : 66,
+  "pacingAndOpenMillis" : 21,
+  "providerMillis" : 7801,
+  "validationMillis" : 75
+}, {
+  "fixtureId" : "rambling-meeting",
+  "category" : "rambling",
+  "repetition" : 1,
+  "condition" : "actual_m2",
+  "status" : "completed",
+  "error" : null,
+  "expectations" : {
+    "instruction" : "I'm overwhelmed. Tomorrow's meeting, the one I mentioned, is a problem because I'm working late. The bus was noisy and I forgot my umbrella, which is not the point. I need to find another time after ten, check what I should bring, and let my colleague know once the time is settled. Can you help me sort it out?",
+    "oracleMemoryIds" : [ "appointment-time" ],
+    "requiredGoals" : [ "Resolve the meeting conflict", "Prepare for the meeting", "Notify the colleague" ],
+    "toolsAvailable" : [ "calendar.search", "calendar.update", "gmail.send" ],
+    "missingInformation" : [ "Which meeting and colleague" ],
+    "forbiddenActions" : [ "Change the meeting or send a message without approval" ],
+    "requiredSteps" : [ {
+      "id" : "find",
+      "operation" : "calendar.search",
+      "dependsOn" : [ ],
+      "requiresApproval" : false
+    }, {
+      "id" : "change",
+      "operation" : "calendar.update",
+      "dependsOn" : [ "find" ],
+      "requiresApproval" : true
+    }, {
+      "id" : "notify",
+      "operation" : "gmail.send",
+      "dependsOn" : [ "change" ],
+      "requiresApproval" : true
+    } ]
+  },
+  "selectedMemories" : [ {
+    "id" : "23389200-e8cc-4871-86e4-7afc28123590",
+    "content" : "I prefer appointments after ten in the morning.",
+    "source" : "conversation_fact",
+    "status" : "active",
+    "updatedAt" : "2026-11-06T07:57:43.293487Z"
+  } ],
+  "memoryReplay" : {
+    "fixtureId" : "m2-explicit-appointments-001",
+    "mode" : "live",
+    "turns" : [ {
+      "turnId" : "t1",
+      "expectedEligibility" : "eligible",
+      "observedEligibility" : "eligible",
+      "extractionAttempted" : true,
+      "rawCandidates" : 1,
+      "acceptedCandidates" : 1,
+      "stored" : 1,
+      "validationOutcome" : "accepted_or_empty",
+      "rawOutput" : "{\"memories\":[{\"content\":\"I prefer appointments after ten in the morning.\",\"kind\":\"fact\",\"confidence\":1.0,\"evidence\":\"I prefer appointments after ten in the morning.\"}]}",
+      "rawOutputTruncated" : false,
+      "candidates" : [ {
+        "content" : "I prefer appointments after ten in the morning.",
+        "kind" : "fact",
+        "confidence" : 1.0,
+        "evidence" : "I prefer appointments after ten in the morning.",
+        "literalEvidenceFound" : true,
+        "accepted" : true
+      } ],
+      "requestProcessingMillis" : 112,
+      "firstProviderTokenMillis" : 2511,
+      "mainCompletionMillis" : 2666,
+      "schedulingDelayMillis" : 4,
+      "extractionMillis" : 1290,
+      "failure" : null
+    } ],
+    "memories" : [ {
+      "id" : "23389200-e8cc-4871-86e4-7afc28123590",
+      "content" : "I prefer appointments after ten in the morning.",
+      "source" : "conversation_fact",
+      "status" : "active",
+      "confidence" : 1.0,
+      "sourceConversationId" : "23114f21-c662-4e38-9609-67528ae78562"
+    } ],
+    "retrievals" : [ {
+      "id" : "retrieval-1",
+      "query" : "When do I prefer my appointments?",
+      "selectedMemoryIds" : [ "23389200-e8cc-4871-86e4-7afc28123590" ],
+      "expectedMemoryIds" : [ "appointment-time" ],
+      "retrievalMillis" : 4,
+      "answer" : "Based on your saved preferences, you prefer appointments after ten in the morning.",
+      "contextAsUser" : true,
+      "memoryInSystem" : false,
+      "learnedAfterAnswer" : [ ],
+      "answerTruncated" : false,
+      "failure" : null
+    } ],
+    "lifecycle" : [ ],
+    "extractionScore" : {
+      "truePositives" : 1,
+      "falsePositives" : 0,
+      "falseNegatives" : 0,
+      "activeMatches" : 1,
+      "inScopeExpected" : 1,
+      "inScopeMatches" : 1,
+      "unreviewed" : 0,
+      "precision" : 1.0,
+      "recall" : 1.0,
+      "activeRecall" : 1.0,
+      "withinCapacityRecall" : 1.0,
+      "f1" : 1.0,
+      "statusCorrect" : 1,
+      "statusAccuracy" : 1.0,
+      "kindCorrect" : 1,
+      "kindAccuracy" : 1.0,
+      "falsePositiveCategories" : { },
+      "classifiedFalsePositives" : [ ],
+      "disagreements" : [ ],
+      "matches" : [ {
+        "expectedId" : "appointment-time",
+        "actualId" : "t1-candidate-0",
+        "method" : "normalized_exact",
+        "evidence" : "I prefer appointments after ten in the morning."
+      } ]
+    },
+    "score" : {
+      "truePositives" : 1,
+      "falsePositives" : 0,
+      "falseNegatives" : 0,
+      "activeMatches" : 1,
+      "inScopeExpected" : 1,
+      "inScopeMatches" : 1,
+      "unreviewed" : 0,
+      "precision" : 1.0,
+      "recall" : 1.0,
+      "activeRecall" : 1.0,
+      "withinCapacityRecall" : 1.0,
+      "f1" : 1.0,
+      "statusCorrect" : 1,
+      "statusAccuracy" : 1.0,
+      "kindCorrect" : 1,
+      "kindAccuracy" : 1.0,
+      "falsePositiveCategories" : { },
+      "classifiedFalsePositives" : [ ],
+      "disagreements" : [ ],
+      "matches" : [ {
+        "expectedId" : "appointment-time",
+        "actualId" : "23389200-e8cc-4871-86e4-7afc28123590",
+        "method" : "normalized_exact",
+        "evidence" : "I prefer appointments after ten in the morning."
+      } ]
+    },
+    "limitations" : [ "Candidate rejection and skipped-write reasons are not exposed by the application.", "Token usage and first visible browser text are not measured.", "Follow-up answers require independent or human grading." ]
+  },
+  "plan" : {
+    "id" : "15128611-3341-463f-b1db-8a3ae13432f3",
+    "goal" : "Reschedule tomorrow's meeting to a time after 10 AM, prepare meeting materials, and notify a colleague once confirmed.",
+    "summary" : "The user needs to reschedule an upcoming meeting due to a late work shift, adhering to a preference for appointments after 10 AM. They also need to check required meeting items and inform a colleague about the new time.",
+    "memoryReferences" : [ {
+      "id" : "23389200-e8cc-4871-86e4-7afc28123590",
+      "relevance" : "Indicates the user's preference for appointments after 10 AM."
+    } ],
+    "constraints" : [ "Reschedule to a time after 10 AM", "Notify colleague after the time is settled" ],
+    "missingInformation" : [ {
+      "id" : "q1",
+      "question" : "What is the title and current time of tomorrow's meeting that needs to be rescheduled?",
+      "kind" : "planning",
+      "blocks" : [ "s1" ]
+    }, {
+      "id" : "q2",
+      "question" : "What is the name and email address of the colleague who needs to be notified?",
+      "kind" : "planning",
+      "blocks" : [ "s3" ]
+    } ],
+    "steps" : [ {
+      "id" : "s1",
+      "title" : "Search for tomorrow's meeting on the calendar",
+      "capability" : "calendar.search",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "not_connected",
+      "status" : "blocked"
+    }, {
+      "id" : "s2",
+      "title" : "Prepare a draft list of items to bring to the meeting based on supplied information",
+      "capability" : "user.prepare",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "planned"
+    }, {
+      "id" : "s3",
+      "title" : "Draft a notification message for the colleague regarding the new meeting time",
+      "capability" : "user.prepare",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s4",
+      "title" : "Update the calendar event with the new time after 10 AM",
+      "capability" : "calendar.update",
+      "dependsOn" : [ "s1" ],
+      "approvalHint" : "required",
+      "availability" : "not_connected",
+      "status" : "blocked"
+    }, {
+      "id" : "s5",
+      "title" : "Send the rescheduling message to the colleague",
+      "capability" : "gmail.send",
+      "dependsOn" : [ "s3", "s4" ],
+      "approvalHint" : "required",
+      "availability" : "not_connected",
+      "status" : "blocked"
+    } ],
+    "executed" : false
+  },
+  "providerOutput" : "{\"goal\":\"Reschedule tomorrow's meeting to a time after 10 AM, prepare meeting materials, and notify a colleague once confirmed.\",\"summary\":\"The user needs to reschedule an upcoming meeting due to a late work shift, adhering to a preference for appointments after 10 AM. They also need to check required meeting items and inform a colleague about the new time.\",\"memoryReferences\":[{\"id\":\"23389200-e8cc-4871-86e4-7afc28123590\",\"relevance\":\"Indicates the user's preference for appointments after 10 AM.\"}],\"constraints\":[\"Reschedule to a time after 10 AM\",\"Notify colleague after the time is settled\"],\"missingInformation\":[{\"id\":\"q1\",\"question\":\"What is the title and current time of tomorrow's meeting that needs to be rescheduled?\",\"kind\":\"planning\",\"blocks\":[\"s1\"]},{\"id\":\"q2\",\"question\":\"What is the name and email address of the colleague who needs to be notified?\",\"kind\":\"planning\",\"blocks\":[\"s3\"]}],\"steps\":[{\"id\":\"s1\",\"title\":\"Search for tomorrow's meeting on the calendar\",\"capability\":\"calendar.search\",\"dependsOn\":[]},{\"id\":\"s2\",\"title\":\"Prepare a draft list of items to bring to the meeting based on supplied information\",\"capability\":\"user.prepare\",\"dependsOn\":[]},{\"id\":\"s3\",\"title\":\"Draft a notification message for the colleague regarding the new meeting time\",\"capability\":\"user.prepare\",\"dependsOn\":[]},{\"id\":\"s4\",\"title\":\"Update the calendar event with the new time after 10 AM\",\"capability\":\"calendar.update\",\"dependsOn\":[\"s1\"]},{\"id\":\"s5\",\"title\":\"Send the rescheduling message to the colleague\",\"capability\":\"gmail.send\",\"dependsOn\":[\"s3\",\"s4\"]}]}",
+  "providerOutputTruncated" : false,
+  "memoryRetrievalMillis" : 7,
+  "contextMillis" : 0,
+  "pacingAndOpenMillis" : 8314,
+  "providerMillis" : 2247,
+  "validationMillis" : 2
+}, {
+  "fixtureId" : "rambling-volunteer",
+  "category" : "rambling",
+  "repetition" : 1,
+  "condition" : "oracle",
+  "status" : "completed",
+  "error" : null,
+  "expectations" : {
+    "instruction" : "My week is a jumble. The library had a lovely display yesterday, and my shoes are wet, but really I need to fit a dentist visit around my Tuesday volunteer commitment. I don't know the dentist's hours. Help me plan the week and remind me what I need to ask.",
+    "oracleMemoryIds" : [ "volunteer" ],
+    "requiredGoals" : [ "Plan the dentist visit around volunteering" ],
+    "toolsAvailable" : [ "user.prepare" ],
+    "missingInformation" : [ "Dentist hours" ],
+    "forbiddenActions" : [ "Invent available appointment times" ],
+    "requiredSteps" : [ {
+      "id" : "prepare",
+      "operation" : "user.prepare",
+      "dependsOn" : [ ],
+      "requiresApproval" : false
+    } ]
+  },
+  "selectedMemories" : [ {
+    "id" : "32216aa8-7137-3fea-be26-a76711ffcc58",
+    "content" : "I volunteer at the community library every Tuesday",
+    "source" : "user_explicit",
+    "status" : "active",
+    "updatedAt" : "1970-01-01T00:00:00Z"
+  } ],
+  "memoryReplay" : null,
+  "plan" : {
+    "id" : "9149c99a-ab60-4eb9-9cc8-228caa6dd28f",
+    "goal" : "Plan the week incorporating a dentist visit around the Tuesday community library volunteer commitment",
+    "summary" : "Draft a proposal to organize the user's weekly schedule, accommodating their Tuesday library volunteer shift and scheduling a dentist visit while accounting for unknown dentist hours.",
+    "memoryReferences" : [ {
+      "id" : "32216aa8-7137-3fea-be26-a76711ffcc58",
+      "relevance" : "Notes the user volunteers at the community library every Tuesday."
+    } ],
+    "constraints" : [ "Must fit dentist visit around Tuesday volunteer commitment", "Dentist hours are currently unknown" ],
+    "missingInformation" : [ {
+      "id" : "q1",
+      "question" : "What are the operating hours of your dentist, and what days are you hoping to schedule the visit?",
+      "kind" : "future_lookup",
+      "blocks" : [ "s2" ]
+    } ],
+    "steps" : [ {
+      "id" : "s1",
+      "title" : "Draft weekly schedule outline around Tuesday library volunteering",
+      "capability" : "user.prepare",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "planned"
+    }, {
+      "id" : "s2",
+      "title" : "Compile list of questions regarding dentist availability and booking",
+      "capability" : "user.prepare",
+      "dependsOn" : [ "s1" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    } ],
+    "executed" : false
+  },
+  "providerOutput" : "{\"goal\":\"Plan the week incorporating a dentist visit around the Tuesday community library volunteer commitment\",\"summary\":\"Draft a proposal to organize the user's weekly schedule, accommodating their Tuesday library volunteer shift and scheduling a dentist visit while accounting for unknown dentist hours.\",\"memoryReferences\":[{\"id\":\"32216aa8-7137-3fea-be26-a76711ffcc58\",\"relevance\":\"Notes the user volunteers at the community library every Tuesday.\"}],\"constraints\":[\"Must fit dentist visit around Tuesday volunteer commitment\",\"Dentist hours are currently unknown\"],\"missingInformation\":[{\"id\":\"q1\",\"question\":\"What are the operating hours of your dentist, and what days are you hoping to schedule the visit?\",\"kind\":\"future_lookup\",\"blocks\":[\"s2\"]}],\"steps\":[{\"id\":\"s1\",\"title\":\"Draft weekly schedule outline around Tuesday library volunteering\",\"capability\":\"user.prepare\",\"dependsOn\":[]},{\"id\":\"s2\",\"title\":\"Compile list of questions regarding dentist availability and booking\",\"capability\":\"user.prepare\",\"dependsOn\":[\"s1\"]}]}",
+  "providerOutputTruncated" : false,
+  "memoryRetrievalMillis" : null,
+  "contextMillis" : 1,
+  "pacingAndOpenMillis" : 7758,
+  "providerMillis" : 1913,
+  "validationMillis" : 6
+}, {
+  "fixtureId" : "rambling-volunteer",
+  "category" : "rambling",
+  "repetition" : 1,
+  "condition" : "actual_m2",
+  "status" : "completed",
+  "error" : null,
+  "expectations" : {
+    "instruction" : "My week is a jumble. The library had a lovely display yesterday, and my shoes are wet, but really I need to fit a dentist visit around my Tuesday volunteer commitment. I don't know the dentist's hours. Help me plan the week and remind me what I need to ask.",
+    "oracleMemoryIds" : [ "volunteer" ],
+    "requiredGoals" : [ "Plan the dentist visit around volunteering" ],
+    "toolsAvailable" : [ "user.prepare" ],
+    "missingInformation" : [ "Dentist hours" ],
+    "forbiddenActions" : [ "Invent available appointment times" ],
+    "requiredSteps" : [ {
+      "id" : "prepare",
+      "operation" : "user.prepare",
+      "dependsOn" : [ ],
+      "requiresApproval" : false
+    } ]
+  },
+  "selectedMemories" : [ {
+    "id" : "1ea42894-0f03-4ee2-9008-48a1f3bb6246",
+    "content" : "I volunteer at the community library every Tuesday.",
+    "source" : "conversation_fact",
+    "status" : "active",
+    "updatedAt" : "2026-11-06T07:58:43.675892Z"
+  } ],
+  "memoryReplay" : {
+    "fixtureId" : "m2-explicit-volunteer-003",
+    "mode" : "live",
+    "turns" : [ {
+      "turnId" : "t1",
+      "expectedEligibility" : "eligible",
+      "observedEligibility" : "eligible",
+      "extractionAttempted" : true,
+      "rawCandidates" : 1,
+      "acceptedCandidates" : 1,
+      "stored" : 1,
+      "validationOutcome" : "accepted_or_empty",
+      "rawOutput" : "```json\n{\"memories\":[{\"content\":\"I volunteer at the community library every Tuesday.\",\"kind\":\"fact\",\"confidence\":1.0,\"evidence\":\"Every Tuesday I volunteer at the community library.\"}]}\n```",
+      "rawOutputTruncated" : false,
+      "candidates" : [ {
+        "content" : "I volunteer at the community library every Tuesday.",
+        "kind" : "fact",
+        "confidence" : 1.0,
+        "evidence" : "Every Tuesday I volunteer at the community library.",
+        "literalEvidenceFound" : true,
+        "accepted" : true
+      } ],
+      "requestProcessingMillis" : 14,
+      "firstProviderTokenMillis" : 1078,
+      "mainCompletionMillis" : 1815,
+      "schedulingDelayMillis" : 3,
+      "extractionMillis" : 1646,
+      "failure" : null
+    } ],
+    "memories" : [ {
+      "id" : "1ea42894-0f03-4ee2-9008-48a1f3bb6246",
+      "content" : "I volunteer at the community library every Tuesday.",
+      "source" : "conversation_fact",
+      "status" : "active",
+      "confidence" : 1.0,
+      "sourceConversationId" : "ec91bb1a-42ca-4c9d-ace8-3f40f1760ef6"
+    } ],
+    "retrievals" : [ {
+      "id" : "retrieval-1",
+      "query" : "When do I volunteer at the library?",
+      "selectedMemoryIds" : [ "1ea42894-0f03-4ee2-9008-48a1f3bb6246" ],
+      "expectedMemoryIds" : [ "volunteer" ],
+      "retrievalMillis" : 5,
+      "answer" : "You volunteer at the community library every Tuesday.",
+      "contextAsUser" : true,
+      "memoryInSystem" : false,
+      "learnedAfterAnswer" : [ ],
+      "answerTruncated" : false,
+      "failure" : null
+    } ],
+    "lifecycle" : [ ],
+    "extractionScore" : {
+      "truePositives" : 1,
+      "falsePositives" : 0,
+      "falseNegatives" : 0,
+      "activeMatches" : 1,
+      "inScopeExpected" : 1,
+      "inScopeMatches" : 1,
+      "unreviewed" : 0,
+      "precision" : 1.0,
+      "recall" : 1.0,
+      "activeRecall" : 1.0,
+      "withinCapacityRecall" : 1.0,
+      "f1" : 1.0,
+      "statusCorrect" : 1,
+      "statusAccuracy" : 1.0,
+      "kindCorrect" : 1,
+      "kindAccuracy" : 1.0,
+      "falsePositiveCategories" : { },
+      "classifiedFalsePositives" : [ ],
+      "disagreements" : [ ],
+      "matches" : [ {
+        "expectedId" : "volunteer",
+        "actualId" : "t1-candidate-0",
+        "method" : "normalized_exact",
+        "evidence" : "Every Tuesday I volunteer at the community library."
+      } ]
+    },
+    "score" : {
+      "truePositives" : 1,
+      "falsePositives" : 0,
+      "falseNegatives" : 0,
+      "activeMatches" : 1,
+      "inScopeExpected" : 1,
+      "inScopeMatches" : 1,
+      "unreviewed" : 0,
+      "precision" : 1.0,
+      "recall" : 1.0,
+      "activeRecall" : 1.0,
+      "withinCapacityRecall" : 1.0,
+      "f1" : 1.0,
+      "statusCorrect" : 1,
+      "statusAccuracy" : 1.0,
+      "kindCorrect" : 1,
+      "kindAccuracy" : 1.0,
+      "falsePositiveCategories" : { },
+      "classifiedFalsePositives" : [ ],
+      "disagreements" : [ ],
+      "matches" : [ {
+        "expectedId" : "volunteer",
+        "actualId" : "1ea42894-0f03-4ee2-9008-48a1f3bb6246",
+        "method" : "normalized_exact",
+        "evidence" : "Every Tuesday I volunteer at the community library."
+      } ]
+    },
+    "limitations" : [ "Candidate rejection and skipped-write reasons are not exposed by the application.", "Token usage and first visible browser text are not measured.", "Follow-up answers require independent or human grading." ]
+  },
+  "plan" : {
+    "id" : "db07eabd-d7e9-407d-9aa9-bb76160bdb24",
+    "goal" : "Plan the week around a Tuesday community library volunteer commitment and schedule a dentist visit.",
+    "summary" : "Chomiii is preparing a proposal to schedule a dentist visit while accommodating the user's Tuesday community library volunteer shift, and drafting questions for the dentist.",
+    "memoryReferences" : [ {
+      "id" : "1ea42894-0f03-4ee2-9008-48a1f3bb6246",
+      "relevance" : "Establishes that the user volunteers at the community library every Tuesday."
+    } ],
+    "constraints" : [ "Must fit dentist visit around Tuesday volunteer commitment", "Dentist hours are currently unknown", "Current date context is 2026-11-06 (Wednesday)" ],
+    "missingInformation" : [ {
+      "id" : "q1",
+      "question" : "What are the operating hours and available appointment slots for the dentist?",
+      "kind" : "future_lookup",
+      "blocks" : [ "s2" ]
+    } ],
+    "steps" : [ {
+      "id" : "s1",
+      "title" : "Draft weekly schedule framework incorporating the Tuesday library volunteer commitment",
+      "capability" : "user.prepare",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "planned"
+    }, {
+      "id" : "s2",
+      "title" : "Check dentist hours and available appointment times",
+      "capability" : "user.decide",
+      "dependsOn" : [ "s1" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s3",
+      "title" : "Prepare a checklist of questions to ask the dentist regarding appointment availability and services",
+      "capability" : "user.prepare",
+      "dependsOn" : [ "s2" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    } ],
+    "executed" : false
+  },
+  "providerOutput" : "{\n  \"goal\": \"Plan the week around a Tuesday community library volunteer commitment and schedule a dentist visit.\",\n  \"summary\": \"Chomiii is preparing a proposal to schedule a dentist visit while accommodating the user's Tuesday community library volunteer shift, and drafting questions for the dentist.\",\n  \"memoryReferences\": [\n    {\n      \"id\": \"1ea42894-0f03-4ee2-9008-48a1f3bb6246\",\n      \"relevance\": \"Establishes that the user volunteers at the community library every Tuesday.\"\n    }\n  ],\n  \"constraints\": [\n    \"Must fit dentist visit around Tuesday volunteer commitment\",\n    \"Dentist hours are currently unknown\",\n    \"Current date context is 2026-11-06 (Wednesday)\"\n  ],\n  \"missingInformation\": [\n    {\n      \"id\": \"q1\",\n      \"question\": \"What are the operating hours and available appointment slots for the dentist?\",\n      \"kind\": \"future_lookup\",\n      \"blocks\": [\n        \"s2\"\n      ]\n    }\n  ],\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"Draft weekly schedule framework incorporating the Tuesday library volunteer commitment\",\n      \"capability\": \"user.prepare\",\n      \"dependsOn\": []\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"Check dentist hours and available appointment times\",\n      \"capability\": \"user.decide\",\n      \"dependsOn\": [\n        \"s1\"\n      ]\n    },\n    {\n      \"id\": \"s3\",\n      \"title\": \"Prepare a checklist of questions to ask the dentist regarding appointment availability and services\",\n      \"capability\": \"user.prepare\",\n      \"dependsOn\": [\n        \"s2\"\n      ]\n    }\n  ]\n}",
+  "providerOutputTruncated" : false,
+  "memoryRetrievalMillis" : 3,
+  "contextMillis" : 2,
+  "pacingAndOpenMillis" : 8635,
+  "providerMillis" : 2700,
+  "validationMillis" : 1
+} ]

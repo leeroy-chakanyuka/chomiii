@@ -1,0 +1,13 @@
+[ {
+  "fixtureId" : "rambling-commute",
+  "condition" : "oracle",
+  "repetition" : 1,
+  "verdict" : "needs_review",
+  "reason" : ""
+}, {
+  "fixtureId" : "rambling-commute",
+  "condition" : "actual_m2",
+  "repetition" : 1,
+  "verdict" : "needs_review",
+  "reason" : ""
+} ]

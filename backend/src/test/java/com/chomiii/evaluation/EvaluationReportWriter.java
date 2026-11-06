@@ -23,6 +23,107 @@ final class EvaluationReportWriter {
         return write(run, root, secrets, null);
     }
 
+    Path writePlanning(PlanningEvaluationSuite.Run run, Path root, List<String> secrets) throws IOException {
+        Path directory = root.resolve(run.metadata().runId()).normalize();
+        if (!directory.startsWith(root.normalize())) throw new IllegalArgumentException("Invalid report path");
+        Files.createDirectories(directory);
+        writeJson(directory.resolve("run-metadata.json"), json.valueToTree(run.metadata()), secrets);
+        writeJson(directory.resolve("results.json"), json.valueToTree(run.cases()), secrets);
+        var summary = new StringBuilder("# Planning evaluation\n\n")
+                .append("- Mode: ").append(run.metadata().mode()).append('\n')
+                .append("- Model: ").append(run.metadata().model()).append('\n')
+                .append("- Commit: ").append(run.metadata().commit()).append('\n')
+                .append("- Working tree dirty: ").append(run.metadata().workingTreeDirty()).append('\n')
+                .append("- Dataset SHA-256: ").append(run.metadata().datasetSha256()).append('\n')
+                .append("- Provider call reservations: ").append(run.metadata().providerCalls()).append('\n')
+                .append("- Token usage and cost: not measured\n")
+                .append("- Semantic scoring: not measured; independent review required\n\n");
+        for (String condition : List.of("oracle", "actual_m2")) {
+            var cases = run.cases().stream().filter(item -> condition.equals(item.condition())).toList();
+            long completed = cases.stream().filter(item -> "completed".equals(item.status())).count();
+            long failed = cases.stream().filter(item -> "failed".equals(item.status())).count();
+            long skipped = cases.stream().filter(item -> "skipped".equals(item.status())).count();
+            summary.append("## ").append(condition).append("\n\n")
+                    .append("- Completed validated plans: ").append(completed).append('\n')
+                    .append("- Failed: ").append(failed).append("; skipped: ").append(skipped).append('\n')
+                    .append("- Goal, step, dependency semantics, memory, clarification, approval and safety quality: not measured\n\n");
+        }
+        summary.append("## Cases\n\n");
+        for (var item : run.cases()) {
+            summary.append("- ").append(item.fixtureId()).append(" / ").append(item.condition()).append(": ")
+                    .append(item.status()).append(item.error() == null ? "" : " (" + item.error() + ")").append('\n');
+        }
+        summary.append("\nCompletion means JSON passed validation, not that the plan is correct. ")
+                .append("Actual-M2 observations use selected owner-scoped records, not oracle fallback. ")
+                .append("Existing M2 candidate grading remains unresolved.\n");
+        writeJson(directory.resolve("manual-review-template.json"), json.valueToTree(PlanningReview.template(run)), secrets);
+        Files.writeString(directory.resolve("summary.md"), redactLines(summary.toString(), secrets));
+        Files.writeString(directory.resolve("manual-review.md"), "# Planning review\n\nCompare each recorded plan and selected memory with the fixture expectations and source conversation. "
+                + "Record evidence and classify planning, extraction, retrieval, conflict, capability, and approval failures. "
+                + "The template is for review and is not an automated acceptance gate.\n");
+        return directory;
+    }
+
+    Path publishPlanning(Path source, Path root, List<String> secrets) throws IOException {
+        var metadata = json.readTree(source.resolve("run-metadata.json").toFile());
+        String runId = metadata.path("runId").asText("");
+        if (!runId.matches("[A-Za-z0-9.-]+-planning-[A-Za-z0-9-]+")) {
+            throw new IllegalArgumentException("Invalid planning run ID");
+        }
+        Path directory = root.resolve(runId).normalize();
+        if (!directory.startsWith(root.normalize())) throw new IllegalArgumentException("Invalid report path");
+        Files.createDirectories(directory);
+        for (String name : List.of("run-metadata.json", "results.json", "manual-review-template.json")) {
+            writeJson(directory.resolve(name), json.readTree(source.resolve(name).toFile()), secrets);
+        }
+        for (String name : List.of("summary.md", "manual-review.md")) {
+            Files.writeString(directory.resolve(name), redactLines(Files.readString(source.resolve(name)), secrets));
+        }
+        return directory;
+    }
+
+    Path writePlanningReview(PlanningEvaluationSuite.Run run, PlanningReview.Review review, Path root,
+            List<String> secrets) throws IOException {
+        var result = new PlanningReview().apply(run, review);
+        Path directory = root.resolve(run.metadata().runId() + "-review-" + java.util.UUID.randomUUID()).normalize();
+        if (!directory.startsWith(root.normalize())) throw new IllegalArgumentException("Invalid report path");
+        Files.createDirectories(directory);
+        writeJson(directory.resolve("review.json"), json.valueToTree(review), secrets);
+        writeJson(directory.resolve("scores.json"), json.valueToTree(result), secrets);
+        var output = new StringBuilder("# Planning review\n\nReviewer: ").append(result.reviewer())
+                .append("\nDeclared independent: ").append(result.declaredIndependent())
+                .append("\nSource mode: ").append(run.metadata().mode())
+                .append("\nSource model: ").append(run.metadata().model())
+                .append("\nDataset SHA-256: ").append(run.metadata().datasetSha256())
+                .append("\n\nScores require decisions for every selected case in the condition. ")
+                .append("A declaration of independence is not verified by the harness. ")
+                .append("Scripted runs do not measure model quality.\n\n");
+        for (String condition : List.of("oracle", "actual_m2")) {
+            output.append("## ").append(condition).append("\n\n");
+            for (var metric : PlanningReview.Metric.values()) {
+                var score = result.scores().get(condition).get(metric);
+                output.append("- ").append(metric).append(": ")
+                        .append(score.value() == null ? "not measured" : score.correct() + "/" + score.total())
+                        .append('\n');
+            }
+            output.append('\n');
+        }
+        Files.writeString(directory.resolve("summary.md"), redactLines(output.toString(), secrets));
+        return directory;
+    }
+
+    Path writePlanningJudgeReview(PlanningEvaluationSuite.Run run, PlanningReview.Review review, Path root,
+            List<String> secrets, List<IndependentJudge.Usage> usage, String status) throws IOException {
+        Path directory = writePlanningReview(run, review, root, secrets);
+        var metadata = json.createObjectNode();
+        metadata.put("status", status);
+        metadata.put("judgeCallsWithUsage", usage.size());
+        metadata.set("usage", json.valueToTree(usage));
+        metadata.put("cost", "not measured");
+        writeJson(directory.resolve("judge-metadata.json"), metadata, secrets);
+        return directory;
+    }
+
     Path write(EvaluationSuite.Run run, Path root, List<String> secrets, Path previous) throws IOException {
         Path directory = root.resolve(run.metadata().runId()).normalize();
         if (!directory.startsWith(root.normalize())) throw new IllegalArgumentException("Invalid report path");

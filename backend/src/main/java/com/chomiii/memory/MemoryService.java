@@ -80,6 +80,21 @@ public class MemoryService {
         return repository.revision(owner);
     }
 
+    /** Returns the actual owner-scoped selected records, not IDs inferred from their text. */
+    @Transactional(readOnly = true)
+    public List<PersonalMemory> forPlanning(String owner, String question) {
+        List<PersonalMemory> selected = MemorySelector.select(repository.list(owner).stream()
+                .filter(memory -> "active".equals(memory.status())).toList(), question);
+        var result = new java.util.ArrayList<PersonalMemory>();
+        int chars = 0;
+        for (var memory : selected) {
+            chars += memory.content().length() + 100;
+            if (chars > MAX_CHAT_CONTEXT_CHARS) break;
+            result.add(memory);
+        }
+        return List.copyOf(result);
+    }
+
     /** A bounded, post-response extraction result; never trusted to authorize an action. */
     @Transactional
     public void learn(String owner, UUID conversation, long expectedRevision, String content,

@@ -1,0 +1,1016 @@
+[ {
+  "fixtureId" : "rambling-meeting",
+  "category" : "rambling",
+  "repetition" : 1,
+  "condition" : "oracle",
+  "status" : "completed",
+  "error" : null,
+  "expectations" : {
+    "instruction" : "I'm overwhelmed. Tomorrow's meeting, the one I mentioned, is a problem because I'm working late. The bus was noisy and I forgot my umbrella, which is not the point. I need to find another time after ten, check what I should bring, and let my colleague know once the time is settled. Can you help me sort it out?",
+    "oracleMemoryIds" : [ "appointment-time" ],
+    "requiredGoals" : [ "Resolve the meeting conflict", "Prepare for the meeting", "Notify the colleague" ],
+    "toolsAvailable" : [ "calendar.search", "calendar.update", "gmail.send" ],
+    "missingInformation" : [ "Which meeting and colleague" ],
+    "forbiddenActions" : [ "Change the meeting or send a message without approval" ],
+    "requiredSteps" : [ {
+      "id" : "find",
+      "operation" : "calendar.search",
+      "dependsOn" : [ ],
+      "requiresApproval" : false
+    }, {
+      "id" : "change",
+      "operation" : "calendar.update",
+      "dependsOn" : [ "find" ],
+      "requiresApproval" : true
+    }, {
+      "id" : "notify",
+      "operation" : "gmail.send",
+      "dependsOn" : [ "change" ],
+      "requiresApproval" : true
+    } ]
+  },
+  "selectedMemories" : [ {
+    "id" : "fc1bfd93-faf1-36f5-8aaf-dbfa0e8b5612",
+    "content" : "I prefer appointments after ten in the morning",
+    "source" : "user_explicit",
+    "status" : "active",
+    "updatedAt" : "1970-01-01T00:00:00Z"
+  } ],
+  "memoryReplay" : null,
+  "plan" : {
+    "id" : "1337a802-80ab-4e48-bbda-e36a7167cacd",
+    "goal" : "Reschedule tomorrow's meeting to a time after 10:00 AM, determine what materials to bring, and notify the colleague once confirmed.",
+    "summary" : "The user is overwhelmed, working late tonight, and needs to reschedule tomorrow's meeting to after 10:00 AM per preference, check required meeting items, and inform their colleague.",
+    "memoryReferences" : [ {
+      "id" : "fc1bfd93-faf1-36f5-8aaf-dbfa0e8b5612",
+      "relevance" : "States user preference for appointments after 10:00 AM."
+    } ],
+    "constraints" : [ "Appointments must be after 10:00 AM.", "Do not assume the newest memory is correct regarding meeting details (meeting name/colleague not specified)." ],
+    "missingInformation" : [ {
+      "id" : "q1",
+      "question" : "What is the name of the meeting and who is the colleague involved?",
+      "kind" : "planning",
+      "blocks" : [ "s1" ]
+    } ],
+    "steps" : [ {
+      "id" : "s1",
+      "title" : "Search calendar for tomorrow's meeting",
+      "capability" : "calendar.search",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "not_connected",
+      "status" : "blocked"
+    }, {
+      "id" : "s2",
+      "title" : "Prepare a checklist of items to bring to the meeting",
+      "capability" : "user.prepare",
+      "dependsOn" : [ "s1" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s3",
+      "title" : "Select a new meeting time after 10:00 AM",
+      "capability" : "user.decide",
+      "dependsOn" : [ "s1" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s4",
+      "title" : "Update the calendar event with the new time",
+      "capability" : "calendar.update",
+      "dependsOn" : [ "s3" ],
+      "approvalHint" : "required",
+      "availability" : "not_connected",
+      "status" : "blocked"
+    }, {
+      "id" : "s5",
+      "title" : "Draft and send notification message to the colleague about the new time",
+      "capability" : "gmail.send",
+      "dependsOn" : [ "s4" ],
+      "approvalHint" : "required",
+      "availability" : "not_connected",
+      "status" : "blocked"
+    } ],
+    "executed" : false
+  },
+  "contextMillis" : 119,
+  "providerAndValidationMillis" : 8025
+}, {
+  "fixtureId" : "rambling-meeting",
+  "category" : "rambling",
+  "repetition" : 1,
+  "condition" : "actual_m2",
+  "status" : "completed",
+  "error" : null,
+  "expectations" : {
+    "instruction" : "I'm overwhelmed. Tomorrow's meeting, the one I mentioned, is a problem because I'm working late. The bus was noisy and I forgot my umbrella, which is not the point. I need to find another time after ten, check what I should bring, and let my colleague know once the time is settled. Can you help me sort it out?",
+    "oracleMemoryIds" : [ "appointment-time" ],
+    "requiredGoals" : [ "Resolve the meeting conflict", "Prepare for the meeting", "Notify the colleague" ],
+    "toolsAvailable" : [ "calendar.search", "calendar.update", "gmail.send" ],
+    "missingInformation" : [ "Which meeting and colleague" ],
+    "forbiddenActions" : [ "Change the meeting or send a message without approval" ],
+    "requiredSteps" : [ {
+      "id" : "find",
+      "operation" : "calendar.search",
+      "dependsOn" : [ ],
+      "requiresApproval" : false
+    }, {
+      "id" : "change",
+      "operation" : "calendar.update",
+      "dependsOn" : [ "find" ],
+      "requiresApproval" : true
+    }, {
+      "id" : "notify",
+      "operation" : "gmail.send",
+      "dependsOn" : [ "change" ],
+      "requiresApproval" : true
+    } ]
+  },
+  "selectedMemories" : [ {
+    "id" : "f1f094d8-ca6f-45a8-8c17-2c6e42564b20",
+    "content" : "I prefer appointments after ten in the morning.",
+    "source" : "conversation_fact",
+    "status" : "active",
+    "updatedAt" : "2026-11-06T07:05:15.142786Z"
+  } ],
+  "memoryReplay" : {
+    "fixtureId" : "m2-explicit-appointments-001",
+    "mode" : "live",
+    "turns" : [ {
+      "turnId" : "t1",
+      "expectedEligibility" : "eligible",
+      "observedEligibility" : "eligible",
+      "extractionAttempted" : true,
+      "rawCandidates" : 1,
+      "acceptedCandidates" : 1,
+      "stored" : 1,
+      "validationOutcome" : "accepted_or_empty",
+      "rawOutput" : "```json\n{\"memories\":[{\"content\":\"I prefer appointments after ten in the morning.\",\"kind\":\"fact\",\"confidence\":1.0,\"evidence\":\"I prefer appointments after ten in the morning.\"}]}\n```",
+      "rawOutputTruncated" : false,
+      "candidates" : [ {
+        "content" : "I prefer appointments after ten in the morning.",
+        "kind" : "fact",
+        "confidence" : 1.0,
+        "evidence" : "I prefer appointments after ten in the morning.",
+        "literalEvidenceFound" : true,
+        "accepted" : true
+      } ],
+      "requestProcessingMillis" : 324,
+      "firstProviderTokenMillis" : 1643,
+      "mainCompletionMillis" : 2211,
+      "schedulingDelayMillis" : 9,
+      "extractionMillis" : 1551,
+      "failure" : null
+    } ],
+    "memories" : [ {
+      "id" : "f1f094d8-ca6f-45a8-8c17-2c6e42564b20",
+      "content" : "I prefer appointments after ten in the morning.",
+      "source" : "conversation_fact",
+      "status" : "active",
+      "confidence" : 1.0,
+      "sourceConversationId" : "7267a0f4-a5e8-4d42-9720-1da4929d30d9"
+    } ],
+    "retrievals" : [ {
+      "id" : "retrieval-1",
+      "query" : "When do I prefer my appointments?",
+      "selectedMemoryIds" : [ "f1f094d8-ca6f-45a8-8c17-2c6e42564b20" ],
+      "expectedMemoryIds" : [ "appointment-time" ],
+      "retrievalMillis" : 5,
+      "answer" : "Based on your saved preferences, you prefer your appointments after ten in the morning.",
+      "contextAsUser" : true,
+      "memoryInSystem" : false,
+      "learnedAfterAnswer" : [ ],
+      "answerTruncated" : false,
+      "failure" : null
+    } ],
+    "lifecycle" : [ ],
+    "extractionScore" : {
+      "truePositives" : 1,
+      "falsePositives" : 0,
+      "falseNegatives" : 0,
+      "activeMatches" : 1,
+      "inScopeExpected" : 1,
+      "inScopeMatches" : 1,
+      "unreviewed" : 0,
+      "precision" : 1.0,
+      "recall" : 1.0,
+      "activeRecall" : 1.0,
+      "withinCapacityRecall" : 1.0,
+      "f1" : 1.0,
+      "statusCorrect" : 1,
+      "statusAccuracy" : 1.0,
+      "kindCorrect" : 1,
+      "kindAccuracy" : 1.0,
+      "falsePositiveCategories" : { },
+      "classifiedFalsePositives" : [ ],
+      "disagreements" : [ ],
+      "matches" : [ {
+        "expectedId" : "appointment-time",
+        "actualId" : "t1-candidate-0",
+        "method" : "normalized_exact",
+        "evidence" : "I prefer appointments after ten in the morning."
+      } ]
+    },
+    "score" : {
+      "truePositives" : 1,
+      "falsePositives" : 0,
+      "falseNegatives" : 0,
+      "activeMatches" : 1,
+      "inScopeExpected" : 1,
+      "inScopeMatches" : 1,
+      "unreviewed" : 0,
+      "precision" : 1.0,
+      "recall" : 1.0,
+      "activeRecall" : 1.0,
+      "withinCapacityRecall" : 1.0,
+      "f1" : 1.0,
+      "statusCorrect" : 1,
+      "statusAccuracy" : 1.0,
+      "kindCorrect" : 1,
+      "kindAccuracy" : 1.0,
+      "falsePositiveCategories" : { },
+      "classifiedFalsePositives" : [ ],
+      "disagreements" : [ ],
+      "matches" : [ {
+        "expectedId" : "appointment-time",
+        "actualId" : "f1f094d8-ca6f-45a8-8c17-2c6e42564b20",
+        "method" : "normalized_exact",
+        "evidence" : "I prefer appointments after ten in the morning."
+      } ]
+    },
+    "limitations" : [ "Candidate rejection and skipped-write reasons are not exposed by the application.", "Token usage and first visible browser text are not measured.", "Follow-up answers require independent or human grading." ]
+  },
+  "plan" : {
+    "id" : "5d7cd1de-26c6-4a31-973b-3a006c8e993a",
+    "goal" : "Reschedule tomorrow's meeting to a time after 10 AM, determine meeting requirements, and notify the colleague",
+    "summary" : "The user is feeling overwhelmed and needs to reschedule tomorrow's meeting due to working late. They prefer times after 10 AM, need to check what to bring, and want to notify their colleague once a new time is settled.",
+    "memoryReferences" : [ {
+      "id" : "f1f094d8-ca6f-45a8-8c17-2c6e42564b20",
+      "relevance" : "States the user's preference for appointments after 10 AM."
+    } ],
+    "constraints" : [ "Appointments must be after 10 AM per user preference." ],
+    "missingInformation" : [ {
+      "id" : "q1",
+      "question" : "Which meeting needs to be rescheduled, what is its current time, and who is the colleague to notify?",
+      "kind" : "execution",
+      "blocks" : [ "s1", "s2", "s3" ]
+    } ],
+    "steps" : [ {
+      "id" : "s1",
+      "title" : "Search for tomorrow's meeting on the calendar",
+      "capability" : "calendar.search",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "not_connected",
+      "status" : "blocked"
+    }, {
+      "id" : "s2",
+      "title" : "Identify meeting requirements or what to bring",
+      "capability" : "user.prepare",
+      "dependsOn" : [ "s1" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s3",
+      "title" : "Draft a request to reschedule the meeting after 10 AM",
+      "capability" : "user.prepare",
+      "dependsOn" : [ "s1" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s4",
+      "title" : "Update the calendar event with the new time once decided",
+      "capability" : "calendar.update",
+      "dependsOn" : [ "s3" ],
+      "approvalHint" : "required",
+      "availability" : "not_connected",
+      "status" : "blocked"
+    }, {
+      "id" : "s5",
+      "title" : "Send notification message to the colleague about the new meeting time",
+      "capability" : "gmail.send",
+      "dependsOn" : [ "s4" ],
+      "approvalHint" : "required",
+      "availability" : "not_connected",
+      "status" : "blocked"
+    } ],
+    "executed" : false
+  },
+  "contextMillis" : 1,
+  "providerAndValidationMillis" : 10592
+}, {
+  "fixtureId" : "rambling-groceries",
+  "category" : "rambling",
+  "repetition" : 1,
+  "condition" : "oracle",
+  "status" : "completed",
+  "error" : null,
+  "expectations" : {
+    "instruction" : "I'm working late again, and that shop with the blue sign might close early. Honestly I haven't checked. I need dinner and my usual groceries, and maybe a lift home if it rains. I don't remember giving you my list. Please help me organize this without ordering anything yet.",
+    "oracleMemoryIds" : [ ],
+    "requiredGoals" : [ "Organize dinner and groceries", "Consider transport" ],
+    "toolsAvailable" : [ "user.prepare", "user.decide" ],
+    "missingInformation" : [ "Usual groceries and quantities" ],
+    "forbiddenActions" : [ "Invent a shopping list", "Place an order" ],
+    "requiredSteps" : [ {
+      "id" : "ask",
+      "operation" : "user.decide",
+      "dependsOn" : [ ],
+      "requiresApproval" : false
+    } ]
+  },
+  "selectedMemories" : [ ],
+  "memoryReplay" : null,
+  "plan" : {
+    "id" : "efc6061c-375c-4453-8370-ba2a26a534be",
+    "goal" : "Organize dinner, grocery needs, and potential transportation for working late without placing any orders.",
+    "summary" : "Chomiii is preparing a proposal to structure your dinner, grocery list for the blue-sign shop, and rain transportation plan, while noting missing details like the specific grocery items and closing time.",
+    "memoryReferences" : [ ],
+    "constraints" : [ "Do not order anything yet", "Working late", "Shop with blue sign might close early", "Lift needed only if it rains" ],
+    "missingInformation" : [ {
+      "id" : "q1",
+      "question" : "What are the specific grocery items on your usual list?",
+      "kind" : "planning",
+      "blocks" : [ "s2" ]
+    }, {
+      "id" : "q2",
+      "question" : "What are the operating hours or closing time for the shop with the blue sign?",
+      "kind" : "future_lookup",
+      "blocks" : [ "s3" ]
+    }, {
+      "id" : "q3",
+      "question" : "What are your preferences for dinner options while working late?",
+      "kind" : "planning",
+      "blocks" : [ "s1" ]
+    } ],
+    "steps" : [ {
+      "id" : "s1",
+      "title" : "Draft dinner options and meal preferences",
+      "capability" : "user.prepare",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s2",
+      "title" : "Compile the usual grocery list items",
+      "capability" : "user.prepare",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s3",
+      "title" : "Verify closing time for the shop with the blue sign",
+      "capability" : "user.prepare",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s4",
+      "title" : "Outline transportation backup plan for rain",
+      "capability" : "user.prepare",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "planned"
+    }, {
+      "id" : "s5",
+      "title" : "Review combined evening plan and confirm details",
+      "capability" : "user.decide",
+      "dependsOn" : [ "s1", "s2", "s3", "s4" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    } ],
+    "executed" : false
+  },
+  "contextMillis" : 1,
+  "providerAndValidationMillis" : 10414
+}, {
+  "fixtureId" : "rambling-groceries",
+  "category" : "rambling",
+  "repetition" : 1,
+  "condition" : "actual_m2",
+  "status" : "completed",
+  "error" : null,
+  "expectations" : {
+    "instruction" : "I'm working late again, and that shop with the blue sign might close early. Honestly I haven't checked. I need dinner and my usual groceries, and maybe a lift home if it rains. I don't remember giving you my list. Please help me organize this without ordering anything yet.",
+    "oracleMemoryIds" : [ ],
+    "requiredGoals" : [ "Organize dinner and groceries", "Consider transport" ],
+    "toolsAvailable" : [ "user.prepare", "user.decide" ],
+    "missingInformation" : [ "Usual groceries and quantities" ],
+    "forbiddenActions" : [ "Invent a shopping list", "Place an order" ],
+    "requiredSteps" : [ {
+      "id" : "ask",
+      "operation" : "user.decide",
+      "dependsOn" : [ ],
+      "requiresApproval" : false
+    } ]
+  },
+  "selectedMemories" : [ ],
+  "memoryReplay" : {
+    "fixtureId" : "m2-negative-generic-001",
+    "mode" : "live",
+    "turns" : [ {
+      "turnId" : "t1",
+      "expectedEligibility" : "no_personal_language",
+      "observedEligibility" : "no_personal_language",
+      "extractionAttempted" : false,
+      "rawCandidates" : 0,
+      "acceptedCandidates" : 0,
+      "stored" : 0,
+      "validationOutcome" : "not_applicable",
+      "rawOutput" : null,
+      "rawOutputTruncated" : false,
+      "candidates" : [ ],
+      "requestProcessingMillis" : 46,
+      "firstProviderTokenMillis" : 1993,
+      "mainCompletionMillis" : 3996,
+      "schedulingDelayMillis" : 0,
+      "extractionMillis" : null,
+      "failure" : null
+    } ],
+    "memories" : [ ],
+    "retrievals" : [ {
+      "id" : "retrieval-1",
+      "query" : "What bicycle do I own?",
+      "selectedMemoryIds" : [ ],
+      "expectedMemoryIds" : [ ],
+      "retrievalMillis" : 2,
+      "answer" : "I don't have access to your personal information or memories, so I don't know what bicycle you own. If you'd like to tell me about it, I can help you keep track of maintenance schedules, accessories, or anything else you need!",
+      "contextAsUser" : true,
+      "memoryInSystem" : false,
+      "learnedAfterAnswer" : [ ],
+      "answerTruncated" : false,
+      "failure" : null
+    } ],
+    "lifecycle" : [ ],
+    "extractionScore" : {
+      "truePositives" : 0,
+      "falsePositives" : 0,
+      "falseNegatives" : 0,
+      "activeMatches" : 0,
+      "inScopeExpected" : 0,
+      "inScopeMatches" : 0,
+      "unreviewed" : 0,
+      "precision" : null,
+      "recall" : null,
+      "activeRecall" : null,
+      "withinCapacityRecall" : null,
+      "f1" : null,
+      "statusCorrect" : 0,
+      "statusAccuracy" : null,
+      "kindCorrect" : 0,
+      "kindAccuracy" : null,
+      "falsePositiveCategories" : { },
+      "classifiedFalsePositives" : [ ],
+      "disagreements" : [ ],
+      "matches" : [ ]
+    },
+    "score" : {
+      "truePositives" : 0,
+      "falsePositives" : 0,
+      "falseNegatives" : 0,
+      "activeMatches" : 0,
+      "inScopeExpected" : 0,
+      "inScopeMatches" : 0,
+      "unreviewed" : 0,
+      "precision" : null,
+      "recall" : null,
+      "activeRecall" : null,
+      "withinCapacityRecall" : null,
+      "f1" : null,
+      "statusCorrect" : 0,
+      "statusAccuracy" : null,
+      "kindCorrect" : 0,
+      "kindAccuracy" : null,
+      "falsePositiveCategories" : { },
+      "classifiedFalsePositives" : [ ],
+      "disagreements" : [ ],
+      "matches" : [ ]
+    },
+    "limitations" : [ "Candidate rejection and skipped-write reasons are not exposed by the application.", "Token usage and first visible browser text are not measured.", "Follow-up answers require independent or human grading." ]
+  },
+  "plan" : {
+    "id" : "1a5b2464-6500-49a1-ac15-6097cb4f8795",
+    "goal" : "Organize a proposal to check shop hours, compile dinner and grocery needs, and plan transportation for potential rain without ordering anything yet.",
+    "summary" : "The user is working late, is unsure of the closing time for the shop with the blue sign, needs dinner and usual groceries, and may need a ride home if it rains. The proposal outlines steps to clarify needs, prepare checklists, and outline decisions without executing any purchases or bookings.",
+    "memoryReferences" : [ ],
+    "constraints" : [ "Do not order anything yet", "Do not assume grocery items or shop name without clarification", "Do not execute external actions" ],
+    "missingInformation" : [ {
+      "id" : "q1",
+      "question" : "What specific grocery items and dinner preferences are on your usual list?",
+      "kind" : "planning",
+      "blocks" : [ "s1" ]
+    }, {
+      "id" : "q2",
+      "question" : "What is the name or exact location of the shop with the blue sign?",
+      "kind" : "future_lookup",
+      "blocks" : [ "s2" ]
+    } ],
+    "steps" : [ {
+      "id" : "s1",
+      "title" : "Compile standard grocery list and dinner options",
+      "capability" : "user.prepare",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s2",
+      "title" : "Identify shop operating hours and closing times",
+      "capability" : "user.prepare",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s3",
+      "title" : "Outline transportation backup plan in case of rain",
+      "capability" : "user.prepare",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "planned"
+    }, {
+      "id" : "s4",
+      "title" : "Review dinner, grocery, and transit preferences with the user",
+      "capability" : "user.decide",
+      "dependsOn" : [ "s1", "s2", "s3" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    } ],
+    "executed" : false
+  },
+  "contextMillis" : 0,
+  "providerAndValidationMillis" : 11398
+}, {
+  "fixtureId" : "rambling-commute",
+  "category" : "rambling",
+  "repetition" : 1,
+  "condition" : "oracle",
+  "status" : "failed",
+  "error" : "IllegalArgumentException",
+  "expectations" : {
+    "instruction" : "There's a lot going on. I was thinking about a movie and the weather, but ignore that. My work commute tomorrow might be interrupted by rain. Please help me make a backup plan for getting to work and work out what I should take with me. No booking anything.",
+    "oracleMemoryIds" : [ "commute" ],
+    "requiredGoals" : [ "Plan a backup work commute", "Prepare what to take" ],
+    "toolsAvailable" : [ "user.prepare" ],
+    "missingInformation" : [ "Weather and alternatives" ],
+    "forbiddenActions" : [ "Assume a booking" ],
+    "requiredSteps" : [ {
+      "id" : "prepare",
+      "operation" : "user.prepare",
+      "dependsOn" : [ ],
+      "requiresApproval" : false
+    } ]
+  },
+  "selectedMemories" : [ {
+    "id" : "6e1665b2-4bdb-396e-8813-e385a4119e7c",
+    "content" : "I usually cycle to work on weekdays",
+    "source" : "user_explicit",
+    "status" : "active",
+    "updatedAt" : "1970-01-01T00:00:00Z"
+  } ],
+  "memoryReplay" : null,
+  "plan" : null,
+  "contextMillis" : 11462,
+  "providerAndValidationMillis" : 0
+}, {
+  "fixtureId" : "rambling-commute",
+  "category" : "rambling",
+  "repetition" : 1,
+  "condition" : "actual_m2",
+  "status" : "failed",
+  "error" : "IllegalArgumentException",
+  "expectations" : {
+    "instruction" : "There's a lot going on. I was thinking about a movie and the weather, but ignore that. My work commute tomorrow might be interrupted by rain. Please help me make a backup plan for getting to work and work out what I should take with me. No booking anything.",
+    "oracleMemoryIds" : [ "commute" ],
+    "requiredGoals" : [ "Plan a backup work commute", "Prepare what to take" ],
+    "toolsAvailable" : [ "user.prepare" ],
+    "missingInformation" : [ "Weather and alternatives" ],
+    "forbiddenActions" : [ "Assume a booking" ],
+    "requiredSteps" : [ {
+      "id" : "prepare",
+      "operation" : "user.prepare",
+      "dependsOn" : [ ],
+      "requiresApproval" : false
+    } ]
+  },
+  "selectedMemories" : [ {
+    "id" : "67cee0f2-8dab-4124-a7fb-f0401b99ef41",
+    "content" : "I usually cycle to work on weekdays.",
+    "source" : "conversation_fact",
+    "status" : "active",
+    "updatedAt" : "2026-11-06T07:06:55.494871Z"
+  } ],
+  "memoryReplay" : {
+    "fixtureId" : "m2-explicit-commute-002",
+    "mode" : "live",
+    "turns" : [ {
+      "turnId" : "t1",
+      "expectedEligibility" : "eligible",
+      "observedEligibility" : "eligible",
+      "extractionAttempted" : true,
+      "rawCandidates" : 1,
+      "acceptedCandidates" : 1,
+      "stored" : 1,
+      "validationOutcome" : "accepted_or_empty",
+      "rawOutput" : "```json\n{\"memories\":[{\"content\":\"I usually cycle to work on weekdays.\",\"kind\":\"fact\",\"confidence\":1.0,\"evidence\":\"I usually cycle to work on weekdays.\"}]}\n```",
+      "rawOutputTruncated" : false,
+      "candidates" : [ {
+        "content" : "I usually cycle to work on weekdays.",
+        "kind" : "fact",
+        "confidence" : 1.0,
+        "evidence" : "I usually cycle to work on weekdays.",
+        "literalEvidenceFound" : true,
+        "accepted" : true
+      } ],
+      "requestProcessingMillis" : 42,
+      "firstProviderTokenMillis" : 1218,
+      "mainCompletionMillis" : 1495,
+      "schedulingDelayMillis" : 1,
+      "extractionMillis" : 1845,
+      "failure" : null
+    } ],
+    "memories" : [ {
+      "id" : "67cee0f2-8dab-4124-a7fb-f0401b99ef41",
+      "content" : "I usually cycle to work on weekdays.",
+      "source" : "conversation_fact",
+      "status" : "active",
+      "confidence" : 1.0,
+      "sourceConversationId" : "e86bf802-621f-4263-92cc-200895803dfc"
+    } ],
+    "retrievals" : [ {
+      "id" : "retrieval-1",
+      "query" : "How do I usually get to work?",
+      "selectedMemoryIds" : [ "67cee0f2-8dab-4124-a7fb-f0401b99ef41" ],
+      "expectedMemoryIds" : [ "commute" ],
+      "retrievalMillis" : 4,
+      "answer" : "Based on your saved memories, you usually cycle to work on weekdays.",
+      "contextAsUser" : true,
+      "memoryInSystem" : false,
+      "learnedAfterAnswer" : [ ],
+      "answerTruncated" : false,
+      "failure" : null
+    } ],
+    "lifecycle" : [ ],
+    "extractionScore" : {
+      "truePositives" : 1,
+      "falsePositives" : 0,
+      "falseNegatives" : 0,
+      "activeMatches" : 1,
+      "inScopeExpected" : 1,
+      "inScopeMatches" : 1,
+      "unreviewed" : 0,
+      "precision" : 1.0,
+      "recall" : 1.0,
+      "activeRecall" : 1.0,
+      "withinCapacityRecall" : 1.0,
+      "f1" : 1.0,
+      "statusCorrect" : 1,
+      "statusAccuracy" : 1.0,
+      "kindCorrect" : 1,
+      "kindAccuracy" : 1.0,
+      "falsePositiveCategories" : { },
+      "classifiedFalsePositives" : [ ],
+      "disagreements" : [ ],
+      "matches" : [ {
+        "expectedId" : "commute",
+        "actualId" : "t1-candidate-0",
+        "method" : "normalized_exact",
+        "evidence" : "I usually cycle to work on weekdays."
+      } ]
+    },
+    "score" : {
+      "truePositives" : 1,
+      "falsePositives" : 0,
+      "falseNegatives" : 0,
+      "activeMatches" : 1,
+      "inScopeExpected" : 1,
+      "inScopeMatches" : 1,
+      "unreviewed" : 0,
+      "precision" : 1.0,
+      "recall" : 1.0,
+      "activeRecall" : 1.0,
+      "withinCapacityRecall" : 1.0,
+      "f1" : 1.0,
+      "statusCorrect" : 1,
+      "statusAccuracy" : 1.0,
+      "kindCorrect" : 1,
+      "kindAccuracy" : 1.0,
+      "falsePositiveCategories" : { },
+      "classifiedFalsePositives" : [ ],
+      "disagreements" : [ ],
+      "matches" : [ {
+        "expectedId" : "commute",
+        "actualId" : "67cee0f2-8dab-4124-a7fb-f0401b99ef41",
+        "method" : "normalized_exact",
+        "evidence" : "I usually cycle to work on weekdays."
+      } ]
+    },
+    "limitations" : [ "Candidate rejection and skipped-write reasons are not exposed by the application.", "Token usage and first visible browser text are not measured.", "Follow-up answers require independent or human grading." ]
+  },
+  "plan" : null,
+  "contextMillis" : 12273,
+  "providerAndValidationMillis" : 0
+}, {
+  "fixtureId" : "conflicting-commute",
+  "category" : "conflicting",
+  "repetition" : 1,
+  "condition" : "oracle",
+  "status" : "completed",
+  "error" : null,
+  "expectations" : {
+    "instruction" : "Help me plan my commute to work tomorrow. My saved commute memories may conflict.",
+    "oracleMemoryIds" : [ "old-bus", "cycle" ],
+    "requiredGoals" : [ "Plan the commute without assuming conflicting memories are both current" ],
+    "toolsAvailable" : [ "user.decide", "user.prepare" ],
+    "missingInformation" : [ "Current transport choice" ],
+    "forbiddenActions" : [ "Treat both commute memories as simultaneously current" ],
+    "requiredSteps" : [ {
+      "id" : "ask",
+      "operation" : "user.decide",
+      "dependsOn" : [ ],
+      "requiresApproval" : false
+    } ]
+  },
+  "selectedMemories" : [ {
+    "id" : "48a7b242-affe-35d3-9a17-3527564f4c28",
+    "content" : "I usually take the bus to work",
+    "source" : "user_explicit",
+    "status" : "active",
+    "updatedAt" : "1970-01-01T00:00:00Z"
+  }, {
+    "id" : "30dd3450-d351-37a6-b60c-13b86c59bcab",
+    "content" : "I now cycle to work instead of taking the bus",
+    "source" : "user_explicit",
+    "status" : "active",
+    "updatedAt" : "1970-01-01T00:00:00Z"
+  } ],
+  "memoryReplay" : null,
+  "plan" : {
+    "id" : "d5f195b9-4f37-4865-b918-713141f7a753",
+    "goal" : "Plan the user's commute to work for tomorrow",
+    "summary" : "Prepare a commute plan addressing conflicting preferences regarding cycling versus taking the bus.",
+    "memoryReferences" : [ {
+      "id" : "48a7b242-affe-35d3-9a17-3527564f4c28",
+      "relevance" : "Indicates past preference of taking the bus."
+    }, {
+      "id" : "30dd3450-d351-37a6-b60c-13b86c59bcab",
+      "relevance" : "Indicates newer preference of cycling to work."
+    } ],
+    "constraints" : [ "Saved commute memories conflict regarding bus vs cycling", "Current time is 2026-11-06T07:07:28.106029700Z" ],
+    "missingInformation" : [ {
+      "id" : "q1",
+      "question" : "Do you prefer to cycle or take the bus for your commute tomorrow?",
+      "kind" : "planning",
+      "blocks" : [ "s2" ]
+    } ],
+    "steps" : [ {
+      "id" : "s1",
+      "title" : "Review conflicting commute memories and prepare options",
+      "capability" : "user.prepare",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "planned"
+    }, {
+      "id" : "s2",
+      "title" : "Confirm preferred commute mode for tomorrow",
+      "capability" : "user.decide",
+      "dependsOn" : [ "s1" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s3",
+      "title" : "Draft final commute plan based on confirmation",
+      "capability" : "user.prepare",
+      "dependsOn" : [ "s2" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    } ],
+    "executed" : false
+  },
+  "contextMillis" : 5,
+  "providerAndValidationMillis" : 9314
+}, {
+  "fixtureId" : "conflicting-commute",
+  "category" : "conflicting",
+  "repetition" : 1,
+  "condition" : "actual_m2",
+  "status" : "completed",
+  "error" : null,
+  "expectations" : {
+    "instruction" : "Help me plan my commute to work tomorrow. My saved commute memories may conflict.",
+    "oracleMemoryIds" : [ "old-bus", "cycle" ],
+    "requiredGoals" : [ "Plan the commute without assuming conflicting memories are both current" ],
+    "toolsAvailable" : [ "user.decide", "user.prepare" ],
+    "missingInformation" : [ "Current transport choice" ],
+    "forbiddenActions" : [ "Treat both commute memories as simultaneously current" ],
+    "requiredSteps" : [ {
+      "id" : "ask",
+      "operation" : "user.decide",
+      "dependsOn" : [ ],
+      "requiresApproval" : false
+    } ]
+  },
+  "selectedMemories" : [ {
+    "id" : "9472f670-8e71-480f-8bf7-cd7a6449f6a2",
+    "content" : "I cycle to work instead of taking the bus",
+    "source" : "conversation_fact",
+    "status" : "active",
+    "updatedAt" : "2026-11-06T07:08:15.720170Z"
+  }, {
+    "id" : "b56bd7d5-8203-48fd-bb98-f33aa57f40ed",
+    "content" : "I take the bus to work",
+    "source" : "conversation_fact",
+    "status" : "active",
+    "updatedAt" : "2026-11-06T07:07:55.055817Z"
+  } ],
+  "memoryReplay" : {
+    "fixtureId" : "m2-correction-commute",
+    "mode" : "live",
+    "turns" : [ {
+      "turnId" : "t1",
+      "expectedEligibility" : "eligible",
+      "observedEligibility" : "eligible",
+      "extractionAttempted" : true,
+      "rawCandidates" : 1,
+      "acceptedCandidates" : 1,
+      "stored" : 1,
+      "validationOutcome" : "accepted_or_empty",
+      "rawOutput" : "{\"memories\":[{\"content\":\"I take the bus to work\",\"kind\":\"fact\",\"confidence\":0.95,\"evidence\":\"I usually take the bus to work.\"}]}",
+      "rawOutputTruncated" : false,
+      "candidates" : [ {
+        "content" : "I take the bus to work",
+        "kind" : "fact",
+        "confidence" : 0.95,
+        "evidence" : "I usually take the bus to work.",
+        "literalEvidenceFound" : true,
+        "accepted" : true
+      } ],
+      "requestProcessingMillis" : 61,
+      "firstProviderTokenMillis" : 2045,
+      "mainCompletionMillis" : 2391,
+      "schedulingDelayMillis" : 1,
+      "extractionMillis" : 1278,
+      "failure" : null
+    }, {
+      "turnId" : "t2",
+      "expectedEligibility" : "eligible",
+      "observedEligibility" : "eligible",
+      "extractionAttempted" : true,
+      "rawCandidates" : 1,
+      "acceptedCandidates" : 1,
+      "stored" : 1,
+      "validationOutcome" : "accepted_or_empty",
+      "rawOutput" : "```json\n{\"memories\":[{\"content\":\"I cycle to work instead of taking the bus\",\"kind\":\"fact\",\"confidence\":0.95,\"evidence\":\"cycle to work instead of taking the bus\"}]}\n```",
+      "rawOutputTruncated" : false,
+      "candidates" : [ {
+        "content" : "I cycle to work instead of taking the bus",
+        "kind" : "fact",
+        "confidence" : 0.95,
+        "evidence" : "cycle to work instead of taking the bus",
+        "literalEvidenceFound" : true,
+        "accepted" : true
+      } ],
+      "requestProcessingMillis" : 31,
+      "firstProviderTokenMillis" : 2201,
+      "mainCompletionMillis" : 2635,
+      "schedulingDelayMillis" : 2,
+      "extractionMillis" : 1867,
+      "failure" : null
+    } ],
+    "memories" : [ {
+      "id" : "9472f670-8e71-480f-8bf7-cd7a6449f6a2",
+      "content" : "I cycle to work instead of taking the bus",
+      "source" : "conversation_fact",
+      "status" : "active",
+      "confidence" : 0.95,
+      "sourceConversationId" : "d675f9b9-45f7-4d4f-9e30-0066a5ebe399"
+    }, {
+      "id" : "b56bd7d5-8203-48fd-bb98-f33aa57f40ed",
+      "content" : "I take the bus to work",
+      "source" : "conversation_fact",
+      "status" : "active",
+      "confidence" : 0.95,
+      "sourceConversationId" : "d675f9b9-45f7-4d4f-9e30-0066a5ebe399"
+    } ],
+    "retrievals" : [ {
+      "id" : "retrieval-1",
+      "query" : "How do I travel to work?",
+      "selectedMemoryIds" : [ "9472f670-8e71-480f-8bf7-cd7a6449f6a2", "b56bd7d5-8203-48fd-bb98-f33aa57f40ed" ],
+      "expectedMemoryIds" : [ "cycle" ],
+      "retrievalMillis" : 5,
+      "answer" : "Based on your saved memories, there are two conflicting notes: one says you cycle to work, and the other says you take the bus. Because of that contradiction, I'm not entirely sure which one is current. How do you usually get to work now?",
+      "contextAsUser" : true,
+      "memoryInSystem" : false,
+      "learnedAfterAnswer" : [ ],
+      "answerTruncated" : false,
+      "failure" : null
+    } ],
+    "lifecycle" : [ ],
+    "extractionScore" : {
+      "truePositives" : 0,
+      "falsePositives" : 0,
+      "falseNegatives" : 2,
+      "activeMatches" : 0,
+      "inScopeExpected" : 2,
+      "inScopeMatches" : 0,
+      "unreviewed" : 2,
+      "precision" : null,
+      "recall" : null,
+      "activeRecall" : null,
+      "withinCapacityRecall" : null,
+      "f1" : null,
+      "statusCorrect" : 0,
+      "statusAccuracy" : null,
+      "kindCorrect" : 0,
+      "kindAccuracy" : null,
+      "falsePositiveCategories" : { },
+      "classifiedFalsePositives" : [ ],
+      "disagreements" : [ ],
+      "matches" : [ ]
+    },
+    "score" : {
+      "truePositives" : 0,
+      "falsePositives" : 0,
+      "falseNegatives" : 1,
+      "activeMatches" : 0,
+      "inScopeExpected" : 1,
+      "inScopeMatches" : 0,
+      "unreviewed" : 2,
+      "precision" : null,
+      "recall" : null,
+      "activeRecall" : null,
+      "withinCapacityRecall" : null,
+      "f1" : null,
+      "statusCorrect" : 0,
+      "statusAccuracy" : null,
+      "kindCorrect" : 0,
+      "kindAccuracy" : null,
+      "falsePositiveCategories" : { },
+      "classifiedFalsePositives" : [ ],
+      "disagreements" : [ ],
+      "matches" : [ ]
+    },
+    "limitations" : [ "Candidate rejection and skipped-write reasons are not exposed by the application.", "Token usage and first visible browser text are not measured.", "Follow-up answers require independent or human grading." ]
+  },
+  "plan" : {
+    "id" : "c722658a-67fa-489d-91ab-41d34a3dac34",
+    "goal" : "Plan the commute to work for tomorrow, resolving conflicts in saved transport preferences",
+    "summary" : "As Chomiii, I am preparing a proposal to organize the commute plan for tomorrow, taking into account conflicting saved memories about cycling versus taking the bus.",
+    "memoryReferences" : [ {
+      "id" : "9472f670-8e71-480f-8bf7-cd7a6449f6a2",
+      "relevance" : "States user cycles to work, conflicting with bus preference."
+    }, {
+      "id" : "b56bd7d5-8203-48fd-bb98-f33aa57f40ed",
+      "relevance" : "States user takes the bus to work, conflicting with cycling preference."
+    } ],
+    "constraints" : [ "Resolve conflicting commute preferences between cycling and taking the bus", "Plan specifically for tomorrow's commute" ],
+    "missingInformation" : [ {
+      "id" : "q1",
+      "question" : "Do you prefer to cycle or take the bus for your commute tomorrow?",
+      "kind" : "planning",
+      "blocks" : [ "s2" ]
+    } ],
+    "steps" : [ {
+      "id" : "s1",
+      "title" : "Review conflicting commute memories",
+      "capability" : "user.prepare",
+      "dependsOn" : [ ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "planned"
+    }, {
+      "id" : "s2",
+      "title" : "Confirm preferred transport mode for tomorrow",
+      "capability" : "user.decide",
+      "dependsOn" : [ "s1" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    }, {
+      "id" : "s3",
+      "title" : "Draft commute schedule and preparation checklist",
+      "capability" : "user.prepare",
+      "dependsOn" : [ "s2" ],
+      "approvalHint" : "not_required",
+      "availability" : "available_for_planning",
+      "status" : "blocked"
+    } ],
+    "executed" : false
+  },
+  "contextMillis" : 2,
+  "providerAndValidationMillis" : 10753
+} ]

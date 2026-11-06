@@ -1,0 +1,25 @@
+{
+  "reviewer" : "",
+  "independent" : false,
+  "decisions" : [ {
+    "fixtureId" : "rambling-meeting",
+    "repetition" : 1,
+    "condition" : "oracle",
+    "grades" : [ ]
+  }, {
+    "fixtureId" : "rambling-meeting",
+    "repetition" : 1,
+    "condition" : "actual_m2",
+    "grades" : [ ]
+  }, {
+    "fixtureId" : "rambling-volunteer",
+    "repetition" : 1,
+    "condition" : "oracle",
+    "grades" : [ ]
+  }, {
+    "fixtureId" : "rambling-volunteer",
+    "repetition" : 1,
+    "condition" : "actual_m2",
+    "grades" : [ ]
+  } ]
+}

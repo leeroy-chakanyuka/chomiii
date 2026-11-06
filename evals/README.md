@@ -277,15 +277,70 @@ least five samples for p50 and 20 for p95. Small or unmatched samples do not
 establish a performance improvement. A provider key, timeout, or quota error is
 an evaluation error, not a passing result.
 
-## M3.1 extension
+## Evaluate M3.1 planning
 
-The optional `planning` object in the appointment fixture is an illustrative
-contract, not a planner or a claim that calendar tools exist. Validation checks
-memory references, fixture-declared tool names, approval flags, dependencies,
-and cycles. A future planner must validate tools against the real catalog.
+`PlanningEvaluationSuiteTest` runs each planning scenario twice. Oracle mode
+uses the fixture's expected memories. Actual-M2 mode replays its linked memory
+fixture and passes the actual selected records to the planner. It does not
+substitute oracle memories when extraction or retrieval fails. The source
+replay uses normal chat explicitly; the planning request is evaluated in a new
+conversation. The 30 scenario expectations still need independent review.
 
-Future M3.1 evaluations should reuse fixture IDs, filtering, budgets, judging,
-and report metadata. Run each planning case twice: first with the human-curated
-`oracleMemoryIds`, then with the actual M2 retrieval. Compare the paths to
-separate extraction, retrieval, and planning errors. No real-world action is
-executed by this harness.
+Run the full scripted planning pipeline from `backend/`:
+
+```powershell
+.\mvnw.cmd "-Dtest=PlanningEvaluationSuiteTest#runSelectedPlanningEvaluationAndWriteReports" "-Deval.suite=planning" test
+```
+
+This uses a scripted planner and cannot measure model quality. Select cases with
+`-Deval.fixture=id1,id2` or a category with `-Deval.category=rambling`.
+The held-out IDs are listed in [M3.1 evaluation](../docs/m3.1-evaluation.md).
+Live runs exclude held-out cases unless you select their IDs explicitly.
+
+For a live run, first configure a disposable database and the key as described
+above. Set a call budget that covers both planner calls and the M2 chat,
+extraction, and follow-up calls for every selected case. For example:
+
+```powershell
+$env:EVAL_LIVE = 'true'
+$env:EVAL_DISPOSABLE_DB = 'true'
+$env:EVAL_MAX_PROVIDER_CALLS = '16'
+$env:EVAL_MAX_FIXTURES = '2'
+$env:EVAL_MIN_PROVIDER_INTERVAL_MILLIS = '10000'
+$env:EVAL_MAX_PROVIDER_INPUT_BYTES = '20000'
+.\mvnw.cmd "-Dtest=PlanningEvaluationSuiteTest#runSelectedPlanningEvaluationAndWriteReports" "-Deval.suite=planning" "-Deval.mode=live" "-Deval.fixture=rambling-meeting,rambling-volunteer" test
+```
+
+Check the actual project limits and remaining quota before each live run. A
+completed plan means that JSON passed Java validation, not that its goals or
+steps are correct. The report records selected memories, raw planner output,
+errors, and available stage timings. It labels semantic metrics not measured
+until an independent reviewer or separately declared model grades the cases.
+
+For a human review, copy `manual-review-template.json` to a separate file. Set
+`reviewer`, declare whether the reviewer is independent, and add grades with a
+metric name, `correct`, `total`, `reason`, and verbatim `evidence`. A `total`
+of zero means not applicable. See [the planning review rubric](judge/planning-rubric.md).
+Then run:
+
+```powershell
+.\mvnw.cmd "-Dtest=PlanningReviewCliTest" "-Deval.suite=planning-review" "-Deval.sourceRun=target/evals/<run-id>" "-Deval.reviewFile=target/evals/<review.json>" test
+```
+
+The report is written separately. A metric remains not measured when any
+selected case lacks a decision or when independence is not declared. The
+harness checks quotes and IDs but cannot verify reviewer independence.
+The templates in older planning reports use a previous format; use the
+templates from the latest reports for this command.
+
+To use a separate-family model on a saved run, set the `EVAL_JUDGE_*` values
+described above, `EVAL_JUDGE=true`, and an explicit call budget. Run
+`PlanningJudgeCliTest` with `-Deval.suite=planning-judge` and
+`-Deval.sourceRun=target/evals/<run-id>`. Judge failures and ungraded cases
+remain visible. Human review and deterministic safety checks remain necessary.
+
+For a synthetic report intended for a reviewer, inspect its contents first.
+`PlanningPublishCliTest` with `-Deval.suite=planning-publish` and
+`-Deval.sourceRun=target/evals/<run-id>` writes a redacted copy under
+`evals/reports/planning/`. Do not publish reports containing real user data or
+credentials. Redaction is not a complete secret detector.
