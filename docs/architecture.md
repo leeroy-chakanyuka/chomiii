@@ -160,5 +160,18 @@ disposable local database. The database URL and Flyway target are pinned to the
 validated test database before Spring starts. A provider wrapper counts and
 limits opt-in live calls, while the scorer remains independent of the Gemini
 SDK. An optional separate-family judge or a human can review ambiguous matches.
-The planning fixture contract is validation only; it does not execute tools.
+The fixture contract describes expectations; the application planner is a
+separate plan-only path and does not execute tools.
 See [evaluation instructions](../evals/README.md) for commands and limitations.
+
+## M3.1 planning path
+
+`ChatStreamService` routes explicit or locally recognized planning requests
+through `PlanningService`. It retains the owner-checked conversation and
+cancelable provider stream. `MemoryService.forPlanning` supplies the selected
+active memory records in a lower-trust user message. The planner buffers model
+JSON, and `PlanParser` checks IDs, limits, capability membership, and the
+dependency graph before the service emits a structured event and readable
+proposal. The capability catalogue describes future operations and contains
+no execution functions. See [M3.1 design](m3.1-design.md) and the
+[memory and planning flow](memory-planning-flow.md).

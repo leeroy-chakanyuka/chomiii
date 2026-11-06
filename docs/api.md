@@ -132,8 +132,13 @@ without creating another message. A second generation in the same
 conversation also returns 409 until the first ends. The server limits active
 generations to eight and response text to 16,000 characters.
 
+An optional boolean `plan` selects the planning path when `true` and forces
+ordinary chat when `false`. If omitted, the local router may select planning
+from the message. The browser also offers **Make a plan**. The same memory
+opt-out header applies. Planning makes a proposal and does not execute actions.
+
 Each event is an SSE frame with an `event` name and JSON `data`. The stream
-uses four event types:
+uses these event types:
 
 ```text
 event:start
@@ -154,6 +159,14 @@ event:error
 data:{"code":"RATE_LIMITED","message":"Gemini's rate limit was reached. Try again later.","status":"failed"}
 ```
 
+For a valid planning request, a `plan` event precedes the readable `delta`.
+Its JSON contains `id`, `goal`, `summary`, `memoryReferences`, `constraints`,
+`missingInformation`, `steps`, and `executed:false`. Step availability and
+approval hints come from the backend catalogue. The structured event is not
+persisted as a separate plan; conversation history contains the readable
+response. Invalid planning output produces an `INVALID_PLAN` error rather than
+a plan event. See [M3.1 design](m3.1-design.md) for the contract and limits.
+
 Cancellation uses `status:"interrupted"` and `code:"INTERRUPTED"`.
 The browser should display failed or interrupted partial content separately
 from a completed assistant answer. Closing the browser stream stops upstream
@@ -170,8 +183,8 @@ The backend passes the newest 20 complete conversation messages, including
 the current user message, to Gemini in chronological order, subject to a
 16,000-character total. It excludes failed and interrupted assistant messages
 and never includes another conversation. A separate fixed system instruction
-defines Chomi as an assistant without tools, live browsing, or long-term
-memory. This is chat history, not M2 memory.
+describes the assistant's capabilities. Relevant M2 memories, when enabled,
+are separate owner-scoped user-role context, not trusted system instructions.
 
 Validation failures return 400. An absent session on a mutation returns 401;
 a wrong Origin returns 403. A foreign or missing conversation returns 404.
@@ -180,6 +193,6 @@ limit returns 429 with `Retry-After: 60`; it allows 60 requests per minute per
 established anonymous session and limits new sessions by IP. The eight-stream
 limit also returns 429. Provider errors after streaming begins use `error`
 events with `INVALID_KEY`, `INVALID_REQUEST`, `UNSUPPORTED_MODEL`,
-`RATE_LIMITED`, `TIMEOUT`, `UNAVAILABLE`, or `EMPTY_RESPONSE`. A storage failure
+`RATE_LIMITED`, `TIMEOUT`, `UNAVAILABLE`, `EMPTY_RESPONSE`, or `INVALID_PLAN`. A storage failure
 can produce `STORAGE_UNAVAILABLE`. Raw upstream messages and keys are never
 included in these errors.

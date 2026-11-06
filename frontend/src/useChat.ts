@@ -149,7 +149,7 @@ export function useChat() {
     } catch (cause) { setError(errorText(cause)) }
   }
 
-  async function submit() {
+  async function submit(plan = false) {
     if (sending.current) return
     const content = input.trim()
     if (!content) { setError('Write a message first.'); return }
@@ -184,7 +184,7 @@ export function useChat() {
       const abort = new AbortController()
       running.current = { conversationId, requestId, abort }
       await sendMessage({ conversationId, requestId, content, provider, model, apiKey: key,
-        signal: abort.signal, useMemory, onEvent(event) {
+        signal: abort.signal, useMemory, plan, onEvent(event) {
           if (event.kind === 'delta') setStreamed((previous) => previous + event.text)
           if (event.kind === 'error') streamError = event.message
           if ((event.kind === 'complete' || event.kind === 'error') && startedAt.current !== null

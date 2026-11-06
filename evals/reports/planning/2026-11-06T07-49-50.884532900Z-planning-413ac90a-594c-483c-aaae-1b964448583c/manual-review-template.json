@@ -1,0 +1,35 @@
+{
+  "reviewer" : "",
+  "independent" : false,
+  "decisions" : [ {
+    "fixtureId" : "rambling-meeting",
+    "repetition" : 1,
+    "condition" : "oracle",
+    "grades" : [ ]
+  }, {
+    "fixtureId" : "rambling-meeting",
+    "repetition" : 1,
+    "condition" : "actual_m2",
+    "grades" : [ ]
+  }, {
+    "fixtureId" : "rambling-groceries",
+    "repetition" : 1,
+    "condition" : "oracle",
+    "grades" : [ ]
+  }, {
+    "fixtureId" : "rambling-groceries",
+    "repetition" : 1,
+    "condition" : "actual_m2",
+    "grades" : [ ]
+  }, {
+    "fixtureId" : "conflicting-commute",
+    "repetition" : 1,
+    "condition" : "oracle",
+    "grades" : [ ]
+  }, {
+    "fixtureId" : "conflicting-commute",
+    "repetition" : 1,
+    "condition" : "actual_m2",
+    "grades" : [ ]
+  } ]
+}

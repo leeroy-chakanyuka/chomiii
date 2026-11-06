@@ -1,0 +1,26 @@
+{
+  "runId" : "2026-11-06T07-56-47.134577300Z-planning-d1d47745-f351-48a1-82d5-2870cf5beb2e",
+  "startedAt" : "2026-11-06T07:56:47.134577300Z",
+  "commit" : "f4843ab0fdf518a8b3c4155feda9a16e77234837",
+  "workingTreeDirty" : true,
+  "datasetSha256" : "17dedc8aa9a665bc3157ef0ce2596f8b6ee54ce28906fcc32eedd293040e5229",
+  "mode" : "live",
+  "model" : "gemini-3.5-flash-lite",
+  "database" : "disposable database",
+  "selectedFixtures" : 2,
+  "repetitions" : 1,
+  "maxProviderCalls" : 16,
+  "minProviderIntervalMillis" : 10000,
+  "maxProviderInputBytes" : 20000,
+  "providerCalls" : {
+    "JUDGE" : 0,
+    "CHAT" : 2,
+    "PLANNING" : 4,
+    "FOLLOW_UP" : 2,
+    "EXTRACTION" : 4
+  },
+  "elapsedMillis" : 148334,
+  "semanticGrading" : "not measured; independent review required",
+  "tokenUsage" : "not measured",
+  "estimatedCost" : "not measured"
+}

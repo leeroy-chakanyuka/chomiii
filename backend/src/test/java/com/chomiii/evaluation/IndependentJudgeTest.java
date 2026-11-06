@@ -58,4 +58,34 @@ class IndependentJudgeTest {
         assertThatThrownBy(() -> IndependentJudge.Config.from(env, 5))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("different");
     }
+
+    @Test
+    void gradesAStoredPlanWithEvidenceAndSharesTheJudgeBudget() throws Exception {
+        var properties = new java.util.Properties();
+        properties.setProperty("eval.fixture", "memory-appointment");
+        var run = new PlanningEvaluationSuite().run(EvaluationConfig.from(properties, Map.of()), Map.of());
+        var item = run.cases().getFirst();
+        String content = """
+                {"fixtureId":"memory-appointment","repetition":1,"condition":"oracle","grades":[
+                 {"metric":"PRIMARY_GOAL","correct":1,"total":1,"reason":"The goal is visible.","evidence":["Scripted example"]}]}
+                """;
+        byte[] body = new ObjectMapper().writeValueAsBytes(Map.of("choices", List.of(Map.of("message", Map.of("content", content)))));
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/judge", exchange -> {
+            exchange.sendResponseHeaders(200, body.length);
+            try (var output = exchange.getResponseBody()) { output.write(body); }
+        });
+        server.start();
+        try {
+            var env = Map.of("EVAL_JUDGE_URL", "http://127.0.0.1:" + server.getAddress().getPort() + "/judge",
+                    "EVAL_JUDGE_MODEL", "other-model", "EVAL_JUDGE_FAMILY", "other-family", "EVAL_JUDGE_API_KEY", "fake");
+            var budget = new LiveBudget(true, 1);
+            var judge = new IndependentJudge(IndependentJudge.Config.from(env, 5), "fake", budget);
+            assertThat(judge.judgePlanning(item).grades()).singleElement()
+                    .satisfies(grade -> assertThat(grade.metric()).isEqualTo(PlanningReview.Metric.PRIMARY_GOAL));
+            assertThat(budget.counts()).containsEntry(LiveBudget.Kind.JUDGE, 1);
+        } finally {
+            server.stop(0);
+        }
+    }
 }
