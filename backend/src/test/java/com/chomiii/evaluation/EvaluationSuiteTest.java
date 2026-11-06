@@ -4,10 +4,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
 /** Maven entry point. The default mode uses synthetic inputs and makes no network calls. */
 class EvaluationSuiteTest {
+    @Test
+    void selectsSeveralExplicitFixturesInOneRun() throws Exception {
+        var properties = new Properties();
+        properties.setProperty("eval.fixture", "m2-explicit-appointments-001,m2-negative-generic-001");
+        var run = new EvaluationSuite().run(EvaluationConfig.from(properties, Map.of()), Map.of());
+        assertThat(run.cases()).extracting(EvaluationSuite.Case::fixtureId)
+                .containsExactlyInAnyOrder("m2-explicit-appointments-001", "m2-negative-generic-001");
+    }
+
     @Test
     void runSelectedEvaluationAndWriteReports() throws Exception {
         var config = EvaluationConfig.from(System.getProperties(), System.getenv());

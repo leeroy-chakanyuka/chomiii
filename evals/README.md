@@ -45,6 +45,8 @@ replace it with `./mvnw`.
 .\mvnw.cmd "-Dtest=EvaluationSuiteTest" "-Deval.fixture=m2-long-capacity" test
 .\mvnw.cmd "-Dtest=EvaluationSuiteTest" "-Deval.category=lifecycle" test
 .\mvnw.cmd "-Dtest=EvaluationSuiteTest" "-Deval.fixture=m2-explicit-appointments-001" "-Deval.repetitions=3" test
+# Select several explicit fixture IDs in one run.
+.\mvnw.cmd "-Dtest=EvaluationSuiteTest" "-Deval.fixture=m2-explicit-appointments-001,m2-negative-generic-001" test
 ```
 
 `EvaluationSuiteTest` writes the report path to the console. A completed run
@@ -92,6 +94,9 @@ $env:EVAL_MAX_PROVIDER_CALLS = '8'
 $env:EVAL_MAX_FIXTURES = '1'
 $env:EVAL_REPETITIONS = '1'
 $env:EVAL_TIMEOUT_SECONDS = '60'
+# Set these for the current project's limits; the values below are examples.
+$env:EVAL_MIN_PROVIDER_INTERVAL_MILLIS = '10000'
+$env:EVAL_MAX_PROVIDER_INPUT_BYTES = '20000'
 # Set CHOMIII_DB_URL, CHOMIII_DB_USER, CHOMIII_DB_PASSWORD, and GEMINI_API_KEY.
 .\mvnw.cmd "-Dtest=EvaluationSuiteTest" "-Deval.mode=live" "-Deval.fixture=m2-explicit-appointments-001" test
 ```
@@ -102,6 +107,13 @@ each provider request. These are reserved attempts, not confirmed billable
 requests; a provider can fail before opening the network call. A follow-up can
 itself schedule extraction. Exhaustion,
 timeouts, invalid output, and provider errors are not successful observations.
+The shared budget spaces requests by the configured minimum interval and stops
+the run after a Gemini provider failure, including a rate-limit response. The input byte limit covers UTF-8
+message and system-instruction text; it is a conservative size guard, not a
+token counter. Defaults impose no pacing and a 1,000,000-byte input limit.
+Rate limits are shared with other project usage, so check the project's current
+RPM, input TPM and remaining RPD before choosing the interval, byte limit and
+call budget. The harness cannot observe other users' usage or count Gemini tokens.
 Live runs use the model's actual assistant replies between fixture user turns;
 scripted runs replay the assistant text included in the fixture.
 

@@ -39,4 +39,14 @@ class EvaluationConfigTest {
         assertThat(config.judge()).isTrue();
         assertThat(config.maxCalls()).isEqualTo(2);
     }
+
+    @Test
+    void acceptsExplicitProviderPacingAndInputLimits() {
+        var config = EvaluationConfig.from(new Properties(), Map.of("EVAL_MIN_PROVIDER_INTERVAL_MILLIS", "10000",
+                "EVAL_MAX_PROVIDER_INPUT_BYTES", "20000"));
+        assertThat(config.minProviderIntervalMillis()).isEqualTo(10_000);
+        assertThat(config.maxProviderInputBytes()).isEqualTo(20_000);
+        assertThatThrownBy(() -> EvaluationConfig.from(new Properties(), Map.of("EVAL_MIN_PROVIDER_INTERVAL_MILLIS", "-1")))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }

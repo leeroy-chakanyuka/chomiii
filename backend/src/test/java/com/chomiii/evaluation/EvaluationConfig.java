@@ -4,7 +4,8 @@ import java.util.Map;
 import java.util.Properties;
 
 record EvaluationConfig(String mode, String fixture, String category, int repetitions,
-        int maxFixtures, int maxCalls, int timeoutSeconds, String model, boolean judge) {
+        int maxFixtures, int maxCalls, int timeoutSeconds, int minProviderIntervalMillis,
+        int maxProviderInputBytes, String model, boolean judge) {
     static EvaluationConfig from(Properties properties, Map<String, String> environment) {
         String mode = properties.getProperty("eval.mode", "offline");
         if (!java.util.Set.of("offline", "integration", "live").contains(mode)) {
@@ -26,10 +27,13 @@ record EvaluationConfig(String mode, String fixture, String category, int repeti
         int repetitions = integer(properties.getProperty("eval.repetitions",
                 environment.getOrDefault("EVAL_REPETITIONS", "1")), 1, 100, "repetitions");
         int timeout = integer(environment.getOrDefault("EVAL_TIMEOUT_SECONDS", "60"), 1, 300, "timeout");
+        int minInterval = integer(environment.getOrDefault("EVAL_MIN_PROVIDER_INTERVAL_MILLIS", "0"), 0, 60_000, "provider interval");
+        int maxInputBytes = integer(environment.getOrDefault("EVAL_MAX_PROVIDER_INPUT_BYTES", "1000000"), 1, 1_000_000, "provider input byte limit");
         String model = environment.getOrDefault("EVAL_MODEL", "gemini-3.5-flash-lite");
         if (model.isBlank()) throw new IllegalArgumentException("Model must not be blank");
         return new EvaluationConfig(mode, properties.getProperty("eval.fixture"),
-                properties.getProperty("eval.category"), repetitions, maxFixtures, maxCalls, timeout, model, judge);
+                properties.getProperty("eval.category"), repetitions, maxFixtures, maxCalls, timeout,
+                minInterval, maxInputBytes, model, judge);
     }
 
     private static int integer(String value, int min, int max, String name) {

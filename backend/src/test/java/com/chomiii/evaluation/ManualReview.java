@@ -62,7 +62,8 @@ final class ManualReview {
                 metadata.datasetSha256(), metadata.mode(), metadata.provider(), metadata.model(),
                 "human review of " + metadata.runId(), metadata.database(), metadata.selectedFixtures(),
                 completed + failed, completed, skipped, failed, metadata.repetitions(), metadata.maxFixtures(),
-                metadata.maxProviderCalls(), metadata.timeoutSeconds(), metadata.providerCalls(), metadata.elapsedMillis(),
+                metadata.maxProviderCalls(), metadata.timeoutSeconds(), metadata.minProviderIntervalMillis(),
+                metadata.maxProviderInputBytes(), metadata.providerCalls(), metadata.elapsedMillis(),
                 metadata.tokenUsage(), metadata.judgeTokenUsage(), metadata.cost(), metadata.seed());
         return new EvaluationSuite.Run(revised, List.copyOf(results));
     }

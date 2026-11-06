@@ -22,6 +22,7 @@ final class EvaluationSuite {
             String mode, String provider, String model, String judge, String database,
             int selectedFixtures, int attempted, int completed, int skipped, int failed,
             int repetitions, int maxFixtures, int maxProviderCalls, int timeoutSeconds,
+            int minProviderIntervalMillis, int maxProviderInputBytes,
             Map<LiveBudget.Kind, Integer> providerCalls, long elapsedMillis, String tokenUsage,
             String judgeTokenUsage, String cost, String seed) {}
     record Run(Metadata metadata, List<Case> cases) {}
@@ -29,13 +30,21 @@ final class EvaluationSuite {
     Run run(EvaluationConfig config, Map<String, String> environment) throws Exception {
         var fixtures = new FixtureLoader().loadAll(Path.of("..", "evals", "fixtures", "m2"));
         String datasetHash = datasetHash(fixtures);
+        var requested = config.fixture() == null ? java.util.Set.<String>of()
+                : java.util.Arrays.stream(config.fixture().split(",", -1)).map(String::strip)
+                        .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        if (requested.contains("")) throw new IllegalArgumentException("Fixture IDs must not be empty");
         var selected = fixtures.stream()
-                .filter(fixture -> config.fixture() == null || config.fixture().equals(fixture.id()))
+                .filter(fixture -> requested.isEmpty() || requested.contains(fixture.id()))
                 .filter(fixture -> config.category() == null || config.category().equals(fixture.category())).toList();
         if (selected.isEmpty()) throw new IllegalArgumentException("No fixtures match the requested filter");
+        if (!requested.isEmpty() && selected.size() != requested.size()) {
+            throw new IllegalArgumentException("A requested fixture ID was not found in the selected category");
+        }
         var started = Instant.now();
         var cases = new ArrayList<Case>();
-        var budget = new LiveBudget("live".equals(config.mode()) || config.judge(), config.maxCalls());
+        var budget = new LiveBudget("live".equals(config.mode()) || config.judge(), config.maxCalls(),
+                config.minProviderIntervalMillis(), config.maxProviderInputBytes());
         var judgeConfig = config.judge() ? IndependentJudge.Config.from(environment, config.timeoutSeconds()) : null;
         var judge = judgeConfig == null ? null : new IndependentJudge(judgeConfig, environment.get("EVAL_JUDGE_API_KEY"), budget);
         var runner = new MemoryEvaluationRunner();
@@ -47,7 +56,9 @@ final class EvaluationSuite {
                 for (int repeat = 1; repeat <= config.repetitions(); repeat++) {
                     if (index >= config.maxFixtures() || (("live".equals(config.mode()) || config.judge()) && budget.exhausted())) {
                         cases.add(new Case(fixture.id(), fixture.category(), fixture.difficulty(), fixture.importance(), repeat,
-                                "skipped", index >= config.maxFixtures() ? "fixture_limit" : "provider_budget_exhausted",
+                                "skipped", index >= config.maxFixtures() ? "fixture_limit"
+                                        : budget.rateLimited() ? "provider_rate_limited"
+                                        : budget.providerFailed() ? "provider_failure" : "provider_budget_exhausted",
                                 fixture.expectedMemories(), fixture.forbiddenMemories(), null, null));
                         continue;
                     }
@@ -106,6 +117,7 @@ final class EvaluationSuite {
                 judgeConfig == null ? "not independently graded" : "declared " + judgeConfig.family() + "/" + judgeConfig.model(),
                 databaseName, selected.size(), completed + failed, completed, skipped, failed,
                 config.repetitions(), config.maxFixtures(), config.maxCalls(), config.timeoutSeconds(),
+                config.minProviderIntervalMillis(), config.maxProviderInputBytes(),
                 Map.copyOf(providerCalls), java.time.Duration.between(started, Instant.now()).toMillis(),
                 "not measured", judgeUsage(judge), estimatedCost(judge, environment), "not supported by provider boundary");
         return new Run(metadata, List.copyOf(cases));

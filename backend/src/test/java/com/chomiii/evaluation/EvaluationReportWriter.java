@@ -46,6 +46,8 @@ final class EvaluationReportWriter {
                     || !prior.provider().equals(now.provider()) || !prior.model().equals(now.model())
                     || !prior.judge().equals(now.judge()) || !prior.database().equals(now.database())
                     || prior.timeoutSeconds() != now.timeoutSeconds() || prior.maxProviderCalls() != now.maxProviderCalls()
+                    || prior.minProviderIntervalMillis() != now.minProviderIntervalMillis()
+                    || prior.maxProviderInputBytes() != now.maxProviderInputBytes()
                     || prior.workingTreeDirty() || now.workingTreeDirty()) {
                 return "\n## Historical comparison\n\nNot comparable: dataset, mode, model, judge, or working-tree state differs.\n";
             }

@@ -21,7 +21,7 @@ class EvaluationReportWriterTest {
                 1, "completed", null, fixture.expectedMemories(), fixture.forbiddenMemories(), observation, null);
         var metadata = new EvaluationSuite.Metadata("example-run", "2026-11-05T00:00:00Z", "synthetic-secret-value", false,
                 "m2-fixtures-v1", "hash", "offline", "scripted", "model", "not independently graded", "fake",
-                1, 1, 1, 0, 0, 1, 1, 0, 60, Map.of(), 0, "not measured", "not measured", "not measured", "not supported");
+                1, 1, 1, 0, 0, 1, 1, 0, 60, 0, 1_000_000, Map.of(), 0, "not measured", "not measured", "not measured", "not supported");
         Path report = new EvaluationReportWriter().write(new EvaluationSuite.Run(metadata, List.of(item)), directory,
                 List.of("synthetic-secret-value"));
 
@@ -46,7 +46,7 @@ class EvaluationReportWriterTest {
                 1, "completed", null, fixture.expectedMemories(), fixture.forbiddenMemories(), observation, null);
         var metadata = new EvaluationSuite.Metadata("unreviewed-run", "2026-11-05T00:00:00Z", "commit", false,
                 "m2-fixtures-v1", "hash", "live", "gemini", "model", "declared other-family/model", "postgresql",
-                1, 1, 1, 0, 0, 1, 1, 5, 60, Map.of(), 0, "not measured", "not measured", "not measured", "not supported");
+                1, 1, 1, 0, 0, 1, 1, 5, 60, 0, 1_000_000, Map.of(), 0, "not measured", "not measured", "not measured", "not supported");
         Path report = new EvaluationReportWriter().write(new EvaluationSuite.Run(metadata, List.of(item)), directory, List.of());
         assertThat(Files.readString(report.resolve("summary.md")))
                 .contains("Final-memory precision >= 95%: NOT EVALUATED");
@@ -73,6 +73,6 @@ class EvaluationReportWriterTest {
     private static EvaluationSuite.Metadata metadata(String id, boolean dirty) {
         return new EvaluationSuite.Metadata(id, "2026-11-05T00:00:00Z", "commit", dirty,
                 "m2-fixtures-v1", "hash", "offline", "scripted", "model", "not independently graded", "fake",
-                1, 1, 1, 0, 0, 1, 1, 0, 60, Map.of(), 0, "not measured", "not measured", "not measured", "not supported");
+                1, 1, 1, 0, 0, 1, 1, 0, 60, 0, 1_000_000, Map.of(), 0, "not measured", "not measured", "not measured", "not supported");
     }
 }

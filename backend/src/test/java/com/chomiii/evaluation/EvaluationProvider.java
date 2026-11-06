@@ -1,6 +1,8 @@
 package com.chomiii.evaluation;
 
 import com.chomiii.provider.ChatProvider;
+import com.chomiii.provider.ProviderFailure;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -56,7 +58,9 @@ final class EvaluationProvider implements ChatProvider {
         if (delegate != null) {
             try {
                 budget.reserve(extraction ? LiveBudget.Kind.EXTRACTION
-                        : followUp ? LiveBudget.Kind.FOLLOW_UP : LiveBudget.Kind.CHAT);
+                        : followUp ? LiveBudget.Kind.FOLLOW_UP : LiveBudget.Kind.CHAT,
+                        input.systemInstruction().getBytes(StandardCharsets.UTF_8).length
+                                + input.messages().stream().mapToLong(message -> message.text().getBytes(StandardCharsets.UTF_8).length).sum());
             } catch (RuntimeException failure) {
                 calls.add(new Call(kind, text, input, null, 0, null, false, false, failure.getClass().getSimpleName()));
                 throw failure;
@@ -64,7 +68,7 @@ final class EvaluationProvider implements ChatProvider {
             try {
                 upstream = delegate.open(input, apiKey);
             } catch (RuntimeException failure) {
-                calls.add(new Call(kind, text, input, null, 0, null, true, false, failure.getClass().getSimpleName()));
+                calls.add(new Call(kind, text, input, null, 0, null, true, false, failureName(failure)));
                 throw failure;
             }
         }
@@ -102,7 +106,7 @@ final class EvaluationProvider implements ChatProvider {
                     if (source != null && (timedOut.get()
                             || System.nanoTime() - start >= TimeUnit.SECONDS.toNanos(timeoutSeconds))) throw new TimedOut();
                 } catch (RuntimeException error) {
-                    failure = error.getClass().getSimpleName();
+                    failure = failureName(error);
                     throw error;
                 } finally {
                     if (watchdog != null) watchdog.cancel(false);
@@ -115,6 +119,15 @@ final class EvaluationProvider implements ChatProvider {
     }
 
     List<Call> calls() { return List.copyOf(calls); }
+
+    private String failureName(RuntimeException failure) {
+        if (failure instanceof ProviderFailure providerFailure) {
+            String code = providerFailure.code().name();
+            if (budget != null) budget.stopForProviderFailure(code);
+            return code;
+        }
+        return failure.getClass().getSimpleName();
+    }
 
     void followUp(boolean enabled) { followUp = enabled; }
 
