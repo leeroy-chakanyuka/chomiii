@@ -216,3 +216,13 @@ it('states deletion limits and does not promise Chomi is never wrong about prefe
   expect(screen.getByText(/Deleting a memory here does not erase copies already sent/)).toBeVisible()
   expect(screen.queryByText(/will not invent/i)).not.toBeInTheDocument()
 })
+
+it('keeps memory recall control in Memories settings instead of the chat composer', async () => {
+  const onMemoryChange = vi.fn()
+  vi.stubGlobal('fetch', vi.fn(async () => jsonResponse([])))
+  render(<MemoryPanel onClose={() => undefined} useMemory={true} onMemoryChange={onMemoryChange} />)
+  const setting = await screen.findByLabelText('Use saved memories in chats')
+  fireEvent.click(setting)
+  expect(onMemoryChange).toHaveBeenCalledWith(false)
+})
+
