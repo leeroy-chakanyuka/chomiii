@@ -5,7 +5,11 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : 'Could not update saved memories.'
 }
 
-export function MemoryPanel({ onClose }: { onClose: () => void }) {
+export function MemoryPanel({ onClose, useMemory = true, onMemoryChange }: {
+  onClose: () => void
+  useMemory?: boolean
+  onMemoryChange?: (enabled: boolean) => void
+}) {
   const [items, setItems] = useState<PersonalMemory[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -109,6 +113,11 @@ export function MemoryPanel({ onClose }: { onClose: () => void }) {
         what Chomi remembers. Relevant active memories may be sent to your AI provider
         in future chats. Learning never grants permission to access apps or spend money.
       </p>
+      {onMemoryChange && <label className="memory-use-toggle">
+        <input type="checkbox" checked={useMemory}
+          onChange={event => onMemoryChange(event.target.checked)} />
+        Use saved memories in chats
+      </label>}
       <p className="memory-intro">
         Memories belong to this browser session, not an account. If you lose its session cookie,
         you may lose access to these memories. Deleting a memory here does not erase copies
