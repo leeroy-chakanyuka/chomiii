@@ -23,14 +23,14 @@ flowchart LR
 ```
 
 Chomiii has a **small, versioned general-purpose runtime identity**. It does
-not yet include accounts, executable tools, autonomous action loops, background
-tasks or long-term personal memory. Anonymous conversations belong to one browser cookie. They do not sync
+not yet include accounts, executable tools, autonomous action loops, or background
+tasks. Anonymous conversations belong to one browser cookie. They do not sync
 between devices, and losing the cookie loses access to them. See
 [docs/roadmap.md](docs/roadmap.md) for later milestones.
 
-## M2 review PR: personal memories
+## M2 personal memories
 
-[PR #3](https://github.com/leeroy-chakanyuka/chomiii/pull/3) introduces
+[PR #3](https://github.com/leeroy-chakanyuka/chomiii/pull/3) introduced
 a **Memories** panel where people can deliberately save, inspect, edit and
 delete preferences or commitments. The PR's backend stores owner-scoped memories (manually saved or learned
 after an optional post-reply extraction) in the existing database and selects
@@ -54,6 +54,15 @@ chat messages or copies already supplied to a model provider.
 
 Read [M2 research](docs/m2-research.md), [design and limitations](docs/m2-design.md)
 and [verification](docs/verification.md) before treating M2 as complete.
+
+## M3.1 review: planning in chat
+
+Planning requests can produce a structured proposal in the current chat. The
+composer also has a **Make a plan** option. Steps describe proposed work; no
+calendar, email, shopping, reminder, or task action runs. The local router and
+model output need further quality evaluation. See the
+[memory and planning flow](docs/memory-planning-flow.md),
+[planning design](docs/m3.1-design.md), and [results and limitations](docs/m3.1-evaluation.md).
 
 ## Product direction and context (M1.5)
 

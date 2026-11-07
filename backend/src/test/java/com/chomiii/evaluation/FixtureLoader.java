@@ -35,6 +35,31 @@ final class FixtureLoader {
         }
     }
 
+    List<PlanningFixture> loadPlanning(Path path, List<EvaluationFixture> memories) throws IOException {
+        var root = json.readTree(path.toFile());
+        require(root != null && root.isArray(), "planning dataset must be an array");
+        var byId = memories.stream().collect(java.util.stream.Collectors.toMap(EvaluationFixture::id, item -> item));
+        var fixtures = new java.util.ArrayList<PlanningFixture>();
+        var ids = new HashSet<String>();
+        for (var node : root) {
+            var fixture = json.treeToValue(node, PlanningFixture.class);
+            require(fixture != null, "planning fixture is required");
+            text(fixture.id(), "planning fixture id");
+            require(ids.add(fixture.id()), "duplicate planning fixture id");
+            require(oneOf(fixture.category(), "simple", "rambling", "memory", "ambiguous", "multi-goal",
+                    "conflicting", "unavailable", "safety"), "invalid planning category");
+            EvaluationFixture source = byId.get(fixture.sourceFixture());
+            require(source != null, "unknown planning source fixture");
+            PlanningContract.validate(fixture.planning(), source.expectedMemories().stream()
+                    .map(EvaluationFixture.ExpectedMemory::id).collect(java.util.stream.Collectors.toSet()));
+            for (var tool : fixture.planning().path("toolsAvailable")) {
+                com.chomiii.planning.CapabilityCatalog.get(tool.asText());
+            }
+            fixtures.add(fixture);
+        }
+        return List.copyOf(fixtures);
+    }
+
     private List<EvaluationFixture> read(Path path) throws IOException {
         var root = json.readTree(path.toFile());
         require(root != null, "empty fixture file");

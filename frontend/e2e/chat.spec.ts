@@ -41,11 +41,14 @@ async function fixture(page: Page) {
       chat.title = chat.messages.length === 0 ? body.content : chat.title
       chat.messages.push({ id: `user-${sends}`, role: 'user', content: body.content,
         status: 'complete', createdAt: new Date().toISOString() })
-      const reply = sends === 1 ? 'Java is a great language to explore.' : 'You mentioned Java.'
+      const plan = 'plan' in body && body.plan === true
+      const reply = plan ? '**Proposed plan — nothing has been done yet**\n\n1. Prepare a checklist — service not connected'
+        : sends === 1 ? 'Java is a great language to explore.' : 'You mentioned Java.'
       chat.messages.push({ id: `assistant-${sends}`, role: 'assistant', content: reply,
         status: 'complete', createdAt: new Date().toISOString() })
       await route.fulfill({ contentType: 'text/event-stream', body: [
         'event:start\ndata:{"requestId":"r","messageId":"m"}\n\n',
+        ...(plan ? ['event:plan\ndata:{"id":"test-plan","executed":false,"steps":[]}\n\n'] : []),
         `event:delta\ndata:${JSON.stringify({ text: reply.slice(0, 12) })}\n\n`,
         `event:delta\ndata:${JSON.stringify({ text: reply.slice(12) })}\n\n`,
         'event:complete\ndata:{"messageId":"m","status":"complete"}\n\n',
@@ -87,6 +90,25 @@ test('configures a key, chats twice, refreshes, and reopens history', async ({ p
   await expect(page.getByText('You mentioned Java.')).toBeVisible()
   await page.getByRole('button', { name: 'Remove key' }).click()
   await expect(page.getByLabel('Gemini API key')).toBeEmpty()
+})
+
+test('requests and reopens a plan in chat on a narrow screen', async ({ page }) => {
+  await fixture(page)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await page.getByLabel('Gemini API key').fill('browser-test-key')
+  await page.getByRole('button', { name: 'Start chatting' }).click()
+  await page.getByLabel('Message').fill('My appointment needs some preparation')
+  await page.getByRole('button', { name: 'Make a plan' }).click()
+  await expect(page.getByText('Proposed plan — nothing has been done yet')).toBeVisible()
+  await expect(page.getByText('Prepare a checklist — service not connected')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Send' })).toBeVisible()
+  expect((await page.locator('html').boundingBox())?.width).toBeLessThanOrEqual(390)
+  await page.reload()
+  await page.getByLabel('Gemini API key').fill('browser-test-key')
+  await page.getByRole('button', { name: 'Start chatting' }).click()
+  await page.getByRole('button', { name: 'My appointment needs some preparation', exact: true }).click()
+  await expect(page.getByText('Proposed plan — nothing has been done yet')).toBeVisible()
 })
 
 test('keeps conversations and message composition usable on a narrow viewport', async ({ page }) => {

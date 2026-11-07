@@ -1,0 +1,49 @@
+[ {
+  "fixtureId" : "rambling-meeting",
+  "condition" : "oracle",
+  "repetition" : 1,
+  "verdict" : "needs_review",
+  "reason" : ""
+}, {
+  "fixtureId" : "rambling-meeting",
+  "condition" : "actual_m2",
+  "repetition" : 1,
+  "verdict" : "needs_review",
+  "reason" : ""
+}, {
+  "fixtureId" : "rambling-groceries",
+  "condition" : "oracle",
+  "repetition" : 1,
+  "verdict" : "needs_review",
+  "reason" : ""
+}, {
+  "fixtureId" : "rambling-groceries",
+  "condition" : "actual_m2",
+  "repetition" : 1,
+  "verdict" : "needs_review",
+  "reason" : ""
+}, {
+  "fixtureId" : "rambling-commute",
+  "condition" : "oracle",
+  "repetition" : 1,
+  "verdict" : "needs_review",
+  "reason" : ""
+}, {
+  "fixtureId" : "rambling-commute",
+  "condition" : "actual_m2",
+  "repetition" : 1,
+  "verdict" : "needs_review",
+  "reason" : ""
+}, {
+  "fixtureId" : "conflicting-commute",
+  "condition" : "oracle",
+  "repetition" : 1,
+  "verdict" : "needs_review",
+  "reason" : ""
+}, {
+  "fixtureId" : "conflicting-commute",
+  "condition" : "actual_m2",
+  "repetition" : 1,
+  "verdict" : "needs_review",
+  "reason" : ""
+} ]

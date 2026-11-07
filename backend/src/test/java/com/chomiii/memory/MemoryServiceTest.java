@@ -142,5 +142,18 @@ class MemoryServiceTest {
         verify(repo).approve("owner", tentative.id());
     }
 
-}
+    @Test
+    void planningUsesOnlySelectedActiveMemoryIdsForTheOwner() {
+        MemoryRepository repo = mock(MemoryRepository.class);
+        MemoryService service = new MemoryService(repo);
+        PersonalMemory active = memory("I prefer appointments after ten");
+        PersonalMemory suggested = new PersonalMemory(UUID.randomUUID(), active.content(), "inferred",
+                Instant.now(), Instant.now(), "suggested", 0.75, null);
+        PersonalMemory unrelated = memory("I like science fiction films");
+        when(repo.list("owner")).thenReturn(List.of(suggested, active, unrelated));
+        assertThat(service.forPlanning("owner", "Plan my appointments"))
+                .extracting(PersonalMemory::id).containsExactly(active.id());
+        assertThat(service.forPlanning("other-owner", "Plan my appointments")).isEmpty();
+    }
 
+}

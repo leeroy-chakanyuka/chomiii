@@ -28,7 +28,11 @@ public class ChatStreamController {
     }
 
     public record MessageRequest(@NotNull UUID requestId, @NotBlank String provider,
-            @NotBlank String model, @NotBlank @Size(max = 8000) String content) {}
+            @NotBlank String model, @NotBlank @Size(max = 8000) String content, Boolean plan) {
+        public MessageRequest(UUID requestId, String provider, String model, String content) {
+            this(requestId, provider, model, content, null);
+        }
+    }
 
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter send(@PathVariable UUID id,

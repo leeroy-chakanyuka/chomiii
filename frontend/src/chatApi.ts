@@ -3,6 +3,7 @@ import { healthUrl } from './health'
 export type ChatEvent =
   | { kind: 'start'; requestId: string; messageId: string }
   | { kind: 'delta'; text: string }
+  | { kind: 'plan'; plan: Record<string, unknown> }
   | { kind: 'complete'; messageId: string; status: 'complete' }
   | { kind: 'error'; code: string; message: string; status: 'failed' | 'interrupted' }
 
@@ -58,6 +59,7 @@ function parseEvent(frame: string): ChatEvent | undefined {
   switch (event) {
     case 'start': return { kind: 'start', requestId: text(payload.requestId), messageId: text(payload.messageId) }
     case 'delta': return { kind: 'delta', text: text(payload.text) }
+    case 'plan': return { kind: 'plan', plan: payload }
     case 'complete':
       if (payload.status !== 'complete') throw new Error('The chat stream was invalid.')
       return { kind: 'complete', messageId: text(payload.messageId), status: 'complete' }
@@ -161,13 +163,15 @@ export async function sendMessage(input: {
   apiKey: string
   signal: AbortSignal
   useMemory?: boolean
+  plan?: boolean
   onEvent: (event: ChatEvent) => void
 }): Promise<void> {
   const response = await fetch(url(`/conversations/${encodeURIComponent(input.conversationId)}/messages/stream`), {
     method: 'POST', credentials: 'same-origin', cache: 'no-store', signal: input.signal,
     headers: { 'Content-Type': 'application/json', 'X-Gemini-Api-Key': input.apiKey,
       ...(input.useMemory === false ? { 'X-Chomiii-Use-Memory': 'false' } : {}) },
-    body: JSON.stringify({ requestId: input.requestId, provider: input.provider, model: input.model, content: input.content }),
+    body: JSON.stringify({ requestId: input.requestId, provider: input.provider, model: input.model,
+      content: input.content, ...(input.plan ? { plan: true } : {}) }),
   })
   if (!response.ok) throw await problem(response)
   if (!response.body) throw new Error('The chat stream is unavailable.')

@@ -1,5 +1,40 @@
 # Verification evidence
 
+## M3.1 planning branch, 2026-11-06
+
+Work started on a branch stacked on M2 evaluation PR #7 at `f4843ab`. PR #7
+merged during this work, and the M3.1 branch was moved to the resulting `main`
+tree before publication. All live reports below record a dirty working tree
+and must be read with that limitation. The 30 planning expectations and live
+semantic outcomes have not received independent review. See
+[M3.1 evaluation](m3.1-evaluation.md) for the fixtures and full results.
+
+| Check | Observed result |
+| --- | --- |
+| Pre-change backend baseline | `mvnw.cmd -Dtest=MemorySelectorTest,MemoryServiceTest,MemoryContextIntegrationTest,ChatIdentityTest,ContextWindowTest test`: 22 passed. |
+| Pre-change frontend baseline | `npm run test -- --run`: 34 passed. |
+| Complete backend suite | `mvnw.cmd test`: 181 tests, 153 passed and 28 skipped, no failures. Database and opt-in tests were skipped in that run. |
+| Planning, memory, and PostgreSQL HTTP | With a fresh local PostgreSQL 17.11 database, `mvnw.cmd -Dtest=ChatStreamDatabaseTest,MemoryDatabaseTest,PlanningDatasetTest,PlanningEvaluationSuiteTest,PlanningReviewTest,ChatPlanningTest,PlanParserTest,PlanningServiceTest test`: 25 passed, one opt-in test skipped. This preceded the final prompt and rendering refinements. |
+| MySQL HTTP | With a fresh local MySQL 8.0 database, `mvn -Dtest=ChatStreamDatabaseTest,MemoryDatabaseTest test`: 10 passed. This preceded the final prompt and rendering refinements. |
+| Final planning recheck | On fresh PostgreSQL, `mvnw.cmd -Dtest=ChatStreamDatabaseTest#planningStreamsStructuredProposalAndPersistsReadableResultForTheOwner,PlanParserTest,PlanningServiceTest,PlanningDatasetTest,PlanningReviewTest,IndependentJudgeTest test`: 16 passed. The same focused planning HTTP test passed on fresh MySQL. |
+| Saved review round trip | `mvnw.cmd -Dtest=PlanningReviewTest,PlanParserTest,PlanningServiceTest test`: 12 passed, including writing and rereading a separate review without changing its source report. |
+| Held-out selection | `mvnw.cmd -Dtest=PlanningDatasetTest,PlanningEvaluationSuiteTest test`: two passed and one opt-in test skipped. Default live selection excluded held-out fixtures; explicit selection included one. |
+| Completion-claim follow-up | `mvnw.cmd -Dtest=PlanParserTest,ChatPlanningTest test`: 10 passed after extending the limited completion-claim filter to constraints, memory explanations, and questions. The added constraint test first failed because the claim was accepted. |
+| Scripted planning dataset | `mvnw.cmd -Dtest=PlanningEvaluationSuiteTest#runSelectedPlanningEvaluationAndWriteReports -Deval.suite=planning test`: 30 oracle and 30 actual-M2 scripted plans validated. This is not a model-quality measurement. |
+| Frontend | `npm run test`: 35 passed. `npm run lint`, `npm run typecheck`, and `npm run build` passed. |
+| Browser fixtures | `npm run test:browser`: eight existing tests passed. `npx playwright test e2e/chat.spec.ts --grep "requests and reopens a plan"`: one mobile planning fixture passed. The latter uses a fake backend. |
+| Live Gemini planning | Four budgeted runs used 58 reserved calls in total. The first had two rejected plans; subsequent runs and limitations are in the [saved reports](../evals/reports/planning/). Semantic scores are not measured. |
+| Independent judge | The separate-family adapter passed its local HTTP fixture test. No external judge was configured or called. |
+| Independent review | Not performed. The scenario expectations, live semantic grades, and combined implementation still need independent review. |
+| Ordinary-chat latency comparison | Not measured under matched before-and-after conditions. |
+
+The validation test for obvious false completion claims first failed because
+no exception was raised. It passed in the later full backend run after the
+limited claim filter was added. This does not prove that the filter catches
+every phrasing. The first chat-planning behavior test initially saved raw JSON
+and marked invalid output complete; both cases passed after the planning path
+was integrated.
+
 ## M2 evaluation harness, 2026-11-05
 
 The evaluation branch is based on M2 commit `720cb5f`. It adds 40 synthetic

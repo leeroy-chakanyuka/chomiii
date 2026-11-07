@@ -45,6 +45,7 @@ final class MemoryEvaluationRunner {
     record Result(String fixtureId, String mode, List<TurnObservation> turns, List<StoredMemory> memories,
             List<RetrievalObservation> retrievals, List<LifecycleObservation> lifecycle,
             MemoryScorer.Score extractionScore, MemoryScorer.Score score, List<String> limitations) {}
+    record PlanningMemory(Result observation, List<PersonalMemory> selected, long retrievalMillis) {}
 
     Result runOffline(EvaluationFixture fixture) throws Exception {
         return run(fixture, new MemoryService(new InMemoryEvaluationRepository()), scriptedTurnStore(),
@@ -62,6 +63,30 @@ final class MemoryEvaluationRunner {
                     session.owner(), session.other(), session.conversation(), id -> database.apiIsolation(session, id), liveProvider, budget,
                     model, apiKey, timeoutSeconds, liveProvider == null ? "database-scripted" : "live");
         }
+    }
+
+    PlanningMemory runForPlanning(EvaluationFixture fixture, DisposableEvaluationDatabase database,
+            ChatProvider liveProvider, LiveBudget budget, String model, String apiKey, int timeoutSeconds,
+            String question) throws Exception {
+        if (database != null) {
+            try (var session = database.session()) {
+                Result result = run(fixture, database.memories(), database.turns(), database.conversations(),
+                        session.owner(), session.other(), session.conversation(), id -> database.apiIsolation(session, id),
+                        liveProvider, budget, model, apiKey, timeoutSeconds,
+                        liveProvider == null ? "database-scripted" : "live");
+                long started = System.nanoTime();
+                var selected = database.memories().forPlanning(session.owner(), question);
+                return new PlanningMemory(result, selected, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started));
+            }
+        }
+        var memories = new MemoryService(new InMemoryEvaluationRepository());
+        Result result = run(fixture, memories, scriptedTurnStore(), mock(ConversationRepository.class),
+                "synthetic-owner", "synthetic-other-owner", UUID.randomUUID(), id -> true,
+                liveProvider, budget, model, apiKey, timeoutSeconds,
+                liveProvider == null ? "offline-scripted" : "live-in-memory");
+        long started = System.nanoTime();
+        var selected = memories.forPlanning("synthetic-owner", question);
+        return new PlanningMemory(result, selected, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started));
     }
 
     private Result run(EvaluationFixture fixture, MemoryService memories, ChatTurnStore turnStore,
@@ -97,7 +122,7 @@ final class MemoryEvaluationRunner {
                     new ProviderCatalog(List.of(model)), List.of(provider), chatWorker);
             for (var turn : fixture.turns()) {
                 if (!"user".equals(turn.role())) continue;
-                var request = new ChatStreamController.MessageRequest(UUID.randomUUID(), "gemini", model, turn.content());
+                var request = new ChatStreamController.MessageRequest(UUID.randomUUID(), "gemini", model, turn.content(), false);
                 if (!validators.getValidator().validate(request).isEmpty()) {
                     observations.add(new TurnObservation(turn.id(), turn.expectedEligibility(), "chat_rejected",
                             false, 0, 0, 0, "not_applicable", null, false, List.of(), null, null, null, null, null, null));
@@ -236,7 +261,7 @@ final class MemoryEvaluationRunner {
                 boolean contextAsUser = false;
                 boolean memoryInSystem = false;
                 boolean answerTruncated = false;
-                var request = new ChatStreamController.MessageRequest(UUID.randomUUID(), "gemini", model, check.query());
+                var request = new ChatStreamController.MessageRequest(UUID.randomUUID(), "gemini", model, check.query(), false);
                 if (!validators.getValidator().validate(request).isEmpty()) {
                     failure = "follow_up_rejected";
                 } else {

@@ -134,6 +134,36 @@ class ChatStreamDatabaseTest {
     }
 
     @Test
+    void planningStreamsStructuredProposalAndPersistsReadableResultForTheOwner() throws Exception {
+        when(provider.id()).thenReturn("gemini");
+        when(provider.open(any(), anyString())).thenAnswer(invocation -> {
+            ChatProvider.ChatInput input = invocation.getArgument(0);
+            return new ChatProvider.Generation() {
+                @Override public void stream(Consumer<String> delta) {
+                    delta.accept(input.systemInstruction().contains("memory-extraction") ? "{\"memories\":[]}"
+                            : """
+                            {"goal":"Prepare for the appointment","summary":"Make a checklist.","memoryReferences":[],
+                             "constraints":[],"missingInformation":[],"steps":[{"id":"s1","title":"Prepare a checklist",
+                             "capability":"user.prepare","dependsOn":[]}]}
+                            """);
+                }
+                @Override public void close() {}
+            };
+        });
+        String owner = session();
+        String other = session();
+        String conversation = conversation(owner);
+        assertThat(send(other, conversation, UUID.randomUUID(), "Please plan my appointment.").statusCode()).isEqualTo(404);
+        var response = send(owner, conversation, UUID.randomUUID(), "Please plan my appointment.");
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).contains("event:plan", "Prepare for the appointment", "\"executed\":false",
+                "event:delta", "nothing has been done", "event:complete");
+        JsonNode messages = json.readTree(get(owner, "/api/conversations/" + conversation).body()).path("messages");
+        assertThat(messages.get(1).path("status").asText()).isEqualTo("complete");
+        assertThat(messages.get(1).path("content").asText()).contains("Proposed plan", "Prepare a checklist");
+    }
+
+    @Test
     void deliversFirstChunkBeforeGenerationFinishesAndCanStopIt() throws Exception {
         when(provider.id()).thenReturn("gemini");
         CountDownLatch release = new CountDownLatch(1);
