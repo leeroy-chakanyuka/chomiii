@@ -183,3 +183,26 @@ The [API reference](docs/api.md) documents requests, streaming events,
 sessions, error codes, and cancellation. [Architecture](docs/architecture.md)
 explains the provider boundary and context policy. [AGENTS.md](AGENTS.md)
 contains the engineering contract. Chomiii is licensed under [MIT](LICENSE).
+
+## Experimental Browserbase cloud-browser adapter
+
+An internal **read-only** Browserbase connector is available behind
+`CHOMIII_BROWSERBASE_ENABLED=true`. It is intentionally **not exposed as an
+HTTP endpoint or registered as a chat/model action**: M3's Java permission
+gateway, owner binding, audit trail and approvals must be implemented and
+reviewed before enabling model-initiated browsing.
+
+Obtain `BROWSERBASE_API_KEY` and `BROWSERBASE_PROJECT_ID` from Browserbase;
+set `CHOMIII_BROWSERBASE_ALLOWED_HOSTS` to an explicit comma-separated list
+of exact HTTPS hostnames, e.g. `example.com,www.example.com`. The integration
+fails closed without these settings, refuses IPs, custom ports, and unlisted
+hosts, and blocks browser requests to unlisted domains. Third-party assets
+may therefore not load. Each read uses a single cloud browser session and
+requests its release after use; the text result is capped at 12,000 characters.
+Browserbase is a separate metered provider, so real sessions can incur costs.
+No secrets or session connection URLs are exposed to the React UI.
+
+The adapter uses Browserbase REST and Playwright Java, not the archived
+Stagehand Java SDK. It currently supports navigation and page-text extraction
+only; no clicks, form submission, login, credential transfer, or unattended
+agent browsing. No Browserbase live-service verification has been performed.
