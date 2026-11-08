@@ -4,6 +4,7 @@ import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
+import com.microsoft.playwright.PlaywrightException;
 import com.microsoft.playwright.options.WaitUntilState;
 import java.net.URI;
 import org.springframework.stereotype.Component;
@@ -50,6 +51,9 @@ public class PlaywrightBrowserbasePageReader implements BrowserbasePageReader {
             } finally {
                 browser.close();
             }
+        } catch (PlaywrightException failure) {
+            // CDP connection exceptions may contain secret-bearing session URLs.
+            throw new IllegalStateException("Browserbase browser navigation failed");
         }
     }
 }
