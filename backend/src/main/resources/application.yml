@@ -9,6 +9,7 @@ spring:
   flyway:
     locations: classpath:db/migration
 
+chomiii:
   browserbase:
     enabled: ${CHOMIII_BROWSERBASE_ENABLED:false}
     api-key: ${BROWSERBASE_API_KEY:}
