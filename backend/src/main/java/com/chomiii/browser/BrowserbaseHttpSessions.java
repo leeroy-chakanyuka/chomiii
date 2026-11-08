@@ -43,12 +43,19 @@ public class BrowserbaseHttpSessions implements BrowserbaseSessions {
             String id = response.path("id").asText("");
             String connectUrl = response.path("connectUrl").asText("");
             URI endpoint = URI.create(connectUrl);
-            if (id.isBlank() || !id.matches("[a-zA-Z0-9_-]{8,100}")
-                    || !"wss".equalsIgnoreCase(endpoint.getScheme())
+            if (id.isBlank() || !id.matches("[a-zA-Z0-9_-]{8,100}")) {
+                throw new IllegalStateException("Browserbase returned an invalid session ID");
+            }
+            if (!"wss".equalsIgnoreCase(endpoint.getScheme())
                     || endpoint.getHost() == null
                     || !(endpoint.getHost().equalsIgnoreCase("browserbase.com")
                         || endpoint.getHost().toLowerCase(java.util.Locale.ROOT).endsWith(".browserbase.com"))) {
-                throw new IllegalStateException("Browserbase returned an invalid session");
+                try {
+                    release(id);
+                } catch (RuntimeException ignored) {
+                    // Preserve the malformed-response error without exposing secret URL data.
+                }
+                throw new IllegalStateException("Browserbase returned an invalid browser endpoint");
             }
             return new Session(id, connectUrl);
         } catch (java.io.IOException e) {
