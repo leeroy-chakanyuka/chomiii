@@ -8,3 +8,9 @@ spring:
     default: local
   flyway:
     locations: classpath:db/migration
+
+  browserbase:
+    enabled: ${CHOMIII_BROWSERBASE_ENABLED:false}
+    api-key: ${BROWSERBASE_API_KEY:}
+    project-id: ${BROWSERBASE_PROJECT_ID:}
+    allowed-hosts: ${CHOMIII_BROWSERBASE_ALLOWED_HOSTS:}
