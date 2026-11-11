@@ -9,14 +9,16 @@ import java.util.UUID;
  * A snapshot is only valid while it matches the owner's current canonical
  * memory state; consumers must not treat stale snapshots as authoritative.
  */
-public record ProfileSnapshot(String text, List<ProfileParagraph> paragraphs, List<UUID> sourceIds) {
+public record ProfileSnapshot(String text, List<ProfileParagraph> paragraphs, List<UUID> sourceIds,
+        List<ProfileParagraph> topics) {
     public ProfileSnapshot {
         paragraphs = List.copyOf(paragraphs);
         sourceIds = List.copyOf(sourceIds);
+        topics = List.copyOf(topics);
     }
 
     public static ProfileSnapshot empty() {
-        return new ProfileSnapshot("", List.of(), List.of());
+        return new ProfileSnapshot("", List.of(), List.of(), List.of());
     }
 
     public boolean isEmpty() {

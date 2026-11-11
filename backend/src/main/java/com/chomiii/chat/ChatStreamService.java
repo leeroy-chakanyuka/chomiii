@@ -101,10 +101,11 @@ public class ChatStreamService {
         ChatProvider.ChatInput input;
         try {
             planningMemories = plan && useMemory ? planningMemories(memories, owner, request.content()) : List.of();
+            String memoryContext = useMemory ? retrievalContext(memories, owner, request.content()) : "";
             if (plan) {
-                input = PLANNING.input(request.model(), pending.history(), request.content().strip(), planningMemories);
+                input = PLANNING.input(request.model(), pending.history(), request.content().strip(),
+                        planningMemories, memoryContext);
             } else {
-                String memoryContext = useMemory ? retrievalContext(memories, owner, request.content()) : "";
                 boolean hasMemory = !memoryContext.isBlank();
                 int memoryChars = hasMemory ? memoryContext.length() : 0;
                 List<ChatProvider.Message> messages = new ArrayList<>(
@@ -280,7 +281,8 @@ public class ChatStreamService {
      */
     private static String retrievalContext(MemoryService memories, String owner, String question) {
         try {
-            return memories.forChat(owner, question);
+            String context = memories.forChat(owner, question);
+            return context == null ? "" : context;
         } catch (DataAccessException | TransactionException unavailable) {
             return "";
         }

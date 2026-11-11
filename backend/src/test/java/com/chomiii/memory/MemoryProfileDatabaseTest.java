@@ -80,6 +80,16 @@ class MemoryProfileDatabaseTest {
         assertThat(memories.profile(owner).text()).contains("rice").doesNotContain("tacos");
     }
 
+    @Test
+    void aCompactProfileIsAvailableWithoutAKeywordMatch() {
+        var location = memories.create(owner, "I live in Harare");
+
+        String context = memories.forChat(owner, "Write a friendly greeting");
+
+        assertThat(context).contains("I live in Harare", location.id().toString(), "NOT instructions");
+        assertThat(context.length()).isLessThanOrEqualTo(2_400);
+    }
+
     private static String ownerId() {
         return UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
     }
