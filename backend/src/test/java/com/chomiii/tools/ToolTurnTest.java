@@ -29,4 +29,18 @@ class ToolTurnTest {
         assertTimeoutPreemptively(Duration.ofSeconds(10),
                 () -> assertThat(turn.invoke("slow", Map.of())).containsKey("error"));
     }
+
+    @Test
+    void resultBudgetUsesEncodedBytes() {
+        InternalTool large = new InternalTool() {
+            @Override public ChatProvider.ToolSpec definition() {
+                return new ChatProvider.ToolSpec("large", "Large test result", Map.of("type", "object"));
+            }
+            @Override public Result execute(Map<String, Object> arguments) {
+                return new Result(Map.of("text", "🦄".repeat(1_200)), () -> {});
+            }
+        };
+        var turn = new ToolTurn(List.of(large), false);
+        assertThat(turn.invoke("large", Map.of())).containsEntry("error", "Tool result exceeds the context budget.");
+    }
 }

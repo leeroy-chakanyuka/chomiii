@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 /** Per-turn limits shared by internal tools. Arguments and results are untrusted. */
 public final class ToolTurn implements ChatProvider.Tools {
     private static final int MAX_CALLS = 2;
-    private static final int MAX_RESULT_CHARS = 3_000;
+    private static final int MAX_RESULT_BYTES = 3_000;
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final ThreadPoolExecutor EXECUTOR = new ThreadPoolExecutor(2, 2, 0, TimeUnit.SECONDS,
             new ArrayBlockingQueue<>(8), Thread.ofPlatform().daemon().name("internal-tool-", 0).factory(),
@@ -61,7 +61,7 @@ public final class ToolTurn implements ChatProvider.Tools {
                 if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
                 return error("Tool unavailable or invalid arguments.");
             }
-            if (JSON.writeValueAsString(result.output()).length() > MAX_RESULT_CHARS) {
+            if (JSON.writeValueAsBytes(result.output()).length > MAX_RESULT_BYTES) {
                 return error("Tool result exceeds the context budget.");
             }
             result.onDelivered().run();
