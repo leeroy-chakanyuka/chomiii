@@ -57,4 +57,20 @@ class StructuredMemoryRetrievalTest {
                         first.id(), second.id(), third.id(), fourth.id());
         assertThat(service.forChat("owner", "Suggest dinner ideas")).doesNotContain("cake");
     }
+
+    @Test
+    void unrelatedHobbiesAreNotAutomaticallyInjectedAsProfileContext() {
+        var repository = mock(MemoryRepository.class);
+        var profiles = mock(MemoryProfileRepository.class);
+        var fact = memory("I collect postage stamps");
+        when(repository.list("owner")).thenReturn(List.of(fact));
+        when(repository.revision("owner")).thenReturn(0L);
+        when(profiles.state("owner")).thenReturn(new MemoryProfileRepository.ProfileState(
+                0, 0, 0, "Other: I collect postage stamps."));
+        when(profiles.paragraphs("owner")).thenReturn(List.of(new MemoryProfileRepository.ProfileParagraphRow(
+                "other", 0, "I collect postage stamps.", 0, 0, 1, List.of(fact.id()))));
+
+        assertThat(new MemoryService(repository, profiles).forChat("owner", "Write a poem about mountains"))
+                .doesNotContain("postage stamps");
+    }
 }

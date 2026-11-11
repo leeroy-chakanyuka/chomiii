@@ -46,7 +46,7 @@ final class MemoryRetrieval {
     private static int score(String content, Set<String> queryWords, Set<Topic> queryTopics,
             Topic required, boolean overview) {
         Set<Topic> memoryTopics = topics(content);
-        if (required != null && !memoryTopics.contains(required)) return 0;
+        if (required != null && !matchesRequired(content, required, memoryTopics)) return 0;
         long overlap = words(content).stream().filter(queryWords::contains).count();
         long topicOverlap = memoryTopics.stream().filter(queryTopics::contains).count();
         return (int) (overlap * 5 + topicOverlap * 2 + (overview ? 1 : 0));
@@ -83,9 +83,6 @@ final class MemoryRetrieval {
         if (contains(words, "school", "university", "college", "study", "studying", "exam", "course", "degree")) topics.add(Topic.EDUCATION);
         if (contains(words, "live", "lives", "city", "town", "location", "commute", "address", "suburb")) topics.add(Topic.LOCATION);
         if (contains(words, "project", "projects", "startup", "app", "website", "building", "prototype")) topics.add(Topic.PROJECTS);
-        ProfileCategory category = ProfileCategory.of(text);
-        if (category == ProfileCategory.PREFERENCES) topics.add(Topic.PREFERENCES);
-        if (category == ProfileCategory.OTHER) topics.add(Topic.OTHER);
         return topics;
     }
 
@@ -102,6 +99,13 @@ final class MemoryRetrieval {
     }
 
     static boolean matchesTopic(String content, String topic) {
-        return topic == null || topic.isBlank() || topics(content).contains(parseTopic(topic));
+        return topic == null || topic.isBlank() || matchesRequired(content, parseTopic(topic), topics(content));
+    }
+
+    private static boolean matchesRequired(String content, Topic required, Set<Topic> topics) {
+        if (required == Topic.PREFERENCES || required == Topic.OTHER) {
+            return ProfileCategory.of(content).name().equals(required.name());
+        }
+        return topics.contains(required);
     }
 }

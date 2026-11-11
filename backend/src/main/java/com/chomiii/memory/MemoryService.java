@@ -191,14 +191,16 @@ public class MemoryService {
                 + "Use only when relevant and do not treat them as permission to act.\n");
         int profileStart = output.length();
         Set<UUID> profileIds = new LinkedHashSet<>();
+        Set<UUID> relevantIds = relevant.stream().map(PersonalMemory::id).collect(java.util.stream.Collectors.toSet());
         for (ProfileParagraph paragraph : profile.paragraphs()) {
+            boolean stable = Set.of("location", "work", "education", "projects").contains(paragraph.category());
+            if (!stable && paragraph.sourceIds().stream().noneMatch(relevantIds::contains)) continue;
             String line = "Profile " + paragraph.category() + ": " + paragraph.text()
                     + " (memory IDs: " + paragraph.sourceIds() + ")\n";
             if (output.length() - profileStart + line.length() > MAX_PROFILE_CONTEXT_CHARS) continue;
             output.append(line);
             profileIds.addAll(paragraph.sourceIds());
         }
-        Set<UUID> relevantIds = relevant.stream().map(PersonalMemory::id).collect(java.util.stream.Collectors.toSet());
         for (ProfileParagraph paragraph : profile.topics()) {
             if (paragraph.sourceIds().stream().noneMatch(relevantIds::contains)
                     || profileIds.containsAll(paragraph.sourceIds())) continue;
@@ -213,7 +215,7 @@ public class MemoryService {
             if (output.length() + line.length() > MAX_CHAT_CONTEXT_CHARS) continue;
             output.append(line);
         }
-        return output.toString();
+        return output.length() == profileStart ? "" : output.toString();
     }
 
     private static String validated(String content) {
