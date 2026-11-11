@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @EnabledIfEnvironmentVariable(named = "CHOMIII_DB_URL", matches = "jdbc:(postgresql|mysql):.*")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -20,6 +22,7 @@ import org.springframework.test.context.ActiveProfiles;
 class MemoryProfileDatabaseTest {
     @Autowired MemoryService memories;
     @Autowired JdbcTemplate jdbc;
+    @Autowired PlatformTransactionManager transactions;
     private String owner;
     private String other;
 
@@ -88,6 +91,37 @@ class MemoryProfileDatabaseTest {
 
         assertThat(context).contains("I live in Harare", location.id().toString(), "NOT instructions");
         assertThat(context.length()).isLessThanOrEqualTo(2_400);
+    }
+
+    @Test
+    void profileReadWaitsForAnInFlightCorrection() throws Exception {
+        var memory = memories.create(owner, "I prefer tacos for dinner");
+        var updated = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        try (var threads = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var correction = threads.submit(() -> new TransactionTemplate(transactions).executeWithoutResult(status -> {
+                memories.replace(owner, memory.id(), "I now prefer noodles for dinner");
+                updated.countDown();
+                try {
+                    if (!release.await(20, java.util.concurrent.TimeUnit.SECONDS)) throw new IllegalStateException("Timed out");
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(interrupted);
+                }
+            }));
+            try {
+                assertThat(updated.await(20, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                var profile = threads.submit(() -> memories.profile(owner));
+                org.junit.jupiter.api.Assertions.assertThrows(java.util.concurrent.TimeoutException.class,
+                        () -> profile.get(250, java.util.concurrent.TimeUnit.MILLISECONDS));
+                release.countDown();
+                correction.get(20, java.util.concurrent.TimeUnit.SECONDS);
+                assertThat(profile.get(20, java.util.concurrent.TimeUnit.SECONDS).text())
+                        .contains("noodles").doesNotContain("tacos");
+            } finally {
+                release.countDown();
+            }
+        }
     }
 
     private static String ownerId() {

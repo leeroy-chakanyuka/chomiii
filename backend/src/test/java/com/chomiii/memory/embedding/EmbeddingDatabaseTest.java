@@ -97,6 +97,20 @@ class EmbeddingDatabaseTest {
     }
 
     @Test
+    void clearingMemoryDeletesReadyVectorsAndInvalidatesRunningJobs() {
+        memories.create(owner, "I prefer tacos");
+        memories.create(owner, "I work as a developer");
+        assertThat(store.complete(store.claim(owner).orElseThrow(), vector())).isTrue();
+        var running = store.claim(owner).orElseThrow();
+
+        memories.clear(owner);
+
+        assertThat(store.complete(running, vector())).isFalse();
+        assertThat(store.vectors(owner, provider.descriptor())).isEmpty();
+        assertThat(store.claim(owner)).isEmpty();
+    }
+
+    @Test
     void hybridSearchUsesStoredVectorsWithoutCallingTheProviderForEachMemory() {
         var memory = memories.create(owner, "I enjoy stargazing");
         assertThat(store.complete(store.claim(owner).orElseThrow(), vector())).isTrue();

@@ -89,7 +89,8 @@ The bundled Nginx config disables `/api` access logging. Hosted proxies must
 also avoid logging the `X-Gemini-Api-Key` header or request bodies. Do not
 enable credential-bearing request traces on the Java server.
 
-Anonymous cookies expire after 180 days. Users cannot reopen their chats if
+Anonymous cookies expire after 180 days. A browser reload retains the cookie
+and access to its memories. Users cannot reopen their chats or memories if
 the cookie is removed or expires. Sessions do not sync between devices, and
 expired-session data has no automated retention cleanup yet. Reassess abuse
 prevention, data retention, and privacy before a widely accessible service.
