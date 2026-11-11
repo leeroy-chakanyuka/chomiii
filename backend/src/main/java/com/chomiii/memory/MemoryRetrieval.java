@@ -100,4 +100,8 @@ final class MemoryRetrieval {
             throw new IllegalArgumentException("Unknown memory topic");
         }
     }
+
+    static boolean matchesTopic(String content, String topic) {
+        return topic == null || topic.isBlank() || topics(content).contains(parseTopic(topic));
+    }
 }

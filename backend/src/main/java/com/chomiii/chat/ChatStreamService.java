@@ -4,6 +4,7 @@ import com.chomiii.agent.AgentInstructions;
 import com.chomiii.memory.MemoryService;
 import com.chomiii.memory.MemoryLearningService;
 import com.chomiii.memory.MemorySearchTool;
+import com.chomiii.memory.HybridMemorySearch;
 import com.chomiii.memory.embedding.EmbeddingIndexer;
 import com.chomiii.memory.PersonalMemory;
 import com.chomiii.planning.PlanningRouter;
@@ -51,6 +52,7 @@ public class ChatStreamService {
     private final ExecutorService executor;
     private final boolean memorySearchEnabled;
     private final EmbeddingIndexer embeddingIndexer;
+    private final HybridMemorySearch hybridMemorySearch;
     private final Semaphore slots = new Semaphore(8);
     private final ConcurrentHashMap<UUID, Active> active = new ConcurrentHashMap<>();
 
@@ -63,7 +65,7 @@ public class ChatStreamService {
     public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
             MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
             ExecutorService chatExecutor, boolean memorySearchEnabled) {
-        this(store, conversations, memories, learning, catalog, providers, chatExecutor, memorySearchEnabled, null);
+        this(store, conversations, memories, learning, catalog, providers, chatExecutor, memorySearchEnabled, null, null);
     }
 
     @Autowired
@@ -71,7 +73,7 @@ public class ChatStreamService {
             MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
             @Qualifier("chatExecutor") ExecutorService chatExecutor,
             @Value("${chomiii.memory.search-tool.enabled:true}") boolean memorySearchEnabled,
-            EmbeddingIndexer embeddingIndexer) {
+            EmbeddingIndexer embeddingIndexer, HybridMemorySearch hybridMemorySearch) {
         this.store = store;
         this.conversations = conversations;
         this.memories = memories;
@@ -81,6 +83,7 @@ public class ChatStreamService {
         this.executor = chatExecutor;
         this.memorySearchEnabled = memorySearchEnabled;
         this.embeddingIndexer = embeddingIndexer;
+        this.hybridMemorySearch = hybridMemorySearch;
     }
 
     public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request, String key) {
@@ -124,8 +127,18 @@ public class ChatStreamService {
         List<PersonalMemory> planningMemories;
         ChatProvider.ChatInput input;
         try {
-            planningMemories = plan && useMemory ? planningMemories(memories, owner, request.content()) : List.of();
+            planningMemories = new ArrayList<>(plan && useMemory
+                    ? planningMemories(memories, owner, request.content()) : List.of());
             String memoryContext = useMemory ? retrievalContext(memories, owner, request.content()) : "";
+            if (useMemory && hybridMemorySearch != null) {
+                try {
+                    var supplement = hybridMemorySearch.augment(owner, request.content(), key, memoryContext);
+                    memoryContext = supplement.context();
+                    if (plan) planningMemories.addAll(supplement.memories());
+                } catch (RuntimeException unavailable) {
+                    // Optional semantic retrieval cannot prevent a normal reply.
+                }
+            }
             if (plan) {
                 input = PLANNING.input(request.model(), pending.history(), request.content().strip(),
                         planningMemories, memoryContext);
@@ -199,7 +212,7 @@ public class ChatStreamService {
             send(emitter, "start", Map.of("requestId", requestId.toString(), "messageId", assistantId.toString()));
             List<PersonalMemory> allowedMemories = new ArrayList<>(planningMemories);
             var tools = useMemory && memorySearchEnabled ? new ToolTurn(List.of(
-                    new MemorySearchTool(memories, owner, allowedMemories::addAll)), planning) : null;
+                    new MemorySearchTool(memories, owner, allowedMemories::addAll, hybridMemorySearch, key)), planning) : null;
             try (ChatProvider.Generation providerStream = tools == null
                     ? provider.open(input, key) : provider.open(input, key, tools)) {
                 generation.set(providerStream);

@@ -213,6 +213,14 @@ After a restart, pending jobs remain available. An interrupted running job can
 be reclaimed after its lease expires when that owner next completes a chat.
 Retries stop after five attempts. A failure leaves lexical recall available.
 
+With embeddings enabled, `memory.search` can combine lexical ranking with
+cosine similarity over compatible stored vectors. Automatic context attempts a
+semantic lookup only for an explicit personal request with no lexical hit.
+The query embedding has a one-second deadline. A bounded, two-minute cache uses
+the owner hash, query hash, and embedding configuration as its key. Missing
+vectors, provider errors, quota exhaustion, and timeouts fall back to lexical
+results. The similarity threshold and ranking weights require evaluation.
+
 The default provider requests 768 dimensions from `gemini-embedding-2` and
 uses Google's asymmetric search prefixes. A model or configuration change makes
 older vectors incompatible. To queue an owner's memories for the configured

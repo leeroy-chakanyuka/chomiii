@@ -3,6 +3,7 @@ package com.chomiii.memory.embedding;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.chomiii.memory.MemoryService;
+import com.chomiii.memory.HybridMemorySearch;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
@@ -93,6 +94,27 @@ class EmbeddingDatabaseTest {
         assertThat(store.complete(inFlight, vector())).isFalse();
         assertThat(store.claim(owner)).isEmpty();
         assertThat(store.vectors(owner, provider.descriptor())).isEmpty();
+    }
+
+    @Test
+    void hybridSearchUsesStoredVectorsWithoutCallingTheProviderForEachMemory() {
+        var memory = memories.create(owner, "I enjoy stargazing");
+        assertThat(store.complete(store.claim(owner).orElseThrow(), vector())).isTrue();
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        EmbeddingProvider fake = new EmbeddingProvider() {
+            @Override public Descriptor descriptor() { return provider.descriptor(); }
+            @Override public float[] document(String text, String key) { throw new AssertionError("Document re-embedded"); }
+            @Override public float[] query(String text, String key) { calls.incrementAndGet(); return vector(); }
+        };
+        var hybrid = new HybridMemorySearch(memories, store, fake, true);
+
+        assertThat(hybrid.augment(owner, "Write a poem", "key", "").context()).isEmpty();
+        assertThat(calls).hasValue(0);
+        assertThat(hybrid.augment(owner, "What are my hobbies?", "key", "").context())
+                .contains("stargazing", memory.id().toString());
+        assertThat(hybrid.augment(owner, "What are my hobbies?", "key", "").context()).contains("stargazing");
+        assertThat(calls).hasValue(1);
+        assertThat(hybrid.search(other, "hobbies", null, 5, "key")).isEmpty();
     }
 
     private static float[] vector() {

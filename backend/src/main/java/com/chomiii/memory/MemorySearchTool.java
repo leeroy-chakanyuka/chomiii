@@ -24,11 +24,20 @@ public final class MemorySearchTool implements InternalTool {
     private final MemoryService memories;
     private final String owner;
     private final Consumer<List<PersonalMemory>> delivered;
+    private final HybridMemorySearch hybrid;
+    private final String apiKey;
 
     public MemorySearchTool(MemoryService memories, String owner, Consumer<List<PersonalMemory>> delivered) {
+        this(memories, owner, delivered, null, null);
+    }
+
+    public MemorySearchTool(MemoryService memories, String owner, Consumer<List<PersonalMemory>> delivered,
+            HybridMemorySearch hybrid, String apiKey) {
         this.memories = memories;
         this.owner = owner;
         this.delivered = delivered;
+        this.hybrid = hybrid;
+        this.apiKey = apiKey;
     }
 
     @Override
@@ -66,7 +75,8 @@ public final class MemorySearchTool implements InternalTool {
             }
             limit = ((Number) arguments.get("limit")).intValue();
         }
-        List<PersonalMemory> hits = memories.search(owner, query.strip(), topic, limit);
+        List<PersonalMemory> hits = hybrid == null ? memories.search(owner, query.strip(), topic, limit)
+                : hybrid.search(owner, query.strip(), topic, limit, apiKey);
         List<Map<String, Object>> records = new ArrayList<>();
         int chars = 0;
         List<PersonalMemory> included = new ArrayList<>();
