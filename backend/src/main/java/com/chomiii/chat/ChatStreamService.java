@@ -3,6 +3,7 @@ package com.chomiii.chat;
 import com.chomiii.agent.AgentInstructions;
 import com.chomiii.memory.MemoryService;
 import com.chomiii.memory.MemoryLearningService;
+import com.chomiii.memory.MemorySearchTool;
 import com.chomiii.memory.PersonalMemory;
 import com.chomiii.planning.PlanningRouter;
 import com.chomiii.planning.PlanningService;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import com.chomiii.provider.ChatProvider;
 import com.chomiii.provider.ProviderCatalog;
 import com.chomiii.provider.ProviderFailure;
+import com.chomiii.tools.ToolTurn;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +30,9 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.TransactionException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Service
@@ -44,12 +48,21 @@ public class ChatStreamService {
     private final ProviderCatalog catalog;
     private final List<ChatProvider> providers;
     private final ExecutorService executor;
+    private final boolean memorySearchEnabled;
     private final Semaphore slots = new Semaphore(8);
     private final ConcurrentHashMap<UUID, Active> active = new ConcurrentHashMap<>();
 
     public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
             MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
-            @Qualifier("chatExecutor") ExecutorService chatExecutor) {
+            ExecutorService chatExecutor) {
+        this(store, conversations, memories, learning, catalog, providers, chatExecutor, true);
+    }
+
+    @Autowired
+    public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
+            MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
+            @Qualifier("chatExecutor") ExecutorService chatExecutor,
+            @Value("${chomiii.memory.search-tool.enabled:true}") boolean memorySearchEnabled) {
         this.store = store;
         this.conversations = conversations;
         this.memories = memories;
@@ -57,6 +70,7 @@ public class ChatStreamService {
         this.catalog = catalog;
         this.providers = List.copyOf(providers);
         this.executor = chatExecutor;
+        this.memorySearchEnabled = memorySearchEnabled;
     }
 
     public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request, String key) {
@@ -132,7 +146,7 @@ public class ChatStreamService {
         try {
             executor.execute(() -> run(request.requestId(), pending.assistantId(), owner, conversation,
                     provider, input, key, generation, emitter, memoryRevision, requestStartedNanos,
-                    storeReadyNanos, contextReadyNanos, plan, planningMemories));
+                    storeReadyNanos, contextReadyNanos, plan, planningMemories, useMemory));
         } catch (RuntimeException exception) {
             active.remove(request.requestId(), generation);
             slots.release();
@@ -164,7 +178,7 @@ public class ChatStreamService {
     private void run(UUID requestId, UUID assistantId, String owner, UUID conversation, ChatProvider provider,
             ChatProvider.ChatInput input, String key, Active generation, SseEmitter emitter, Long memoryRevision,
             long requestStartedNanos, long storeReadyNanos, long contextReadyNanos,
-            boolean planning, List<PersonalMemory> planningMemories) {
+            boolean planning, List<PersonalMemory> planningMemories, boolean useMemory) {
         long workerStartedNanos = System.nanoTime();
         StringBuilder response = new StringBuilder();
         long[] firstDeltaNanos = {0L};
@@ -173,7 +187,11 @@ public class ChatStreamService {
         String outcome = "failed";
         try {
             send(emitter, "start", Map.of("requestId", requestId.toString(), "messageId", assistantId.toString()));
-            try (ChatProvider.Generation providerStream = provider.open(input, key)) {
+            List<PersonalMemory> allowedMemories = new ArrayList<>(planningMemories);
+            var tools = useMemory && memorySearchEnabled ? new ToolTurn(List.of(
+                    new MemorySearchTool(memories, owner, allowedMemories::addAll)), planning) : null;
+            try (ChatProvider.Generation providerStream = tools == null
+                    ? provider.open(input, key) : provider.open(input, key, tools)) {
                 generation.set(providerStream);
                 if (generation.cancelled.get()) {
                     throw new CancellationException();
@@ -195,7 +213,7 @@ public class ChatStreamService {
                     }
                 };
                 if (planning) {
-                    var plan = PLANNING.read(providerStream, planningMemories);
+                    var plan = PLANNING.read(providerStream, allowedMemories);
                     if (generation.cancelled.get()) throw new CancellationException();
                     String rendered = PLANNING.render(plan);
                     if (rendered.length() > MAX_REPLY_CHARS) {

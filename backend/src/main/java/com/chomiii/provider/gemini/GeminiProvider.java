@@ -8,16 +8,22 @@ import com.google.genai.errors.ApiException;
 import com.google.genai.errors.GenAiIOException;
 import com.google.genai.types.ClientOptions;
 import com.google.genai.types.Content;
+import com.google.genai.types.FunctionCall;
+import com.google.genai.types.FunctionDeclaration;
+import com.google.genai.types.FunctionResponse;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.types.HttpOptions;
 import com.google.genai.types.HttpRetryOptions;
 import com.google.genai.types.Part;
+import com.google.genai.types.Tool;
 import java.io.InterruptedIOException;
 import java.net.URI;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -56,18 +62,28 @@ public class GeminiProvider implements ChatProvider {
         if (apiKey == null || apiKey.isBlank()) {
             throw new ProviderFailure(ProviderFailure.Code.INVALID_KEY, "Enter a Gemini API key.");
         }
-        return new GeminiGeneration(input, apiKey);
+        return new GeminiGeneration(input, apiKey, null);
+    }
+
+    @Override
+    public Generation open(ChatInput input, String apiKey, Tools tools) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new ProviderFailure(ProviderFailure.Code.INVALID_KEY, "Enter a Gemini API key.");
+        }
+        return new GeminiGeneration(input, apiKey, tools);
     }
 
     private final class GeminiGeneration implements Generation {
         private final ChatInput input;
         private final String apiKey;
+        private final Tools tools;
         private final AtomicBoolean cancelled = new AtomicBoolean();
         private final AtomicReference<Call> active = new AtomicReference<>();
 
-        private GeminiGeneration(ChatInput input, String apiKey) {
+        private GeminiGeneration(ChatInput input, String apiKey, Tools tools) {
             this.input = input;
             this.apiKey = apiKey;
+            this.tools = tools;
         }
 
         @Override
@@ -83,14 +99,11 @@ public class GeminiProvider implements ChatProvider {
 
             HttpOptions options = HttpOptions.builder().baseUrl(endpoint.toString()).timeout(timeoutMillis)
                     .retryOptions(HttpRetryOptions.builder().attempts(1).build()).build();
-            List<Content> messages = input.messages().stream()
+            List<Content> messages = new ArrayList<>(input.messages().stream()
                     .map(message -> Content.builder()
                             .role(message.role() == Role.USER ? "user" : "model")
                             .parts(Part.fromText(message.text())).build())
-                    .toList();
-            GenerateContentConfig config = GenerateContentConfig.builder()
-                    .systemInstruction(Content.fromParts(Part.fromText(input.systemInstruction())))
-                    .build();
+                    .toList());
             OkHttpClient transport = new OkHttpClient.Builder()
                     .connectTimeout(Duration.ofMillis(Math.min(timeoutMillis, 15_000)))
                     .readTimeout(Duration.ofMillis(timeoutMillis))
@@ -107,27 +120,80 @@ public class GeminiProvider implements ChatProvider {
             try (Client client = Client.builder().enterprise(false).apiKey(apiKey).httpOptions(options)
                     .clientOptions(ClientOptions.builder().customHttpClient(transport).build()).build()) {
                 clientReady = System.nanoTime();
-                try (ResponseStream<GenerateContentResponse> response =
-                        client.models.generateContentStream(input.model(), messages, config)) {
-                    streamOpen = System.nanoTime();
-                    if (cancelled.get()) {
-                        throw failure(ProviderFailure.Code.CANCELLED);
+                int callsUsed = 0;
+                for (int round = 0; round < 3; round++) {
+                    boolean toolsAvailable = tools != null && callsUsed < 2 && !tools.definitions().isEmpty();
+                    var config = GenerateContentConfig.builder()
+                            .systemInstruction(Content.fromParts(Part.fromText(input.systemInstruction())));
+                    if (tools != null) config.maxOutputTokens(4096);
+                    if (toolsAvailable) {
+                        List<FunctionDeclaration> declarations = tools.definitions().stream()
+                                .map(spec -> FunctionDeclaration.builder().name(spec.name())
+                                        .description(spec.description()).parametersJsonSchema(spec.parameters()).build())
+                                .toList();
+                        config.tools(Tool.builder().functionDeclarations(declarations).build());
                     }
+                    List<Part> modelParts = new ArrayList<>();
+                    List<FunctionCall> calls = new ArrayList<>();
+                    StringBuilder buffered = new StringBuilder();
                     boolean receivedText = false;
-                    for (GenerateContentResponse chunk : response) {
-                        if (cancelled.get()) {
-                            throw failure(ProviderFailure.Code.CANCELLED);
-                        }
-                        String text = chunk.text();
-                        if (text != null && !text.isEmpty()) {
-                            if (firstText == 0) firstText = System.nanoTime();
-                            receivedText = true;
-                            delta.accept(text);
+                    int modelChars = 0;
+                    try (ResponseStream<GenerateContentResponse> response =
+                            client.models.generateContentStream(input.model(), messages, config.build())) {
+                        if (streamOpen == 0) streamOpen = System.nanoTime();
+                        for (GenerateContentResponse chunk : response) {
+                            if (cancelled.get()) throw failure(ProviderFailure.Code.CANCELLED);
+                            chunk.checkFinishReason();
+                            var candidates = chunk.candidates().orElse(List.of());
+                            if (candidates.isEmpty()) continue;
+                            var content = candidates.getFirst().content();
+                            if (content.isEmpty()) continue;
+                            for (Part part : content.get().parts().orElse(List.of())) {
+                                if (toolsAvailable) {
+                                    modelParts.add(part);
+                                    modelChars += part.text().map(String::length).orElse(0);
+                                    if (modelParts.size() > 256 || modelChars > 20_000) {
+                                        throw failure(ProviderFailure.Code.INVALID_REQUEST);
+                                    }
+                                }
+                                part.functionCall().ifPresent(calls::add);
+                                if (part.thought().orElse(false)) continue;
+                                String text = part.text().orElse("");
+                                if (!text.isEmpty()) {
+                                    if (firstText == 0) firstText = System.nanoTime();
+                                    receivedText = true;
+                                    if (tools != null && tools.bufferTextUntilFinal()) {
+                                        if (buffered.length() + text.length() > 20_000) {
+                                            throw failure(ProviderFailure.Code.INVALID_REQUEST);
+                                        }
+                                        buffered.append(text);
+                                    } else {
+                                        delta.accept(text);
+                                    }
+                                }
+                            }
                         }
                     }
-                    if (!receivedText) {
-                        throw failure(ProviderFailure.Code.EMPTY_RESPONSE);
+                    if (calls.isEmpty()) {
+                        if (!receivedText) throw failure(ProviderFailure.Code.EMPTY_RESPONSE);
+                        if (!buffered.isEmpty()) delta.accept(buffered.toString());
+                        break;
                     }
+                    if (!toolsAvailable || calls.size() > 2 - callsUsed) {
+                        throw failure(ProviderFailure.Code.INVALID_REQUEST);
+                    }
+                    callsUsed += calls.size();
+                    messages.add(Content.builder().role("model").parts(modelParts).build());
+                    List<Part> results = new ArrayList<>();
+                    for (FunctionCall call : calls) {
+                        if (cancelled.get()) throw failure(ProviderFailure.Code.CANCELLED);
+                        String name = call.name().orElse("");
+                        Map<String, Object> result = tools.invoke(name, call.args().orElse(Map.of()));
+                        var functionResponse = FunctionResponse.builder().name(name).response(result);
+                        call.id().ifPresent(functionResponse::id);
+                        results.add(Part.builder().functionResponse(functionResponse.build()).build());
+                    }
+                    messages.add(Content.builder().role("user").parts(results).build());
                 }
             } catch (ApiException exception) {
                 outcome = "upstream_" + exception.code();

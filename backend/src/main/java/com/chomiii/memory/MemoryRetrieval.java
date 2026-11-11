@@ -17,7 +17,7 @@ final class MemoryRetrieval {
             "their", "them", "there", "these", "they", "this", "what", "when", "where", "which",
             "with", "would", "your");
 
-    private enum Topic { FOOD, WORK, SCHEDULES, EDUCATION, LOCATION, PROJECTS }
+    private enum Topic { FOOD, WORK, SCHEDULES, EDUCATION, LOCATION, PROJECTS, PREFERENCES, OTHER }
     private record Match(PersonalMemory memory, int relevance) {}
 
     private MemoryRetrieval() {}
@@ -83,6 +83,9 @@ final class MemoryRetrieval {
         if (contains(words, "school", "university", "college", "study", "studying", "exam", "course", "degree")) topics.add(Topic.EDUCATION);
         if (contains(words, "live", "lives", "city", "town", "location", "commute", "address", "suburb")) topics.add(Topic.LOCATION);
         if (contains(words, "project", "projects", "startup", "app", "website", "building", "prototype")) topics.add(Topic.PROJECTS);
+        ProfileCategory category = ProfileCategory.of(text);
+        if (category == ProfileCategory.PREFERENCES) topics.add(Topic.PREFERENCES);
+        if (category == ProfileCategory.OTHER) topics.add(Topic.OTHER);
         return topics;
     }
 
