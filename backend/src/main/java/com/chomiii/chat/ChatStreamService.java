@@ -4,6 +4,7 @@ import com.chomiii.agent.AgentInstructions;
 import com.chomiii.memory.MemoryService;
 import com.chomiii.memory.MemoryLearningService;
 import com.chomiii.memory.MemorySearchTool;
+import com.chomiii.memory.embedding.EmbeddingIndexer;
 import com.chomiii.memory.PersonalMemory;
 import com.chomiii.planning.PlanningRouter;
 import com.chomiii.planning.PlanningService;
@@ -49,6 +50,7 @@ public class ChatStreamService {
     private final List<ChatProvider> providers;
     private final ExecutorService executor;
     private final boolean memorySearchEnabled;
+    private final EmbeddingIndexer embeddingIndexer;
     private final Semaphore slots = new Semaphore(8);
     private final ConcurrentHashMap<UUID, Active> active = new ConcurrentHashMap<>();
 
@@ -58,11 +60,18 @@ public class ChatStreamService {
         this(store, conversations, memories, learning, catalog, providers, chatExecutor, true);
     }
 
+    public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
+            MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
+            ExecutorService chatExecutor, boolean memorySearchEnabled) {
+        this(store, conversations, memories, learning, catalog, providers, chatExecutor, memorySearchEnabled, null);
+    }
+
     @Autowired
     public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
             MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
             @Qualifier("chatExecutor") ExecutorService chatExecutor,
-            @Value("${chomiii.memory.search-tool.enabled:true}") boolean memorySearchEnabled) {
+            @Value("${chomiii.memory.search-tool.enabled:true}") boolean memorySearchEnabled,
+            EmbeddingIndexer embeddingIndexer) {
         this.store = store;
         this.conversations = conversations;
         this.memories = memories;
@@ -71,6 +80,7 @@ public class ChatStreamService {
         this.providers = List.copyOf(providers);
         this.executor = chatExecutor;
         this.memorySearchEnabled = memorySearchEnabled;
+        this.embeddingIndexer = embeddingIndexer;
     }
 
     public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request, String key) {
@@ -287,6 +297,7 @@ public class ChatStreamService {
                 } catch (RuntimeException ignored) {
                     log.debug("memory_learning scheduling unavailable");
                 }
+                if (useMemory && embeddingIndexer != null) embeddingIndexer.schedule(owner, key);
             }
         }
     }

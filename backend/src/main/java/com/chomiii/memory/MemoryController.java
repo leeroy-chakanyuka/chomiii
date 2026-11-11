@@ -42,6 +42,12 @@ public class MemoryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(memory.create(owner, request.content()));
     }
 
+    @PostMapping("/reindex")
+    public ResponseEntity<Void> reindex(@RequestAttribute(AnonymousSessionFilter.OWNER_ATTRIBUTE) String owner) {
+        memory.reindex(owner);
+        return ResponseEntity.accepted().build();
+    }
+
     @PutMapping("/{id}")
     public PersonalMemory replace(
             @RequestAttribute(AnonymousSessionFilter.OWNER_ATTRIBUTE) String owner,

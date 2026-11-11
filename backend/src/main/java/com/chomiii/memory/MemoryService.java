@@ -1,6 +1,7 @@
 package com.chomiii.memory;
 
 import com.chomiii.chat.ChatApiException;
+import com.chomiii.memory.embedding.EmbeddingStore;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -27,15 +28,21 @@ public class MemoryService {
      * then runs synchronously inside every canonical mutation transaction.
      */
     private final MemoryProfileRepository profiles;
+    private final EmbeddingStore embeddings;
 
     public MemoryService(MemoryRepository repository) {
-        this(repository, null);
+        this(repository, null, null);
+    }
+
+    public MemoryService(MemoryRepository repository, MemoryProfileRepository profiles) {
+        this(repository, profiles, null);
     }
 
     @Autowired
-    public MemoryService(MemoryRepository repository, MemoryProfileRepository profiles) {
+    public MemoryService(MemoryRepository repository, MemoryProfileRepository profiles, EmbeddingStore embeddings) {
         this.repository = repository;
         this.profiles = profiles;
+        this.embeddings = embeddings;
     }
 
     @Transactional(readOnly = true)
@@ -54,6 +61,7 @@ public class MemoryService {
         repository.bumpRevision(owner);
         PersonalMemory memory = repository.create(owner, clean);
         rebuildDerivedContent(owner, false);
+        if (embeddings != null) embeddings.enqueue(owner, memory);
         return memory;
     }
 
@@ -65,8 +73,10 @@ public class MemoryService {
         }
         repository.bumpRevision(owner);
         rebuildDerivedContent(owner, false);
-        return repository.find(owner, id).orElseThrow(
+        PersonalMemory memory = repository.find(owner, id).orElseThrow(
                 () -> new ChatApiException(HttpStatus.NOT_FOUND, "Memory not found."));
+        if (embeddings != null) embeddings.enqueue(owner, memory);
+        return memory;
     }
 
     @Transactional
@@ -77,8 +87,10 @@ public class MemoryService {
         }
         repository.bumpRevision(owner);
         rebuildDerivedContent(owner, false);
-        return repository.find(owner, id).orElseThrow(
+        PersonalMemory memory = repository.find(owner, id).orElseThrow(
                 () -> new ChatApiException(HttpStatus.NOT_FOUND, "Memory not found."));
+        if (embeddings != null) embeddings.enqueue(owner, memory);
+        return memory;
     }
 
     @Transactional
@@ -128,6 +140,11 @@ public class MemoryService {
         return MemoryRetrieval.select(repository.list(owner), query, topic, limit);
     }
 
+    @Transactional
+    public void reindex(String owner) {
+        if (embeddings != null) embeddings.reindex(owner);
+    }
+
     /** A bounded, post-response extraction result; never trusted to authorize an action. */
     @Transactional
     public void learn(String owner, UUID conversation, long expectedRevision, String content,
@@ -148,6 +165,10 @@ public class MemoryService {
         // several candidates from one extraction can be stored) and refresh
         // the derived profile in the same transaction.
         rebuildDerivedContent(owner, true);
+        if (embeddings != null && isFact) {
+            repository.list(owner).stream().filter(memory -> "active".equals(memory.status())
+                    && memory.content().equals(clean)).findFirst().ifPresent(memory -> embeddings.enqueue(owner, memory));
+        }
     }
 
     /**

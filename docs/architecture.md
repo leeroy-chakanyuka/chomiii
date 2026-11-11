@@ -58,12 +58,11 @@ within 16,000 Java string characters, prioritizing the newest complete history. 
 order and role and excludes failed or interrupted assistant messages. It reads
 only the owner-checked conversation. The M1.5 prompt layer loads only the
 short versioned `agent/SYSTEM.md` from the Java classpath at startup. User
-text stays in the user role, never in the trusted system instruction. No
-skill registry, classification model, retrieval or long-term memory is active.
+text stays in the user role, never in the trusted system instruction. The
+memory service adds bounded personal context as a separate user-role message.
 
-This remains a character-based, single-conversation context selector, not a
-token-aware personal memory engine. See [context.md](context.md) for the exact
-current limits and the plans for future context sources.
+The conversation-history selector uses a character budget rather than model
+tokens. See [context.md](context.md) for the history policy and context limits.
 
 ## Browser sessions and credentials
 
@@ -124,8 +123,8 @@ for everyday-user requirements and the design lessons we intend to adopt.
 than Beacon/third-party memory infrastructure. The owner-scoped
 `personal_memories` Flyway V3 table stores explicit user-saved facts.
 `MemoryController` exposes inspectable CRUD, `MemoryService` enforces
-limits and ownership, and `MemorySelector` chooses a bounded number of
-lexically relevant facts. `ChatStreamService` supplies selected records
+limits and ownership, and `MemoryRetrieval` ranks lexical and topic matches.
+`ChatStreamService` supplies selected records
 as a **user-role context message** before the current request; these
 records are not part of the system prompt and grant no tool privileges.
 
@@ -138,10 +137,10 @@ flowchart LR
     Memory -->|relevant user data| Provider["ChatProvider / Gemini"]
 ```
 
-Memory identity currently follows the existing anonymous cookie, **not
-a named cross-device user**. Retrieval makes an indexed local DB read
-but no extra model call. The M2 acceptance and retention requirements
-are outlined in [M2 design](m2-design.md).
+Memory identity follows the existing anonymous cookie, not a named cross-device
+user. Lexical retrieval makes a local database read. Optional embedding indexing
+can make additional provider calls after a reply. The M2 acceptance and
+retention requirements are outlined in [M2 design](m2-design.md).
 
 The session filter also protects `/api/memories`, applying the same owner,
 origin, and no-store rules as conversation requests. Before storing a chat
@@ -160,8 +159,8 @@ disposable local database. The database URL and Flyway target are pinned to the
 validated test database before Spring starts. A provider wrapper counts and
 limits opt-in live calls, while the scorer remains independent of the Gemini
 SDK. An optional separate-family judge or a human can review ambiguous matches.
-The fixture contract describes expectations; the application planner is a
-separate plan-only path and does not execute tools.
+The fixture contract describes expectations. The planner can invoke the internal
+read-only memory search tool, but it cannot execute external actions.
 See [evaluation instructions](../evals/README.md) for commands and limitations.
 
 ## M3.1 planning path
@@ -175,3 +174,49 @@ dependency graph before the service emits a structured event and readable
 proposal. The capability catalogue describes future operations and contains
 no execution functions. See [M3.1 design](m3.1-design.md) and the
 [memory and planning flow](memory-planning-flow.md).
+
+## Persistent profile and optional embeddings
+
+Canonical `personal_memories` remain authoritative. Flyway V4 adds an
+owner-scoped profile, categorized paragraphs, and their source memory IDs.
+`MemoryService` refreshes those rows inside the canonical mutation transaction
+under the owner's session-row lock. The profile records both the user's memory
+revision and a content revision for accepted background learning. The original
+memory revision continues to reject extraction results from before a correction
+or deletion. Ordinary reads validate the revisions and source relationships
+without regenerating the profile.
+
+Chat and planning receive a bounded profile and selected facts as lower-trust
+user data. The `memory.search` function can request additional approved facts.
+The Gemini adapter sends native function calls and function responses in the
+same generation. It retains provider continuation signatures only for that
+request. The application does not persist those parts in chat history. The
+tool has per-turn call, result, and execution-time limits. Recall off removes
+the tool and the automatic memory context. Set
+`chomiii.memory.search-tool.enabled=false` to disable the tool independently.
+
+Flyway V5 adds a durable job and vector per canonical memory. The vector is a
+JSON array of normalized 32-bit values stored in SQL `TEXT`, with the owner,
+memory ID, content hash, model, dimensions, configuration, and timestamp.
+JSON is portable and inspectable but uses more space and parsing time than a
+binary float array. A future PostgreSQL deployment could use `pgvector` for
+indexed nearest-neighbor search after corpus size and measurements justify
+the database-specific dependency. The current implementation compares vectors
+in Java and adds no vector database.
+
+Embedding generation is disabled by default. Set
+`chomiii.memory.embeddings.enabled=true` to permit indexing. Canonical changes
+queue work in the same transaction, even when indexing is disabled. After a
+successful recall-enabled chat, a bounded worker uses that turn's Gemini key
+to process pending jobs for that owner. The key is never stored in the jobs.
+After a restart, pending jobs remain available. An interrupted running job can
+be reclaimed after its lease expires when that owner next completes a chat.
+Retries stop after five attempts. A failure leaves lexical recall available.
+
+The default provider requests 768 dimensions from `gemini-embedding-2` and
+uses Google's asymmetric search prefixes. A model or configuration change makes
+older vectors incompatible. To queue an owner's memories for the configured
+model, send `POST /api/memories/reindex` with that browser's session cookie and
+the normal origin header. Reindexing removes the owner's old vectors and queues
+fresh jobs; a later eligible chat supplies the temporary provider key. Model
+calls can use quota or incur charges under the user's Google project.
