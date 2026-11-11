@@ -73,4 +73,20 @@ class StructuredMemoryRetrievalTest {
         assertThat(new MemoryService(repository, profiles).forChat("owner", "Write a poem about mountains"))
                 .doesNotContain("postage stamps");
     }
+
+    @Test
+    void duplicateFactsAreCollapsedAndConflictingFactsRemainVisible() {
+        var repository = mock(MemoryRepository.class);
+        var older = new PersonalMemory(UUID.randomUUID(), "I prefer tacos for dinner", "user_explicit",
+                Instant.EPOCH, Instant.EPOCH);
+        var duplicate = new PersonalMemory(UUID.randomUUID(), "I prefer tacos for dinner", "user_explicit",
+                Instant.EPOCH, Instant.EPOCH);
+        var newer = new PersonalMemory(UUID.randomUUID(), "I now prefer noodles for dinner", "user_explicit",
+                Instant.EPOCH, Instant.EPOCH.plusSeconds(10));
+        when(repository.list("owner")).thenReturn(List.of(older, duplicate, newer));
+
+        assertThat(new MemoryService(repository).forPlanning("owner", "Suggest dinner"))
+                .extracting(PersonalMemory::content)
+                .containsExactly("I now prefer noodles for dinner", "I prefer tacos for dinner");
+    }
 }

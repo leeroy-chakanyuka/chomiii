@@ -56,6 +56,8 @@ class MemoryProfileDatabaseTest {
 
         memories.replace(owner, food.id(), "I now prefer noodles for dinner");
         assertThat(memories.profile(owner).text()).contains("noodles").doesNotContain("tacos");
+        assertThat(memories.forChat(owner, "What should I eat for dinner?"))
+                .contains("noodles").doesNotContain("tacos");
 
         long revision = memories.revision(owner);
         memories.learn(owner, UUID.randomUUID(), revision, "I might like curry on weekends", "inferred", 0.75);
