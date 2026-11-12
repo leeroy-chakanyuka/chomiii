@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 final class LiveBudget {
-    enum Kind { CHAT, EXTRACTION, FOLLOW_UP, PLANNING, JUDGE }
+    enum Kind { CHAT, EXTRACTION, FOLLOW_UP, PLANNING, TOOL_CONTINUATION, JUDGE }
     static final class Exhausted extends IllegalStateException {
         Exhausted() { super("Provider call budget exhausted"); }
     }

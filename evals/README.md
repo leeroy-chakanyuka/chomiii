@@ -102,8 +102,8 @@ $env:EVAL_MAX_PROVIDER_INPUT_BYTES = '20000'
 ```
 
 The default model is `gemini-3.5-flash-lite`; set `EVAL_MODEL` to change it.
-The budget counts main chat, extraction, follow-up chat, and judge calls before
-each provider request. These are reserved attempts, not confirmed billable
+The budget counts main chat, extraction, follow-up chat, tool continuation,
+and judge calls before each provider request. These are reserved attempts, not confirmed billable
 requests; a provider can fail before opening the network call. A follow-up can
 itself schedule extraction. Exhaustion,
 timeouts, invalid output, and provider errors are not successful observations.
@@ -113,7 +113,8 @@ message and system-instruction text; it is a conservative size guard, not a
 token counter. Defaults impose no pacing and a 1,000,000-byte input limit.
 Rate limits are shared with other project usage, so check the project's current
 RPM, input TPM and remaining RPD before choosing the interval, byte limit and
-call budget. The harness cannot observe other users' usage or count Gemini tokens.
+call budget. The harness cannot observe other users' usage. It reports Gemini
+token usage only when every reserved request returns the required metadata.
 Live runs use the model's actual assistant replies between fixture user turns;
 scripted runs replay the assistant text included in the fixture.
 
@@ -271,11 +272,19 @@ otherwise useful facts because the filter rejects the entire message.
 
 The report records request processing, provider-stream first token and duration,
 post-completion scheduling delay, extraction-stream duration, and direct
-retrieval time. It does not measure actual validation or persistence duration,
-browser paint, or Gemini token usage. Live percentile summaries require at
+retrieval time. It does not measure actual validation or persistence duration
+or browser paint. Live percentile summaries require at
 least five samples for p50 and 20 for p95. Small or unmatched samples do not
 establish a performance improvement. A provider key, timeout, or quota error is
 an evaluation error, not a passing result.
+
+## Compare memory retrieval configurations
+
+`MemoryAblationSuiteTest` compares the profile and lexical baseline with
+optional fake embeddings and scripted tool calls. It uses the same selected M2
+fixtures for all four arms and a disposable SQL database. The test does not
+measure real model decisions or answer quality. Run it as described in
+[memory retrieval evaluation](../docs/memory-evaluation.md).
 
 ## Evaluate M3.1 planning
 

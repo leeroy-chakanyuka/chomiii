@@ -68,6 +68,27 @@ it('explicitly saves, corrects and deletes a personal memory', async () => {
   expect(requests.map(entry => entry.method)).toEqual(['GET', 'POST', 'PUT', 'DELETE'])
 })
 
+it('lets the user explicitly replace an older fact while keeping it as history', async () => {
+  const old = updated('I commute by bus')
+  const suggestion = { ...updated('I now commute by bicycle'), id: 'memory-2', status: 'suggested', source: 'conversation_fact' }
+  const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    if (!init?.method) return jsonResponse([suggestion, old])
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(String(init.body))).toEqual({ supersededMemoryId: 'memory-1' })
+    return jsonResponse({ ...suggestion, status: 'active' })
+  })
+  vi.stubGlobal('fetch', fetchMock)
+
+  render(<MemoryPanel onClose={() => undefined} />)
+  await screen.findByText('I now commute by bicycle')
+  fireEvent.click(screen.getByRole('button', { name: 'Replace an older memory' }))
+  fireEvent.change(screen.getByLabelText('Memory to replace'), { target: { value: 'memory-1' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm replacement' }))
+  await screen.findByText(/Past memory — replaced/)
+  expect(screen.getByText('I commute by bus')).toBeVisible()
+  expect(fetchMock).toHaveBeenCalledTimes(2)
+})
+
 it('shows a provider error without pretending a memory was saved', async () => {
   vi.stubGlobal('fetch', vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
     if (!init?.method) return jsonResponse([])
@@ -215,4 +236,13 @@ it('states deletion limits and does not promise Chomi is never wrong about prefe
   await screen.findByText('I prefer Saturdays')
   expect(screen.getByText(/Deleting a memory here does not erase copies already sent/)).toBeVisible()
   expect(screen.queryByText(/will not invent/i)).not.toBeInTheDocument()
+})
+
+it('keeps memory recall control in Memories settings instead of the chat composer', async () => {
+  const onMemoryChange = vi.fn()
+  vi.stubGlobal('fetch', vi.fn(async () => jsonResponse([])))
+  render(<MemoryPanel onClose={() => undefined} useMemory={true} onMemoryChange={onMemoryChange} />)
+  const setting = await screen.findByLabelText('Use saved memories in chats')
+  fireEvent.click(setting)
+  expect(onMemoryChange).toHaveBeenCalledWith(false)
 })

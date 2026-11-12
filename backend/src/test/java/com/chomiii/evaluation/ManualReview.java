@@ -46,7 +46,7 @@ final class ManualReview {
                     MemoryEvaluationRunner.scoringMemories(observation.memories(), observation.turns()), judgment);
             var rescored = new MemoryEvaluationRunner.Result(observation.fixtureId(), observation.mode(),
                     observation.turns(), observation.memories(), observation.retrievals(), observation.lifecycle(),
-                    observation.extractionScore(), score, observation.limitations());
+                    observation.extractionScore(), score, observation.limitations(), observation.providerUsage());
             boolean recoverJudgeFailure = item.error() != null && item.error().startsWith("judge_");
             results.add(new EvaluationSuite.Case(item.fixtureId(), item.category(), item.difficulty(), item.importance(),
                     item.repetition(), recoverJudgeFailure ? "completed" : item.status(), recoverJudgeFailure ? null : item.error(),

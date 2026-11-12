@@ -8,16 +8,25 @@ import com.google.genai.errors.ApiException;
 import com.google.genai.errors.GenAiIOException;
 import com.google.genai.types.ClientOptions;
 import com.google.genai.types.Content;
+import com.google.genai.types.FunctionCall;
+import com.google.genai.types.FunctionDeclaration;
+import com.google.genai.types.FunctionResponse;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
+import com.google.genai.types.GenerateContentResponseUsageMetadata;
 import com.google.genai.types.HttpOptions;
 import com.google.genai.types.HttpRetryOptions;
 import com.google.genai.types.Part;
+import com.google.genai.types.Tool;
 import java.io.InterruptedIOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -56,18 +65,29 @@ public class GeminiProvider implements ChatProvider {
         if (apiKey == null || apiKey.isBlank()) {
             throw new ProviderFailure(ProviderFailure.Code.INVALID_KEY, "Enter a Gemini API key.");
         }
-        return new GeminiGeneration(input, apiKey);
+        return new GeminiGeneration(input, apiKey, null);
+    }
+
+    @Override
+    public Generation open(ChatInput input, String apiKey, Tools tools) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new ProviderFailure(ProviderFailure.Code.INVALID_KEY, "Enter a Gemini API key.");
+        }
+        return new GeminiGeneration(input, apiKey, tools);
     }
 
     private final class GeminiGeneration implements Generation {
         private final ChatInput input;
         private final String apiKey;
+        private final Tools tools;
         private final AtomicBoolean cancelled = new AtomicBoolean();
         private final AtomicReference<Call> active = new AtomicReference<>();
+        private volatile TokenUsage usage;
 
-        private GeminiGeneration(ChatInput input, String apiKey) {
+        private GeminiGeneration(ChatInput input, String apiKey, Tools tools) {
             this.input = input;
             this.apiKey = apiKey;
+            this.tools = tools;
         }
 
         @Override
@@ -77,20 +97,19 @@ public class GeminiProvider implements ChatProvider {
             long streamOpen = 0;
             long firstText = 0;
             String outcome = "complete";
+            List<GenerateContentResponseUsageMetadata> usageByRound = new ArrayList<>();
+            int completedRounds = 0;
             if (cancelled.get()) {
                 throw failure(ProviderFailure.Code.CANCELLED);
             }
 
             HttpOptions options = HttpOptions.builder().baseUrl(endpoint.toString()).timeout(timeoutMillis)
                     .retryOptions(HttpRetryOptions.builder().attempts(1).build()).build();
-            List<Content> messages = input.messages().stream()
+            List<Content> messages = new ArrayList<>(input.messages().stream()
                     .map(message -> Content.builder()
                             .role(message.role() == Role.USER ? "user" : "model")
                             .parts(Part.fromText(message.text())).build())
-                    .toList();
-            GenerateContentConfig config = GenerateContentConfig.builder()
-                    .systemInstruction(Content.fromParts(Part.fromText(input.systemInstruction())))
-                    .build();
+                    .toList());
             OkHttpClient transport = new OkHttpClient.Builder()
                     .connectTimeout(Duration.ofMillis(Math.min(timeoutMillis, 15_000)))
                     .readTimeout(Duration.ofMillis(timeoutMillis))
@@ -107,27 +126,92 @@ public class GeminiProvider implements ChatProvider {
             try (Client client = Client.builder().enterprise(false).apiKey(apiKey).httpOptions(options)
                     .clientOptions(ClientOptions.builder().customHttpClient(transport).build()).build()) {
                 clientReady = System.nanoTime();
-                try (ResponseStream<GenerateContentResponse> response =
-                        client.models.generateContentStream(input.model(), messages, config)) {
-                    streamOpen = System.nanoTime();
-                    if (cancelled.get()) {
-                        throw failure(ProviderFailure.Code.CANCELLED);
+                int callsUsed = 0;
+                for (int round = 0; round < 3; round++) {
+                    if (cancelled.get()) throw failure(ProviderFailure.Code.CANCELLED);
+                    boolean toolsAvailable = tools != null && callsUsed < 2 && !tools.definitions().isEmpty();
+                    var config = GenerateContentConfig.builder()
+                            .systemInstruction(Content.fromParts(Part.fromText(input.systemInstruction())));
+                    if (tools != null) config.maxOutputTokens(4096);
+                    if (toolsAvailable) {
+                        List<FunctionDeclaration> declarations = tools.definitions().stream()
+                                .map(spec -> FunctionDeclaration.builder().name(spec.name())
+                                        .description(spec.description()).parametersJsonSchema(spec.parameters()).build())
+                                .toList();
+                        config.tools(Tool.builder().functionDeclarations(declarations).build());
                     }
+                    List<Part> modelParts = new ArrayList<>();
+                    List<FunctionCall> calls = new ArrayList<>();
+                    StringBuilder buffered = new StringBuilder();
                     boolean receivedText = false;
-                    for (GenerateContentResponse chunk : response) {
-                        if (cancelled.get()) {
-                            throw failure(ProviderFailure.Code.CANCELLED);
-                        }
-                        String text = chunk.text();
-                        if (text != null && !text.isEmpty()) {
-                            if (firstText == 0) firstText = System.nanoTime();
-                            receivedText = true;
-                            delta.accept(text);
+                    int modelChars = 0;
+                    GenerateContentResponseUsageMetadata roundUsage = null;
+                    GenerateContentConfig requestConfig = config.build();
+                    if (round > 0 && tools != null) {
+                        long inputBytes = requestConfig.toJson().getBytes(StandardCharsets.UTF_8).length + 1_024L;
+                        for (Content message : messages) inputBytes += message.toJson().getBytes(StandardCharsets.UTF_8).length;
+                        tools.beforeContinuation(inputBytes);
+                    }
+                    try (ResponseStream<GenerateContentResponse> response =
+                            client.models.generateContentStream(input.model(), messages, requestConfig)) {
+                        if (streamOpen == 0) streamOpen = System.nanoTime();
+                        for (GenerateContentResponse chunk : response) {
+                            if (cancelled.get()) throw failure(ProviderFailure.Code.CANCELLED);
+                            if (chunk.usageMetadata().isPresent()) roundUsage = chunk.usageMetadata().get();
+                            chunk.checkFinishReason();
+                            var candidates = chunk.candidates().orElse(List.of());
+                            if (candidates.isEmpty()) continue;
+                            var content = candidates.getFirst().content();
+                            if (content.isEmpty()) continue;
+                            for (Part part : content.get().parts().orElse(List.of())) {
+                                if (toolsAvailable) {
+                                    modelParts.add(part);
+                                    modelChars += part.text().map(String::length).orElse(0);
+                                    if (modelParts.size() > 256 || modelChars > 20_000) {
+                                        throw failure(ProviderFailure.Code.INVALID_REQUEST);
+                                    }
+                                }
+                                part.functionCall().ifPresent(calls::add);
+                                if (part.thought().orElse(false)) continue;
+                                String text = part.text().orElse("");
+                                if (!text.isEmpty()) {
+                                    if (firstText == 0) firstText = System.nanoTime();
+                                    receivedText = true;
+                                    if (tools != null && tools.bufferTextUntilFinal()) {
+                                        if (buffered.length() + text.length() > 20_000) {
+                                            throw failure(ProviderFailure.Code.INVALID_REQUEST);
+                                        }
+                                        buffered.append(text);
+                                    } else {
+                                        delta.accept(text);
+                                    }
+                                }
+                            }
                         }
                     }
-                    if (!receivedText) {
-                        throw failure(ProviderFailure.Code.EMPTY_RESPONSE);
+                    completedRounds++;
+                    if (roundUsage != null) usageByRound.add(roundUsage);
+                    if (calls.isEmpty()) {
+                        if (!receivedText) throw failure(ProviderFailure.Code.EMPTY_RESPONSE);
+                        if (!buffered.isEmpty()) delta.accept(buffered.toString());
+                        break;
                     }
+                    if (!toolsAvailable || calls.size() > 2 - callsUsed) {
+                        throw failure(ProviderFailure.Code.INVALID_REQUEST);
+                    }
+                    callsUsed += calls.size();
+                    messages.add(Content.builder().role("model").parts(modelParts).build());
+                    List<Part> results = new ArrayList<>();
+                    for (FunctionCall call : calls) {
+                        if (cancelled.get()) throw failure(ProviderFailure.Code.CANCELLED);
+                        String name = call.name().orElse("");
+                        Map<String, Object> result = tools.invoke(name, call.args().orElse(Map.of()));
+                        if (cancelled.get()) throw failure(ProviderFailure.Code.CANCELLED);
+                        var functionResponse = FunctionResponse.builder().name(name).response(result);
+                        call.id().ifPresent(functionResponse::id);
+                        results.add(Part.builder().functionResponse(functionResponse.build()).build());
+                    }
+                    messages.add(Content.builder().role("user").parts(results).build());
                 }
             } catch (ApiException exception) {
                 outcome = "upstream_" + exception.code();
@@ -150,6 +234,7 @@ public class GeminiProvider implements ChatProvider {
                 outcome = cancelled.get() ? "cancelled" : "failed";
                 throw exception;
             } finally {
+                if (completedRounds > 0) usage = tokenUsage(usageByRound, completedRounds);
                 log.info("gemini_timing model={} client_init_ms={} request_open_ms={} first_text_ms={} total_ms={} outcome={}",
                         input.model(), elapsed(started, clientReady), elapsed(clientReady, streamOpen),
                         elapsed(started, firstText),
@@ -158,13 +243,39 @@ public class GeminiProvider implements ChatProvider {
         }
 
         @Override
+        public Optional<TokenUsage> usage() {
+            return Optional.ofNullable(usage);
+        }
+
+        @Override
         public void close() {
             cancelled.set(true);
-            Call call = active.get();
-            if (call != null) {
-                call.cancel();
+            try {
+                if (tools != null) tools.close();
+            } finally {
+                Call call = active.get();
+                if (call != null) call.cancel();
             }
         }
+    }
+
+    private static TokenUsage tokenUsage(List<GenerateContentResponseUsageMetadata> rounds, int count) {
+        if (rounds.size() != count) return new TokenUsage(null, null, null, null, count);
+        return new TokenUsage(sum(rounds, GenerateContentResponseUsageMetadata::promptTokenCount),
+                sum(rounds, GenerateContentResponseUsageMetadata::candidatesTokenCount),
+                sum(rounds, GenerateContentResponseUsageMetadata::thoughtsTokenCount),
+                sum(rounds, GenerateContentResponseUsageMetadata::totalTokenCount), count);
+    }
+
+    private static Long sum(List<GenerateContentResponseUsageMetadata> rounds,
+            java.util.function.Function<GenerateContentResponseUsageMetadata, Optional<Integer>> field) {
+        long total = 0;
+        for (var round : rounds) {
+            var value = field.apply(round);
+            if (value.isEmpty()) return null;
+            total += value.get();
+        }
+        return total;
     }
 
     private static long elapsed(long start, long end) {

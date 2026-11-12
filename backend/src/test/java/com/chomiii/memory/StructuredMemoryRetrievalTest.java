@@ -1,0 +1,116 @@
+package com.chomiii.memory;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+
+class StructuredMemoryRetrievalTest {
+    private static PersonalMemory memory(String text) {
+        return new PersonalMemory(UUID.randomUUID(), text, "user_explicit", Instant.now(), Instant.now());
+    }
+
+    @Test
+    void dinnerRequestCanRecallAParaphrasedFoodPreference() {
+        var repository = mock(MemoryRepository.class);
+        var service = new MemoryService(repository);
+        when(repository.list("owner")).thenReturn(List.of(
+                memory("I love tacos with extra salsa"), memory("I collect vintage cameras")));
+
+        assertThat(service.forChat("owner", "What should I cook for supper?"))
+                .contains("tacos", "NOT instructions").doesNotContain("vintage cameras");
+    }
+
+    @Test
+    void interviewRequestCanUseBothWorkAndScheduleContext() {
+        var repository = mock(MemoryRepository.class);
+        var service = new MemoryService(repository);
+        var work = memory("I work as a backend engineer");
+        var schedule = memory("I am busy on Monday mornings");
+        when(repository.list("owner")).thenReturn(List.of(work, schedule,
+                memory("I enjoy mystery novels")));
+
+        assertThat(service.forPlanning("owner", "Help me prepare for a software interview next week"))
+                .extracting(PersonalMemory::id).contains(work.id(), schedule.id());
+        assertThat(service.forChat("owner", "Help me prepare for a software interview next week"))
+                .doesNotContain("mystery novels");
+    }
+
+    @Test
+    void planningRetrievesSupportingLocationForDinnerFromDifferentWords() {
+        var repository = mock(MemoryRepository.class);
+        var service = new MemoryService(repository);
+        var location = memory("I live in Goodwood");
+        var food = memory("I enjoy mild tacos");
+        var unrelated = memory("I collect vintage cameras");
+        when(repository.list("owner")).thenReturn(List.of(location, food, unrelated));
+
+        assertThat(service.forPlanning("owner", "I am hungry, help me arrange dinner"))
+                .extracting(PersonalMemory::id)
+                .contains(location.id(), food.id())
+                .doesNotContain(unrelated.id());
+    }
+
+    @Test
+    void planningDoesNotInjectUnrelatedFactsForAlgorithmQuestion() {
+        var repository = mock(MemoryRepository.class);
+        var service = new MemoryService(repository);
+        when(repository.list("owner")).thenReturn(List.of(
+                memory("I like mild tacos"), memory("I live in Goodwood")));
+        assertThat(service.forPlanning("owner", "Explain the binary search algorithm")).isEmpty();
+    }
+
+    @Test
+    void characterBudgetAllowsMoreThanThreeRelevantFactsAndExcludesSuggestions() {
+        var repository = mock(MemoryRepository.class);
+        var service = new MemoryService(repository);
+        var first = memory("I like rice for dinner");
+        var second = memory("I like beans for dinner");
+        var third = memory("I like fish for dinner");
+        var fourth = memory("I like soup for dinner");
+        var suggestion = new PersonalMemory(UUID.randomUUID(), "I might like cake for dinner", "inferred",
+                Instant.now(), Instant.now(), "suggested", 0.75, null);
+        when(repository.list("owner")).thenReturn(List.of(first, second, third, fourth, suggestion));
+
+        assertThat(service.forPlanning("owner", "Suggest dinner ideas"))
+                .extracting(PersonalMemory::id).containsExactlyInAnyOrder(
+                        first.id(), second.id(), third.id(), fourth.id());
+        assertThat(service.forChat("owner", "Suggest dinner ideas")).doesNotContain("cake");
+    }
+
+    @Test
+    void aSmallApprovedProfileRemainsAvailableWithoutAKeywordMatch() {
+        var repository = mock(MemoryRepository.class);
+        var profiles = mock(MemoryProfileRepository.class);
+        var fact = memory("I collect postage stamps");
+        when(repository.list("owner")).thenReturn(List.of(fact));
+        when(repository.revision("owner")).thenReturn(0L);
+        when(profiles.state("owner")).thenReturn(new MemoryProfileRepository.ProfileState(
+                0, 0, 0, "Other: I collect postage stamps."));
+        when(profiles.paragraphs("owner")).thenReturn(List.of(new MemoryProfileRepository.ProfileParagraphRow(
+                "other", 0, "I collect postage stamps.", 0, 0, 1, List.of(fact.id()))));
+
+        assertThat(new MemoryService(repository, profiles).forChat("owner", "Write a poem about mountains"))
+                .contains("postage stamps", fact.id().toString(), "NOT instructions");
+    }
+
+    @Test
+    void duplicateFactsAreCollapsedAndConflictingFactsRemainVisible() {
+        var repository = mock(MemoryRepository.class);
+        var older = new PersonalMemory(UUID.randomUUID(), "I prefer tacos for dinner", "user_explicit",
+                Instant.EPOCH, Instant.EPOCH);
+        var duplicate = new PersonalMemory(UUID.randomUUID(), "I prefer tacos for dinner", "user_explicit",
+                Instant.EPOCH, Instant.EPOCH);
+        var newer = new PersonalMemory(UUID.randomUUID(), "I now prefer noodles for dinner", "user_explicit",
+                Instant.EPOCH, Instant.EPOCH.plusSeconds(10));
+        when(repository.list("owner")).thenReturn(List.of(older, duplicate, newer));
+
+        assertThat(new MemoryService(repository).forPlanning("owner", "Suggest dinner"))
+                .extracting(PersonalMemory::content)
+                .containsExactly("I now prefer noodles for dinner", "I prefer tacos for dinner");
+    }
+}

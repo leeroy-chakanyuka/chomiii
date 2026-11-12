@@ -3,6 +3,9 @@ package com.chomiii.chat;
 import com.chomiii.agent.AgentInstructions;
 import com.chomiii.memory.MemoryService;
 import com.chomiii.memory.MemoryLearningService;
+import com.chomiii.memory.MemorySearchTool;
+import com.chomiii.memory.HybridMemorySearch;
+import com.chomiii.memory.embedding.EmbeddingIndexer;
 import com.chomiii.memory.PersonalMemory;
 import com.chomiii.planning.PlanningRouter;
 import com.chomiii.planning.PlanningService;
@@ -10,6 +13,9 @@ import java.util.ArrayList;
 import com.chomiii.provider.ChatProvider;
 import com.chomiii.provider.ProviderCatalog;
 import com.chomiii.provider.ProviderFailure;
+import com.chomiii.tools.ToolTurn;
+import com.chomiii.tools.ToolRegistry;
+import com.chomiii.tools.ToolExecutionContext;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +34,9 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.TransactionException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Service
@@ -44,12 +52,32 @@ public class ChatStreamService {
     private final ProviderCatalog catalog;
     private final List<ChatProvider> providers;
     private final ExecutorService executor;
+    private final boolean memorySearchEnabled;
+    private final EmbeddingIndexer embeddingIndexer;
+    private final HybridMemorySearch hybridMemorySearch;
+    private final ToolRegistry toolRegistry;
     private final Semaphore slots = new Semaphore(8);
     private final ConcurrentHashMap<UUID, Active> active = new ConcurrentHashMap<>();
 
     public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
             MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
-            @Qualifier("chatExecutor") ExecutorService chatExecutor) {
+            ExecutorService chatExecutor) {
+        this(store, conversations, memories, learning, catalog, providers, chatExecutor, true);
+    }
+
+    public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
+            MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
+            ExecutorService chatExecutor, boolean memorySearchEnabled) {
+        this(store, conversations, memories, learning, catalog, providers, chatExecutor, memorySearchEnabled, null, null,
+                new ToolRegistry(List.of(new MemorySearchTool(memories, null))));
+    }
+
+    @Autowired
+    public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
+            MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
+            @Qualifier("chatExecutor") ExecutorService chatExecutor,
+            @Value("${chomiii.memory.search-tool.enabled:true}") boolean memorySearchEnabled,
+            EmbeddingIndexer embeddingIndexer, HybridMemorySearch hybridMemorySearch, ToolRegistry toolRegistry) {
         this.store = store;
         this.conversations = conversations;
         this.memories = memories;
@@ -57,6 +85,10 @@ public class ChatStreamService {
         this.catalog = catalog;
         this.providers = List.copyOf(providers);
         this.executor = chatExecutor;
+        this.memorySearchEnabled = memorySearchEnabled;
+        this.embeddingIndexer = embeddingIndexer;
+        this.hybridMemorySearch = hybridMemorySearch;
+        this.toolRegistry = toolRegistry;
     }
 
     public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request, String key) {
@@ -100,11 +132,22 @@ public class ChatStreamService {
         List<PersonalMemory> planningMemories;
         ChatProvider.ChatInput input;
         try {
-            planningMemories = plan && useMemory ? planningMemories(memories, owner, request.content()) : List.of();
+            planningMemories = new ArrayList<>(plan && useMemory
+                    ? planningMemories(memories, owner, request.content()) : List.of());
+            String memoryContext = useMemory ? retrievalContext(memories, owner, request.content()) : "";
+            if (useMemory && hybridMemorySearch != null) {
+                try {
+                    var supplement = hybridMemorySearch.augment(owner, request.content(), key, memoryContext);
+                    memoryContext = supplement.context();
+                    if (plan) planningMemories.addAll(supplement.memories());
+                } catch (RuntimeException unavailable) {
+                    // Optional semantic retrieval cannot prevent a normal reply.
+                }
+            }
             if (plan) {
-                input = PLANNING.input(request.model(), pending.history(), request.content().strip(), planningMemories);
+                input = PLANNING.input(request.model(), pending.history(), request.content().strip(),
+                        planningMemories, memoryContext);
             } else {
-                String memoryContext = useMemory ? retrievalContext(memories, owner, request.content()) : "";
                 boolean hasMemory = !memoryContext.isBlank();
                 int memoryChars = hasMemory ? memoryContext.length() : 0;
                 List<ChatProvider.Message> messages = new ArrayList<>(
@@ -131,7 +174,7 @@ public class ChatStreamService {
         try {
             executor.execute(() -> run(request.requestId(), pending.assistantId(), owner, conversation,
                     provider, input, key, generation, emitter, memoryRevision, requestStartedNanos,
-                    storeReadyNanos, contextReadyNanos, plan, planningMemories));
+                    storeReadyNanos, contextReadyNanos, plan, planningMemories, useMemory));
         } catch (RuntimeException exception) {
             active.remove(request.requestId(), generation);
             slots.release();
@@ -163,7 +206,7 @@ public class ChatStreamService {
     private void run(UUID requestId, UUID assistantId, String owner, UUID conversation, ChatProvider provider,
             ChatProvider.ChatInput input, String key, Active generation, SseEmitter emitter, Long memoryRevision,
             long requestStartedNanos, long storeReadyNanos, long contextReadyNanos,
-            boolean planning, List<PersonalMemory> planningMemories) {
+            boolean planning, List<PersonalMemory> planningMemories, boolean useMemory) {
         long workerStartedNanos = System.nanoTime();
         StringBuilder response = new StringBuilder();
         long[] firstDeltaNanos = {0L};
@@ -172,7 +215,17 @@ public class ChatStreamService {
         String outcome = "failed";
         try {
             send(emitter, "start", Map.of("requestId", requestId.toString(), "messageId", assistantId.toString()));
-            try (ChatProvider.Generation providerStream = provider.open(input, key)) {
+            var toolMemoryIds = new java.util.HashSet<UUID>();
+            var toolContext = new ToolExecutionContext(owner, conversation, requestId, key,
+                    useMemory && memorySearchEnabled, observation -> {
+                if ("memory.search".equals(observation.toolName())) toolMemoryIds.addAll(observation.references());
+            });
+            var session = new ToolTurn(toolRegistry, toolContext, planning);
+            var tools = session.definitions().isEmpty() ? null : session;
+            if (tools == null) session.close();
+            generation.setTools(tools);
+            try (ChatProvider.Generation providerStream = tools == null
+                    ? provider.open(input, key) : provider.open(input, key, tools)) {
                 generation.set(providerStream);
                 if (generation.cancelled.get()) {
                     throw new CancellationException();
@@ -194,7 +247,7 @@ public class ChatStreamService {
                     }
                 };
                 if (planning) {
-                    var plan = PLANNING.read(providerStream, planningMemories);
+                    var plan = PLANNING.readWithAdditionalMemoryIds(providerStream, planningMemories, toolMemoryIds);
                     if (generation.cancelled.get()) throw new CancellationException();
                     String rendered = PLANNING.render(plan);
                     if (rendered.length() > MAX_REPLY_CHARS) {
@@ -205,6 +258,8 @@ public class ChatStreamService {
                 } else {
                     providerStream.stream(delta);
                 }
+            } finally {
+                if (tools != null) tools.close();
             }
             if (generation.cancelled.get()) {
                 throw new CancellationException();
@@ -268,6 +323,7 @@ public class ChatStreamService {
                 } catch (RuntimeException ignored) {
                     log.debug("memory_learning scheduling unavailable");
                 }
+                if (useMemory && embeddingIndexer != null) embeddingIndexer.schedule(owner, key);
             }
         }
     }
@@ -280,7 +336,8 @@ public class ChatStreamService {
      */
     private static String retrievalContext(MemoryService memories, String owner, String question) {
         try {
-            return memories.forChat(owner, question);
+            String context = memories.forChat(owner, question);
+            return context == null ? "" : context;
         } catch (DataAccessException | TransactionException unavailable) {
             return "";
         }
@@ -325,6 +382,7 @@ public class ChatStreamService {
         private final AtomicBoolean cancelled = new AtomicBoolean();
         private final AtomicBoolean finished = new AtomicBoolean();
         private final AtomicReference<ChatProvider.Generation> provider = new AtomicReference<>();
+        private final AtomicReference<ChatProvider.Tools> tools = new AtomicReference<>();
 
         private Active(String owner, UUID conversation) {
             this.owner = owner;
@@ -338,8 +396,15 @@ public class ChatStreamService {
             }
         }
 
+        private void setTools(ChatProvider.Tools session) {
+            tools.set(session);
+            if (session != null && cancelled.get()) session.close();
+        }
+
         private void cancelUnlessFinished() {
             if (!finished.get() && cancelled.compareAndSet(false, true)) {
+                ChatProvider.Tools session = tools.get();
+                if (session != null) session.close();
                 ChatProvider.Generation stream = provider.get();
                 if (stream != null) {
                     stream.close();

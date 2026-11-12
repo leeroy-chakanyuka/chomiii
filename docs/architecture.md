@@ -58,12 +58,11 @@ within 16,000 Java string characters, prioritizing the newest complete history. 
 order and role and excludes failed or interrupted assistant messages. It reads
 only the owner-checked conversation. The M1.5 prompt layer loads only the
 short versioned `agent/SYSTEM.md` from the Java classpath at startup. User
-text stays in the user role, never in the trusted system instruction. No
-skill registry, classification model, retrieval or long-term memory is active.
+text stays in the user role, never in the trusted system instruction. The
+memory service adds bounded personal context as a separate user-role message.
 
-This remains a character-based, single-conversation context selector, not a
-token-aware personal memory engine. See [context.md](context.md) for the exact
-current limits and the plans for future context sources.
+The conversation-history selector uses a character budget rather than model
+tokens. See [context.md](context.md) for the history policy and context limits.
 
 ## Browser sessions and credentials
 
@@ -90,7 +89,8 @@ The bundled Nginx config disables `/api` access logging. Hosted proxies must
 also avoid logging the `X-Gemini-Api-Key` header or request bodies. Do not
 enable credential-bearing request traces on the Java server.
 
-Anonymous cookies expire after 180 days. Users cannot reopen their chats if
+Anonymous cookies expire after 180 days. A browser reload retains the cookie
+and access to its memories. Users cannot reopen their chats or memories if
 the cookie is removed or expires. Sessions do not sync between devices, and
 expired-session data has no automated retention cleanup yet. Reassess abuse
 prevention, data retention, and privacy before a widely accessible service.
@@ -124,8 +124,8 @@ for everyday-user requirements and the design lessons we intend to adopt.
 than Beacon/third-party memory infrastructure. The owner-scoped
 `personal_memories` Flyway V3 table stores explicit user-saved facts.
 `MemoryController` exposes inspectable CRUD, `MemoryService` enforces
-limits and ownership, and `MemorySelector` chooses a bounded number of
-lexically relevant facts. `ChatStreamService` supplies selected records
+limits and ownership, and `MemoryRetrieval` ranks lexical and topic matches.
+`ChatStreamService` supplies selected records
 as a **user-role context message** before the current request; these
 records are not part of the system prompt and grant no tool privileges.
 
@@ -138,10 +138,10 @@ flowchart LR
     Memory -->|relevant user data| Provider["ChatProvider / Gemini"]
 ```
 
-Memory identity currently follows the existing anonymous cookie, **not
-a named cross-device user**. Retrieval makes an indexed local DB read
-but no extra model call. The M2 acceptance and retention requirements
-are outlined in [M2 design](m2-design.md).
+Memory identity follows the existing anonymous cookie, not a named cross-device
+user. Lexical retrieval makes a local database read. Optional embedding indexing
+can make additional provider calls after a reply. The M2 acceptance and
+retention requirements are outlined in [M2 design](m2-design.md).
 
 The session filter also protects `/api/memories`, applying the same owner,
 origin, and no-store rules as conversation requests. Before storing a chat
@@ -160,8 +160,8 @@ disposable local database. The database URL and Flyway target are pinned to the
 validated test database before Spring starts. A provider wrapper counts and
 limits opt-in live calls, while the scorer remains independent of the Gemini
 SDK. An optional separate-family judge or a human can review ambiguous matches.
-The fixture contract describes expectations; the application planner is a
-separate plan-only path and does not execute tools.
+The fixture contract describes expectations. The planner can invoke the internal
+read-only memory search tool, but it cannot execute external actions.
 See [evaluation instructions](../evals/README.md) for commands and limitations.
 
 ## M3.1 planning path
@@ -175,3 +175,109 @@ dependency graph before the service emits a structured event and readable
 proposal. The capability catalogue describes future operations and contains
 no execution functions. See [M3.1 design](m3.1-design.md) and the
 [memory and planning flow](memory-planning-flow.md).
+
+## Persistent profile and optional embeddings
+
+Canonical `personal_memories` remain authoritative. Flyway V4 adds an
+owner-scoped profile, categorized paragraphs, and their source memory IDs.
+`MemoryService` refreshes those rows inside the canonical mutation transaction
+under the owner's session-row lock. The profile records both the user's memory
+revision and a content revision for accepted background learning. The original
+memory revision continues to reject extraction results from before a correction
+or deletion. Ordinary reads validate the revisions and source relationships
+without regenerating the profile.
+
+Chat and planning receive a bounded profile and selected facts as lower-trust
+user data. The `memory.search` function can request additional approved facts.
+The Gemini adapter sends native function calls and function responses in the
+same generation. It retains provider continuation signatures only for that
+request. The application does not persist those parts in chat history. The
+tool has per-turn call, result, and execution-time limits. Recall off removes
+the tool and the automatic memory context. Set
+`chomiii.memory.search-tool.enabled=false` to disable the tool independently.
+
+`MemoryConflictDetector` compares general claim words, scope, negation, and
+explicit change markers. The extraction response can also supply a subject
+label. The comparison is heuristic; uncertain changes remain suggestions.
+A person can explicitly approve a suggestion as a replacement for an active
+memory. The previous record is marked superseded, excluded from recall and
+derived indexes, and remains individually deletable. Delayed extraction is
+still checked against the owner's memory revision.
+
+Flyway V5 adds a durable job and vector per canonical memory. The vector is a
+JSON array of normalized 32-bit values stored in SQL `TEXT`, with the owner,
+memory ID, content hash, model, dimensions, configuration, and timestamp.
+JSON is portable and inspectable but uses more space and parsing time than a
+binary float array. A future PostgreSQL deployment could use `pgvector` for
+indexed nearest-neighbor search after corpus size and measurements justify
+the database-specific dependency. The current implementation compares vectors
+in Java and adds no vector database.
+
+Embedding generation is disabled by default. Set
+`chomiii.memory.embeddings.enabled=true` to permit indexing. Canonical changes
+queue work in the same transaction, even when indexing is disabled. After a
+successful recall-enabled chat, a bounded worker uses that turn's Gemini key
+to process pending jobs for that owner. The key is never stored in the jobs.
+After a restart, pending jobs remain available. An interrupted running job can
+be reclaimed after its lease expires when that owner next completes a chat.
+Retries stop after five attempts. A failure leaves lexical recall available.
+Indexing is at least once: a crash after a provider response but before the
+database commit can repeat that request. A ready vector is reused while its
+content hash and embedding configuration match.
+
+With embeddings enabled, `memory.search` can combine lexical ranking with
+cosine similarity over compatible stored vectors. Automatic context attempts a
+semantic lookup only for an explicit personal request with no lexical hit.
+The query embedding has a one-second deadline. A bounded, two-minute cache uses
+the owner hash, query hash, and embedding configuration as its key. Missing
+vectors, provider errors, quota exhaustion, and timeouts fall back to lexical
+results. The similarity threshold and ranking weights require evaluation.
+
+The default provider requests 768 dimensions from `gemini-embedding-2` and
+uses Google's asymmetric search prefixes. A model or configuration change makes
+older vectors incompatible. To queue an owner's memories for the configured
+model, send `POST /api/memories/reindex` with that browser's session cookie and
+the normal origin header. Reindexing removes the owner's old vectors and queues
+fresh jobs; a later eligible chat supplies the temporary provider key. Model
+calls can use quota or incur charges under the user's Google project.
+
+Google's [embedding guide](https://ai.google.dev/gemini-api/docs/embeddings)
+documents `client.models.embedContent(model, text, config)` with
+`EmbedContentConfig.builder().outputDimensionality(768).build()`. For
+`gemini-embedding-2`, documents use `title: none | text: ...`, queries use
+`task: search result | query: ...`, and the `taskType` field is unsupported.
+Google states that 768-dimensional outputs are normalized and that embeddings
+from `gemini-embedding-001` and `gemini-embedding-2` are incompatible.
+
+On 2026-11-12, Google's [pricing page](https://ai.google.dev/gemini-api/docs/pricing#gemini-embedding-2)
+listed standard text embedding as free on the free tier and $0.20 per million
+input tokens on the paid tier. The page states that free-tier content can be
+used to improve Google's products. [Rate limits](https://ai.google.dev/gemini-api/docs/rate-limits)
+are per project and vary by model and tier. Check the project's current limits
+and terms before enabling indexing.
+
+## Internal tool runtime
+
+`ToolRegistry` discovers `InternalTool` beans and checks their immutable
+`ToolDefinition` schemas and unique names at startup. A definition declares a
+capability and a read or write effect. `ToolTurn` selects available tools,
+copies and validates the arguments, and asks `ToolAuthorization` before
+execution. The argument snapshot is immutable and has a size limit. Results
+contain either `output` or an `error` with an `errorCode`. Cancellation closes
+the tool turn and interrupts an in-flight call. Tool results are untrusted data.
+
+`ToolExecutionContext` carries the server-resolved owner and the conversation
+and request IDs. The default `ReadOnlyToolAuthorization` permits `memory.read`
+only when recall is enabled and denies other capabilities, including reads.
+There is no grant store or approval interface yet. A future
+policy can use the trusted context, capability, effect, and arguments to check
+persistent grants or a one-time approval before a write.
+
+To add a tool, implement `InternalTool` as a Spring bean with a `ToolDefinition`,
+availability check, and `execute` method. Schemas support objects, arrays,
+strings, numbers, integers, booleans, required fields, enums, and bounded
+values. The registry rejects unsupported schema keywords. To add an inference
+provider, implement `ChatProvider`, translate the shared definitions into the
+provider's native declarations, send calls through `ChatProvider.Tools`, and
+preserve native continuation state and cancellation. Tool business logic does
+not import the provider SDK.

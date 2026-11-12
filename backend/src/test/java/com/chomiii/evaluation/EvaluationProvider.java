@@ -2,6 +2,7 @@ package com.chomiii.evaluation;
 
 import com.chomiii.provider.ChatProvider;
 import com.chomiii.provider.ProviderFailure;
+import com.chomiii.tools.ToolDefinition;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +20,8 @@ final class EvaluationProvider implements ChatProvider {
         TimedOut() { super("Evaluation provider deadline exceeded"); }
     }
     record Call(String kind, String text, ChatInput input, String output, long durationNanos,
-            Long firstDeltaNanos, boolean providerInvoked, boolean outputTruncated, String failure) {}
+            Long firstDeltaNanos, boolean providerInvoked, boolean outputTruncated, String failure,
+            TokenUsage usage) {}
     private final Map<String, String> extractions;
     private final Map<String, String> answers;
     private final List<Call> calls = new CopyOnWriteArrayList<>();
@@ -49,6 +51,10 @@ final class EvaluationProvider implements ChatProvider {
     @Override public String id() { return "gemini"; }
 
     @Override public Generation open(ChatInput input, String apiKey) {
+        return open(input, apiKey, null);
+    }
+
+    @Override public Generation open(ChatInput input, String apiKey, Tools tools) {
         boolean extraction = input.systemInstruction().contains("memory-extraction classifier");
         boolean planning = input.systemInstruction().contains("assistant preparing a proposal");
         String text = input.messages().getLast().text();
@@ -63,13 +69,25 @@ final class EvaluationProvider implements ChatProvider {
                         input.systemInstruction().getBytes(StandardCharsets.UTF_8).length
                                 + input.messages().stream().mapToLong(message -> message.text().getBytes(StandardCharsets.UTF_8).length).sum());
             } catch (RuntimeException failure) {
-                calls.add(new Call(kind, text, input, null, 0, null, false, false, failure.getClass().getSimpleName()));
+                calls.add(new Call(kind, text, input, null, 0, null, false, false, failure.getClass().getSimpleName(), null));
                 throw failure;
             }
             try {
-                upstream = delegate.open(input, apiKey);
+                Tools bounded = tools == null ? null : new Tools() {
+                    @Override public List<ToolDefinition> definitions() { return tools.definitions(); }
+                    @Override public Map<String, Object> invoke(String name, Map<String, Object> arguments) {
+                        return tools.invoke(name, arguments);
+                    }
+                    @Override public boolean bufferTextUntilFinal() { return tools.bufferTextUntilFinal(); }
+                    @Override public void beforeContinuation(long inputBytes) {
+                        budget.reserve(LiveBudget.Kind.TOOL_CONTINUATION, inputBytes);
+                        tools.beforeContinuation(inputBytes);
+                    }
+                    @Override public void close() { tools.close(); }
+                };
+                upstream = bounded == null ? delegate.open(input, apiKey) : delegate.open(input, apiKey, bounded);
             } catch (RuntimeException failure) {
-                calls.add(new Call(kind, text, input, null, 0, null, true, false, failureName(failure)));
+                calls.add(new Call(kind, text, input, null, 0, null, true, false, failureName(failure), null));
                 throw failure;
             }
         }
@@ -112,7 +130,8 @@ final class EvaluationProvider implements ChatProvider {
                 } finally {
                     if (watchdog != null) watchdog.cancel(false);
                     calls.add(new Call(kind, text, input, received.toString(), System.nanoTime() - start,
-                            first[0] == 0 ? null : first[0], true, truncated[0], failure));
+                            first[0] == 0 ? null : first[0], true, truncated[0], failure,
+                            source == null ? null : source.usage().orElse(null)));
                 }
             }
             @Override public void close() { if (source != null) source.close(); }
