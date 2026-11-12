@@ -14,6 +14,9 @@ import com.chomiii.provider.ChatProvider;
 import com.chomiii.provider.ProviderCatalog;
 import com.chomiii.provider.ProviderFailure;
 import com.chomiii.tools.ToolTurn;
+import com.chomiii.tools.InternalTool;
+import com.chomiii.tools.TimeNowTool;
+import java.time.Clock;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +54,7 @@ public class ChatStreamService {
     private final List<ChatProvider> providers;
     private final ExecutorService executor;
     private final boolean memorySearchEnabled;
+    private final boolean timeToolEnabled;
     private final EmbeddingIndexer embeddingIndexer;
     private final HybridMemorySearch hybridMemorySearch;
     private final Semaphore slots = new Semaphore(8);
@@ -65,7 +69,7 @@ public class ChatStreamService {
     public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
             MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
             ExecutorService chatExecutor, boolean memorySearchEnabled) {
-        this(store, conversations, memories, learning, catalog, providers, chatExecutor, memorySearchEnabled, null, null);
+        this(store, conversations, memories, learning, catalog, providers, chatExecutor, memorySearchEnabled, null, null, false);
     }
 
     @Autowired
@@ -73,7 +77,8 @@ public class ChatStreamService {
             MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
             @Qualifier("chatExecutor") ExecutorService chatExecutor,
             @Value("${chomiii.memory.search-tool.enabled:true}") boolean memorySearchEnabled,
-            EmbeddingIndexer embeddingIndexer, HybridMemorySearch hybridMemorySearch) {
+            EmbeddingIndexer embeddingIndexer, HybridMemorySearch hybridMemorySearch,
+            @Value("${chomiii.tools.time.enabled:false}") boolean timeToolEnabled) {
         this.store = store;
         this.conversations = conversations;
         this.memories = memories;
@@ -82,6 +87,7 @@ public class ChatStreamService {
         this.providers = List.copyOf(providers);
         this.executor = chatExecutor;
         this.memorySearchEnabled = memorySearchEnabled;
+        this.timeToolEnabled = timeToolEnabled;
         this.embeddingIndexer = embeddingIndexer;
         this.hybridMemorySearch = hybridMemorySearch;
     }
@@ -211,8 +217,12 @@ public class ChatStreamService {
         try {
             send(emitter, "start", Map.of("requestId", requestId.toString(), "messageId", assistantId.toString()));
             List<PersonalMemory> allowedMemories = new ArrayList<>(planningMemories);
-            var tools = useMemory && memorySearchEnabled ? new ToolTurn(List.of(
-                    new MemorySearchTool(memories, owner, allowedMemories::addAll, hybridMemorySearch, key)), planning) : null;
+            List<InternalTool> offeredTools = new ArrayList<>();
+            if (useMemory && memorySearchEnabled) {
+                offeredTools.add(new MemorySearchTool(memories, owner, allowedMemories::addAll, hybridMemorySearch, key));
+            }
+            if (timeToolEnabled) offeredTools.add(new TimeNowTool(Clock.systemUTC()));
+            var tools = offeredTools.isEmpty() ? null : new ToolTurn(offeredTools, planning);
             try (ChatProvider.Generation providerStream = tools == null
                     ? provider.open(input, key) : provider.open(input, key, tools)) {
                 generation.set(providerStream);
