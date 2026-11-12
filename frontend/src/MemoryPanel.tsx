@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { addMemory, approveMemory, clearMemories, listMemories, removeMemory, updateMemory, type PersonalMemory } from './memoryApi'
+import { addMemory, approveMemory, approveMemoryReplacing, clearMemories, listMemories, removeMemory, updateMemory, type PersonalMemory } from './memoryApi'
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : 'Could not update saved memories.'
@@ -18,6 +18,8 @@ export function MemoryPanel({ onClose, useMemory = true, onMemoryChange }: {
   const [content, setContent] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
+  const [replacing, setReplacing] = useState<string | null>(null)
+  const [replacedId, setReplacedId] = useState('')
   const loadVersion = useRef(0)
 
   useEffect(() => {
@@ -76,6 +78,20 @@ export function MemoryPanel({ onClose, useMemory = true, onMemoryChange }: {
     finally { setWorking(false) }
   }
 
+  async function replaceOlder(id: string) {
+    if (working || !replacedId) return
+    setWorking(true)
+    setError('')
+    try {
+      const saved = await approveMemoryReplacing(id, replacedId)
+      setItems(previous => previous.map(item => item.id === id ? saved
+        : item.id === replacedId ? { ...item, status: 'superseded' } : item))
+      setReplacing(null)
+      setReplacedId('')
+    } catch (reason) { setError(errorText(reason)) }
+    finally { setWorking(false) }
+  }
+
   async function remove(id: string) {
     if (working) return
     setWorking(true)
@@ -109,8 +125,8 @@ export function MemoryPanel({ onClose, useMemory = true, onMemoryChange }: {
         completed reply, it may send your message to your selected AI provider again to extract
         memories, using additional model tokens and your API key.
         Clear personal facts may become active memories; uncertain or conflicting information
-        stays here as suggestions until you approve it. Resolve an outdated active fact
-        before approving a contradictory suggestion. You can inspect, correct, reject or delete
+        stays here as suggestions until you approve it. You can replace an outdated active fact
+        when approving a contradictory suggestion. You can inspect, correct, reject or delete
         what Chomi remembers. Relevant active memories may be sent to your AI provider
         in future chats. Learning never grants permission to access apps or spend money.
       </p>
@@ -167,6 +183,7 @@ export function MemoryPanel({ onClose, useMemory = true, onMemoryChange }: {
               <p>{item.content}</p>
               <span className="memory-meta">
                 {item.status === 'suggested' ? 'Suggested memory — review before use' :
+                  item.status === 'superseded' ? 'Past memory — replaced' :
                   item.source === 'user_explicit' ? 'You saved this' : 'Learned from conversation'}
                 {' · '}{Math.round(item.confidence * 100)}% confidence
                 {' · updated '}{new Date(item.updatedAt).toLocaleDateString()}
@@ -174,11 +191,27 @@ export function MemoryPanel({ onClose, useMemory = true, onMemoryChange }: {
               <div className="memory-actions">
                 {item.status === 'suggested' && <button type="button" className="memory-save"
                   disabled={working} onClick={() => void approve(item.id)}>Approve</button>}
+                {item.status === 'suggested' && items.some(other => other.status === 'active') &&
+                  <button type="button" disabled={working} onClick={() => { setReplacing(item.id); setReplacedId('') }}>
+                    Replace an older memory
+                  </button>}
                 <button type="button" disabled={working}
                   onClick={() => { setEditing(item.id); setEditText(item.content) }}>Edit</button>
                 <button type="button" disabled={working} className="memory-danger"
                   onClick={() => void remove(item.id)}>{item.status === 'suggested' ? 'Reject' : 'Delete'}</button>
               </div>
+              {replacing === item.id && <div className="memory-actions">
+                <label htmlFor={'replacement-' + item.id}>Memory to replace</label>
+                <select id={'replacement-' + item.id} value={replacedId} disabled={working}
+                  onChange={event => setReplacedId(event.target.value)}>
+                  <option value="">Choose an active memory</option>
+                  {items.filter(other => other.status === 'active').map(other =>
+                    <option key={other.id} value={other.id}>{other.content}</option>)}
+                </select>
+                <button type="button" disabled={working || !replacedId}
+                  onClick={() => void replaceOlder(item.id)}>Confirm replacement</button>
+                <button type="button" disabled={working} onClick={() => setReplacing(null)}>Cancel replacement</button>
+              </div>}
             </>}
           </li>)}</ul>}
       </>}

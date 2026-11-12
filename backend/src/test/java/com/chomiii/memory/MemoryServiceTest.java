@@ -156,4 +156,100 @@ class MemoryServiceTest {
         assertThat(service.forPlanning("other-owner", "Plan my appointments")).isEmpty();
     }
 
+    @Test
+    void definiteConflictsStaySuggestedUntilTheActiveFactIsResolved() {
+        MemoryRepository repo = mock(MemoryRepository.class);
+        MemoryService service = new MemoryService(repo);
+        UUID conversation = UUID.randomUUID();
+        when(repo.revision("owner")).thenReturn(7L);
+        when(repo.list("owner")).thenReturn(List.of(memory("I work at the Riverside library")));
+        service.learn("owner", conversation, 7L,
+                "I changed jobs and now work at the Cedar bakery", "conversation_fact", 0.95);
+        verify(repo).createLearned("owner", conversation,
+                "I changed jobs and now work at the Cedar bakery", "conversation_fact", "suggested", 0.95);
+    }
+
+    @Test
+    void unresolvedChangeStatementsStaySuggestedInsteadOfAutoActivating() {
+        MemoryRepository repo = mock(MemoryRepository.class);
+        MemoryService service = new MemoryService(repo);
+        UUID conversation = UUID.randomUUID();
+        when(repo.revision("owner")).thenReturn(7L);
+        when(repo.list("owner")).thenReturn(List.of(memory("I mainly write Python")));
+        service.learn("owner", conversation, 7L, "I now use Rust", "conversation_fact", 0.95);
+        verify(repo).createLearned("owner", conversation, "I now use Rust",
+                "conversation_fact", "suggested", 0.95);
+    }
+
+    @Test
+    void uncertainStatementsStayReviewableEvenWithoutExistingFacts() {
+        MemoryRepository repo = mock(MemoryRepository.class);
+        MemoryService service = new MemoryService(repo);
+        UUID conversation = UUID.randomUUID();
+        when(repo.revision("owner")).thenReturn(7L);
+        service.learn("owner", conversation, 7L, "I might change careers next year",
+                "conversation_fact", 0.95);
+        verify(repo).createLearned("owner", conversation, "I might change careers next year",
+                "conversation_fact", "suggested", 0.95);
+    }
+
+    @Test
+    void approvingAConflictingCorrectionIsBlockedUntilTheOldFactIsResolved() {
+        MemoryRepository repo = mock(MemoryRepository.class);
+        MemoryService service = new MemoryService(repo);
+        UUID id = UUID.randomUUID();
+        PersonalMemory proposed = new PersonalMemory(id, "I now work at the Cedar bakery",
+                "conversation_fact", Instant.now(), Instant.now(), "suggested", 0.95, null);
+        when(repo.find("owner", id)).thenReturn(java.util.Optional.of(proposed));
+        when(repo.list("owner")).thenReturn(List.of(proposed, memory("I work at the Riverside library")));
+        assertThatThrownBy(() -> service.approve("owner", id))
+                .isInstanceOf(ChatApiException.class)
+                .hasMessageContaining("conflicts with an active memory");
+        org.mockito.Mockito.verify(repo, org.mockito.Mockito.never())
+                .approve(anyString(), org.mockito.ArgumentMatchers.any(UUID.class));
+    }
+
+    @Test
+    void extractionTopicIdentityMakesAWordlessCorrectionDefinite() {
+        MemoryRepository repo = mock(MemoryRepository.class);
+        MemoryService service = new MemoryService(repo);
+        UUID id = UUID.randomUUID();
+        PersonalMemory proposed = new PersonalMemory(id, "I moved to Bulawayo", "conversation_fact",
+                Instant.now(), Instant.now(), "suggested", 0.95, null, "residence");
+        PersonalMemory residence = new PersonalMemory(UUID.randomUUID(), "I live in Harare",
+                "conversation_fact", Instant.now(), Instant.now(), "active", 0.95, null, "residence");
+        when(repo.find("owner", id)).thenReturn(java.util.Optional.of(proposed));
+        when(repo.list("owner")).thenReturn(List.of(proposed, residence));
+        assertThatThrownBy(() -> service.approve("owner", id))
+                .isInstanceOf(ChatApiException.class)
+                .hasMessageContaining("conflicts with an active memory");
+    }
+
+    @Test
+    void approvalOfAnAmbiguousChangeRemainsAvailableToTheReviewer() {
+        MemoryRepository repo = mock(MemoryRepository.class);
+        MemoryService service = new MemoryService(repo);
+        UUID id = UUID.randomUUID();
+        PersonalMemory proposed = new PersonalMemory(id, "I moved to Bulawayo", "conversation_fact",
+                Instant.now(), Instant.now(), "suggested", 0.95, null);
+        when(repo.find("owner", id)).thenReturn(java.util.Optional.of(proposed));
+        when(repo.list("owner")).thenReturn(List.of(proposed, memory("I live in Harare")));
+        when(repo.approve("owner", id)).thenReturn(true);
+        service.approve("owner", id);
+        verify(repo).approve("owner", id);
+    }
+
+    @Test
+    void learnedSlotTopicsArePersistedWithTheFact() {
+        MemoryRepository repo = mock(MemoryRepository.class);
+        MemoryService service = new MemoryService(repo);
+        UUID conversation = UUID.randomUUID();
+        when(repo.revision("owner")).thenReturn(7L);
+        service.learn("owner", conversation, 7L, "I moved to Bulawayo",
+                "conversation_fact", 0.96, "residence");
+        verify(repo).createLearned("owner", conversation, "I moved to Bulawayo",
+                "conversation_fact", "active", 0.96);
+        verify(repo).setClaimTopicByContent("owner", "I moved to Bulawayo", "residence");
+    }
+
 }

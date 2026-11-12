@@ -1,152 +1,186 @@
 package com.chomiii.memory;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /**
- * Conservative same-slot conflict gate for automatically learned personal facts.
- * It is intentionally NOT an open-domain semantic contradiction classifier:
- * only explicit first-person commute, residence, and meal-preference changes
- * are recognized.
+ * Conservative same-slot conflict gate for automatically learned personal
+ * facts, domain-agnostic by construction. The candidate and each active
+ * memory are decomposed into structured claims (slot, value, scope, change,
+ * negation, coexistence, replaced-value references) and compared with one
+ * uniform rule set; there are no per-domain conflict expressions.
+ *
  * An uncertain candidate stays suggested; this class never edits or deletes
- * an existing user-controlled memory.
+ * an existing user-controlled memory. An optional model-supplied topic label
+ * (from the regular extraction pass) refines slot identity for corrections
+ * that share no wording, but value incompatibility is always decided
+ * deterministically.
  */
 final class MemoryConflictDetector {
-    // Different locations or transport modes may coexist; an explicit change
-    // marker is required before one fact can block another.
-    private static final Pattern CHANGE = Pattern.compile(
-            "(?i)\\b(now|currently|moved|switched|instead|no\\s+longer|changed)\\b");
-    private static final Pattern COMMUTE = Pattern.compile(
-            "(?i)\\bi\\s+(?:(now|currently|usually|no\\s+longer)\\s+)?(?:commute|travel)" +
-            "(?:\\s+to\\s+(work|school|university))?\\s+(?:by|on)\\s+(?:the\\s+|a\\s+)?([\\p{L}]+)" +
-            "(?:\\s+to\\s+(work|school|university))?");
-    private static final Pattern TAKE_TO_WORK = Pattern.compile(
-            "(?i)\\bi\\s+(?:(now|currently|usually|no\\s+longer)\\s+)?take\\s+(?:the\\s+|a\\s+)?" +
-            "(bus|train|taxi|tram|subway)\\s+to\\s+(work|school|university)\\b");
-    private static final Pattern RESIDENCE = Pattern.compile(
-            "(?i)\\bi\\s+(?:(?:now|currently)\\s+)?(?:live\\s+in|reside\\s+in|moved\\s+to)" +
-            "\\s+([\\p{L}][\\p{L} '-]{1,60})");
-    private static final Pattern MEAL_PREFERENCE = Pattern.compile(
-            "(?i)\\bi\\s+(?:(now|currently|usually|no\\s+longer)\\s+)?(prefer|like|love)\\s+" +
-            "([\\p{L}][\\p{L} '-]{0,60}?)\\s+for\\s+(breakfast|lunch|dinner|supper)\\b");
-    private static final Pattern WEEKDAY = Pattern.compile("(?i)\\b(weekdays?|monday|tuesday|wednesday|thursday|friday)\\b");
-    private static final Pattern WEEKEND = Pattern.compile("(?i)\\b(weekends?|saturday|sunday)\\b");
 
-    private record Commute(String mode, String destination, boolean negative, boolean simple) {}
-    private record Preference(String meal, String value, boolean negative, boolean exclusive) {}
+    private enum Relation { CONFLICT, KNOWN_COEXIST, UNRESOLVED }
+    private static final Pattern UNCERTAIN = Pattern.compile(
+            "(?i)\\b(might|maybe|perhaps|possibly|unsure|uncertain|considering|not\\s+sure|i\\s+think)\\b");
 
     private MemoryConflictDetector() {}
 
     static boolean conflicts(String candidate, List<PersonalMemory> existing) {
-        if (candidate == null || !CHANGE.matcher(candidate).find()) return false;
-        Commute candidateCommute = commute(candidate);
-        String candidateResidence = residence(candidate);
-        Preference candidatePreference = preference(candidate);
-        if (candidateCommute == null && candidateResidence == null && candidatePreference == null) return false;
-        return existing.stream().filter(memory -> "active".equals(memory.status()))
-                .anyMatch(memory -> {
-                    if (differentSchedules(candidate, memory.content())) return false;
-                    Commute oldCommute = commute(memory.content());
-                    String oldResidence = residence(memory.content());
-                    Preference oldPreference = preference(memory.content());
-                    return conflicts(candidateCommute, oldCommute)
-                            || candidateResidence != null && oldResidence != null
-                                    && !candidateResidence.equals(oldResidence)
-                            || conflicts(candidatePreference, oldPreference);
-                });
+        return conflicts(candidate, null, existing);
     }
 
-    /** Treat differently phrased facts about the same known slot as duplicates. */
+    /** True when any active memory of this owner is an incompatible same-slot fact. */
+    static boolean conflicts(String candidate, String topic, List<PersonalMemory> existing) {
+        return relation(candidate, topic, existing) == Relation.CONFLICT;
+    }
+
+    /** True when an active memory already states the same fact in other words. */
     static boolean equivalent(String candidate, List<PersonalMemory> existing) {
-        Commute commute = commute(candidate);
-        String location = residence(candidate);
-        return existing.stream().filter(memory -> "active".equals(memory.status()))
-                .anyMatch(memory -> equivalent(commute, commute(memory.content()))
-                        || location != null && simpleResidence(candidate) && simpleResidence(memory.content())
-                                && location.equals(residence(memory.content())));
+        List<MemoryClaims.Claim> claims = MemoryClaims.parse(candidate);
+        if (claims.isEmpty()) return false;
+        return existing.stream()
+                .filter(memory -> "active".equals(memory.status()))
+                .filter(memory -> !sameText(memory.content(), candidate))
+                .anyMatch(memory -> duplicate(claims, MemoryClaims.parse(memory.content())));
     }
 
-    private static Commute commute(String text) {
-        if (text == null) return null;
-        Matcher matcher = COMMUTE.matcher(text);
-        String mode;
-        String destination;
-        if (!matcher.find()) {
-            matcher = TAKE_TO_WORK.matcher(text);
-            if (!matcher.find()) return null;
-            mode = matcher.group(2);
-            destination = matcher.group(3);
-        } else {
-            mode = matcher.group(3);
-            destination = matcher.group(2) == null ? matcher.group(4) : matcher.group(2);
+    /**
+     * True when a change-worded or negated candidate may be a correction in a
+     * slot the deterministic gate cannot name: nothing conflicts, nothing is
+     * known to coexist, and at least one other active fact exists. Such
+     * candidates stay suggested for review instead of silently activating
+     * beside an outdated fact.
+     */
+    static boolean ambiguous(String candidate, String topic, List<PersonalMemory> existing) {
+        if (candidate != null && UNCERTAIN.matcher(candidate).find()) return true;
+        List<MemoryClaims.Claim> claims = MemoryClaims.parse(candidate);
+        if (claims.isEmpty() || !marked(claims)) return false;
+        boolean hasOther = existing.stream()
+                .filter(memory -> "active".equals(memory.status()))
+                .anyMatch(memory -> !sameText(memory.content(), candidate));
+        return hasOther && claims.stream()
+                .filter(claim -> (claim.change() || claim.negated()) && !claim.coexist() && !claim.temporary())
+                .anyMatch(claim -> relation(List.of(claim), candidate, topic, existing) == Relation.UNRESOLVED);
+    }
+
+    private static Relation relation(String candidate, String topic, List<PersonalMemory> existing) {
+        return relation(MemoryClaims.parse(candidate), candidate, topic, existing);
+    }
+
+    private static Relation relation(List<MemoryClaims.Claim> candidate, String candidateText,
+            String topic, List<PersonalMemory> existing) {
+        Relation overall = Relation.UNRESOLVED;
+        for (PersonalMemory memory : existing) {
+            if (!"active".equals(memory.status()) || sameText(memory.content(), candidateText)) continue;
+            for (MemoryClaims.Claim e : MemoryClaims.parse(memory.content())) {
+                for (MemoryClaims.Claim c : candidate) {
+                    Relation pair = relate(c, topic, e, memory.claimTopic());
+                    if (pair == Relation.CONFLICT) return Relation.CONFLICT;
+                    if (pair == Relation.KNOWN_COEXIST) overall = Relation.KNOWN_COEXIST;
+                }
+            }
         }
-        String value = switch (mode.toLowerCase(Locale.ROOT)) {
-            case "bike", "bicycle", "cycling", "cycle" -> "bicycle";
-            case "car", "driving", "drive" -> "car";
-            case "walking", "foot", "walk" -> "walking";
-            default -> mode.toLowerCase(Locale.ROOT);
-        };
-        boolean negative = negative(matcher.group(1));
-        boolean simple = text.substring(0, matcher.start()).isBlank()
-                && text.substring(matcher.end()).matches("[\\s.!?]*");
-        return new Commute(value, destination == null ? null : destination.toLowerCase(Locale.ROOT), negative, simple);
+        return overall;
     }
 
-    private static boolean equivalent(Commute left, Commute right) {
-        return left != null && right != null && left.simple() && right.simple()
-                && !left.negative() && !right.negative() && left.mode().equals(right.mode())
-                && java.util.Objects.equals(left.destination(), right.destination());
+    private static Relation relate(MemoryClaims.Claim c, String candidateTopic,
+            MemoryClaims.Claim e, String existingTopic) {
+        if (c.coexist() || e.coexist() || c.temporary()) return Relation.KNOWN_COEXIST;
+        if (disjointScopes(c, e)) return Relation.KNOWN_COEXIST;
+        boolean flip = c.negated() != e.negated();
+        if (!c.change() && !flip) return Relation.KNOWN_COEXIST;
+        if (references(c, e)) return Relation.CONFLICT;
+        boolean slotMatch = sameTopic(candidateTopic, existingTopic)
+                || !Collections.disjoint(c.slot(), e.slot());
+        if (!slotMatch) return Relation.UNRESOLVED;
+        if (differingParameters(c, e)) return Relation.KNOWN_COEXIST;
+        if (!compatibleScopes(c, e)) return Relation.UNRESOLVED;
+        if (flip) return intersectingValues(c, e) ? Relation.CONFLICT : Relation.UNRESOLVED;
+        return disjointValues(c, e) ? Relation.CONFLICT : Relation.UNRESOLVED;
     }
 
-    private static boolean conflicts(Commute left, Commute right) {
-        if (left == null || right == null || left.destination() != null && right.destination() != null
-                && !left.destination().equals(right.destination())) return false;
-        return left.negative() || right.negative()
-                ? left.mode().equals(right.mode()) && left.negative() != right.negative()
-                : !left.mode().equals(right.mode());
+    /**
+     * A change statement that names the replaced value is a definite correction.
+     * Shared words count only when the candidate's subject is among them, so
+     * the same location in otherwise different facts is not a replacement.
+     */
+    private static boolean references(MemoryClaims.Claim c, MemoryClaims.Claim e) {
+        if (!c.change() && !c.negated()) return false;
+        if (!c.references().isEmpty()) {
+            var words = new java.util.HashSet<>(e.slot());
+            words.addAll(e.value());
+            if (words.containsAll(c.references())) return true;
+        }
+        return !Collections.disjoint(c.slot(), e.value())
+                && Stream.concat(c.value().stream(), c.slot().stream())
+                .filter(e.value()::contains).count() >= 2;
     }
 
-    private static Preference preference(String text) {
-        Matcher matcher = MEAL_PREFERENCE.matcher(text);
-        if (!matcher.find()) return null;
-        String meal = matcher.group(4).toLowerCase(Locale.ROOT);
-        return new Preference("supper".equals(meal) ? "dinner" : meal,
-                matcher.group(3).toLowerCase(Locale.ROOT).strip(),
-                negative(matcher.group(1)), "prefer".equalsIgnoreCase(matcher.group(2)));
+    private static boolean duplicate(List<MemoryClaims.Claim> candidate,
+            List<MemoryClaims.Claim> existing) {
+        if (candidate.size() != existing.size()) return false;
+        List<MemoryClaims.Claim> remaining = new ArrayList<>(existing);
+        for (MemoryClaims.Claim claim : candidate) {
+            MemoryClaims.Claim match = null;
+            for (MemoryClaims.Claim other : remaining) {
+                if (sameSignature(claim, other)) {
+                    match = other;
+                    break;
+                }
+            }
+            if (match == null) return false;
+            remaining.remove(match);
+        }
+        return remaining.isEmpty();
     }
 
-    private static boolean conflicts(Preference left, Preference right) {
-        if (left == null || right == null || !left.meal().equals(right.meal())) return false;
-        return left.negative() || right.negative()
-                ? left.value().equals(right.value()) && left.negative() != right.negative()
-                : left.exclusive() && right.exclusive() && !left.value().equals(right.value());
+    private static boolean sameSignature(MemoryClaims.Claim left, MemoryClaims.Claim right) {
+        return left.slot().equals(right.slot()) && left.params().equals(right.params())
+                && left.value().equals(right.value()) && left.scope().equals(right.scope())
+                && left.negated() == right.negated();
     }
 
-    private static boolean negative(String modifier) {
-        return modifier != null && modifier.replaceAll("\\s+", " ").equalsIgnoreCase("no longer");
+    private static boolean marked(List<MemoryClaims.Claim> claims) {
+        return claims.stream().anyMatch(claim ->
+                claim.change() || claim.negated() || claim.coexist() || claim.temporary());
     }
 
-    private static boolean differentSchedules(String left, String right) {
-        return WEEKDAY.matcher(left).find() && WEEKEND.matcher(right).find()
-                || WEEKEND.matcher(left).find() && WEEKDAY.matcher(right).find();
+    private static boolean disjointScopes(MemoryClaims.Claim c, MemoryClaims.Claim e) {
+        return !c.scope().isEmpty() && !e.scope().isEmpty()
+                && Collections.disjoint(c.scope(), e.scope());
     }
 
-    private static boolean simpleResidence(String text) {
-        Matcher matcher = RESIDENCE.matcher(text);
-        return matcher.find() && text.substring(0, matcher.start()).isBlank()
-                && text.substring(matcher.end()).matches("[\\s.!?]*")
-                && !matcher.group(1).matches("(?i).*\\s+(but|and|because|since|while|although)\\s+.*");
+    private static boolean compatibleScopes(MemoryClaims.Claim c, MemoryClaims.Claim e) {
+        return (c.scope().isEmpty() && e.scope().isEmpty())
+                || !Collections.disjoint(c.scope(), e.scope());
     }
 
-    private static String residence(String text) {
-        if (text == null) return null;
-        Matcher matcher = RESIDENCE.matcher(text);
-        if (!matcher.find()) return null;
-        String location = matcher.group(1).toLowerCase(Locale.ROOT).strip();
-        // Stop at common sentence or clause boundaries.
-        location = location.split("(?i)\\s+(?:but|and|because|since|while|although|for\\s+work)\\s+", 2)[0].strip();
-        return location.isEmpty() ? null : location;
+    private static boolean differingParameters(MemoryClaims.Claim c, MemoryClaims.Claim e) {
+        return !c.params().isEmpty() && !e.params().isEmpty()
+                && Collections.disjoint(c.params(), e.params());
+    }
+
+    private static boolean intersectingValues(MemoryClaims.Claim c, MemoryClaims.Claim e) {
+        return (c.value().isEmpty() && e.value().isEmpty())
+                || !Collections.disjoint(c.value(), e.value());
+    }
+
+    private static boolean disjointValues(MemoryClaims.Claim c, MemoryClaims.Claim e) {
+        return !c.value().isEmpty() && !e.value().isEmpty()
+                && Collections.disjoint(c.value(), e.value());
+    }
+
+    private static boolean sameTopic(String left, String right) {
+        if (left == null || right == null) return false;
+        return left.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").strip()
+                .equals(right.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").strip());
+    }
+
+    private static boolean sameText(String left, String right) {
+        return left != null && right != null
+                && left.strip().equalsIgnoreCase(right.strip());
     }
 }

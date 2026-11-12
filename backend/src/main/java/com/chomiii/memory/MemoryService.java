@@ -87,9 +87,10 @@ public class MemoryService {
                 .orElseThrow(() -> new ChatApiException(HttpStatus.NOT_FOUND, "Suggested memory not found."));
         // Explicit review must resolve a conflicting active fact first. Never
         // silently overwrite a user-controlled record or approve both versions.
-        if (MemoryConflictDetector.conflicts(proposed.content(), repository.list(owner))) {
+        if (MemoryConflictDetector.conflicts(proposed.content(), proposed.claimTopic(),
+                repository.list(owner))) {
             throw new ChatApiException(HttpStatus.CONFLICT,
-                    "This suggestion conflicts with an active memory. Edit or delete the outdated fact first.");
+                    "This suggestion conflicts with an active memory. Replace, edit or delete the outdated fact first.");
         }
         if (!repository.approve(owner, id)) {
             throw new ChatApiException(HttpStatus.NOT_FOUND, "Suggested memory not found.");
@@ -99,6 +100,35 @@ public class MemoryService {
         PersonalMemory memory = repository.find(owner, id).orElseThrow(
                 () -> new ChatApiException(HttpStatus.NOT_FOUND, "Memory not found."));
         if (embeddings != null) embeddings.enqueue(owner, memory);
+        return memory;
+    }
+
+    /** Explicitly replace one user-selected active memory while retaining its history. */
+    @Transactional
+    public PersonalMemory approveReplacing(String owner, UUID id, UUID supersededId) {
+        repository.lockOwner(owner);
+        PersonalMemory proposed = repository.find(owner, id)
+                .filter(memory -> "suggested".equals(memory.status())).orElse(null);
+        if (id.equals(supersededId) || proposed == null) {
+            throw new ChatApiException(HttpStatus.NOT_FOUND, "Suggested memory not found.");
+        }
+        if (MemoryConflictDetector.conflicts(proposed.content(), proposed.claimTopic(), repository.list(owner).stream()
+                .filter(memory -> !memory.id().equals(supersededId)).toList())) {
+            throw new ChatApiException(HttpStatus.CONFLICT, "Resolve the other conflicting active memories first.");
+        }
+        if (!repository.supersede(owner, supersededId, id)) {
+            throw new ChatApiException(HttpStatus.NOT_FOUND, "Active memory to replace not found.");
+        }
+        if (!repository.approve(owner, id)) {
+            throw new ChatApiException(HttpStatus.CONFLICT, "The suggestion has changed. Refresh and try again.");
+        }
+        repository.bumpRevision(owner);
+        rebuildDerivedContent(owner, false);
+        PersonalMemory memory = repository.find(owner, id).orElseThrow();
+        if (embeddings != null) {
+            embeddings.discard(owner, supersededId);
+            embeddings.enqueue(owner, memory);
+        }
         return memory;
     }
 
@@ -159,25 +189,46 @@ public class MemoryService {
     @Transactional
     public void learn(String owner, UUID conversation, long expectedRevision, String content,
             String kind, double confidence) {
+        learn(owner, conversation, expectedRevision, content, kind, confidence, null);
+    }
+
+    /**
+     * {@code claimTopic} is optional extraction provenance: a general subject
+     * label that lets the conservative conflict gate recognize corrections
+     * whose wording shares nothing. It is never treated as authority and is
+     * only stored alongside the fact.
+     */
+    @Transactional
+    public void learn(String owner, UUID conversation, long expectedRevision, String content,
+            String kind, double confidence, String claimTopic) {
         if (!("conversation_fact".equals(kind) || "inferred".equals(kind))
                 || !Double.isFinite(confidence) || confidence < 0.70 || confidence > 1.0) return;
         String clean = content == null ? "" : content.strip();
         if (clean.length() < 8 || clean.length() > MAX_CHARS) return;
+        String topic = normalizedTopic(claimTopic);
         repository.lockOwner(owner);
         if (repository.revision(owner) != expectedRevision
                 || repository.count(owner) >= MAX_ITEMS
                 || repository.existsContent(owner, clean)) return;
         boolean isFact = "conversation_fact".equals(kind) && confidence >= 0.88;
-        // Conservative contradiction protection: a clear newer commute or
-        // residence statement is reviewable instead of silently coexisting
-        // with an already-active incompatible memory.
         if (isFact) {
             List<PersonalMemory> existing = repository.list(owner);
             if (MemoryConflictDetector.equivalent(clean, existing)) return;
-            if (MemoryConflictDetector.conflicts(clean, existing)) isFact = false;
+            // Conservative contradiction protection: a change statement or
+            // negation that incompatibly reworks an active same-slot fact is
+            // reviewable instead of silently coexisting with it.
+            if (MemoryConflictDetector.conflicts(clean, topic, existing)) {
+                isFact = false;
+            } else if (MemoryConflictDetector.ambiguous(clean, topic, existing)) {
+                // A change-worded statement the gate cannot match to a slot may
+                // still be a correction in any domain; it stays reviewable
+                // rather than auto-activating beside a possibly outdated fact.
+                isFact = false;
+            }
         }
         repository.createLearned(owner, conversation, clean, kind,
                 isFact ? "active" : "suggested", confidence);
+        if (topic != null) repository.setClaimTopicByContent(owner, clean, topic);
         // Successful learned insertions advance a separate profile content
         // revision (learn intentionally leaves memory_revision unchanged so
         // several candidates from one extraction can be stored) and refresh
@@ -243,6 +294,12 @@ public class MemoryService {
                     "A memory must have 1–500 characters.");
         }
         return clean;
+    }
+
+    private static String normalizedTopic(String topic) {
+        if (topic == null) return null;
+        String clean = topic.replaceAll("\\s+", " ").strip();
+        return clean.isEmpty() || clean.length() > 120 ? null : clean;
     }
 
     /**

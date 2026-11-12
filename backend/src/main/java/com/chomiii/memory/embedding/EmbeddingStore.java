@@ -47,6 +47,12 @@ public class EmbeddingStore {
                 .forEach(memory -> enqueue(owner, memory, true));
     }
 
+    @Transactional
+    public void discard(String owner, UUID memoryId) {
+        jdbc.update("delete from memory_embeddings where owner_hash = ? and memory_id = ?", owner, memoryId.toString());
+        jdbc.update("delete from memory_embedding_jobs where owner_hash = ? and memory_id = ?", owner, memoryId.toString());
+    }
+
     private void enqueue(String owner, PersonalMemory memory, boolean force) {
         var descriptor = provider.descriptor();
         String hash = hash(memory.content());
@@ -144,7 +150,7 @@ public class EmbeddingStore {
         Map<UUID, float[]> result = new HashMap<>();
         jdbc.query("select e.memory_id, e.content_hash, e.vector_text, m.content from memory_embeddings e "
                         + "join personal_memories m on m.owner_hash = e.owner_hash and m.id = e.memory_id "
-                        + "where e.owner_hash = ? and m.status = 'active' and e.model_id = ? "
+                        + "where e.owner_hash = ? and m.status = 'active' and m.superseded_by is null and e.model_id = ? "
                         + "and e.dimensions = ? and e.configuration = ?", row -> {
                     if (hash(row.getString("content")).equals(row.getString("content_hash"))) {
                         try {

@@ -113,6 +113,52 @@ class MemoryProfileDatabaseTest {
     }
 
     @Test
+    void explicitReplacementKeepsHistoryButExcludesItFromCurrentContextAndVectors() {
+        var old = memories.create(owner, "I commute by bus");
+        memories.learn(owner, UUID.randomUUID(), memories.revision(owner),
+                "I now commute by bicycle", "conversation_fact", 0.96);
+        var candidate = memories.list(owner).stream()
+                .filter(item -> item.content().equals("I now commute by bicycle"))
+                .findFirst().orElseThrow();
+        long staleRevision = memories.revision(owner);
+
+        memories.approveReplacing(owner, candidate.id(), old.id());
+
+        var historical = memories.list(owner).stream().filter(item -> item.id().equals(old.id())).findFirst().orElseThrow();
+        assertThat(historical.status()).isEqualTo("superseded");
+        assertThat(historical.supersededBy()).isEqualTo(candidate.id());
+        assertThat(memories.profile(owner).text()).contains("bicycle").doesNotContain("bus");
+        assertThat(memories.search(owner, "commute", null, 10)).extracting(PersonalMemory::id)
+                .contains(candidate.id()).doesNotContain(old.id());
+        assertThat(jdbc.queryForObject("select count(*) from memory_embedding_jobs where owner_hash = ? and memory_id = ?",
+                Integer.class, owner, old.id().toString())).isZero();
+
+        memories.delete(owner, candidate.id());
+        assertThat(memories.list(owner)).anySatisfy(item -> {
+            assertThat(item.id()).isEqualTo(old.id());
+            assertThat(item.status()).isEqualTo("superseded");
+        });
+        assertThat(memories.forChat(owner, "How do I commute?")).doesNotContain("bus");
+        memories.delete(owner, old.id());
+        memories.learn(owner, UUID.randomUUID(), staleRevision, "I commute by bus", "conversation_fact", 0.96);
+        assertThat(memories.list(owner)).isEmpty();
+    }
+
+    @Test
+    void replacementCannotUseAnotherOwnersMemory() {
+        var foreign = memories.create(other, "I commute by train");
+        memories.learn(owner, UUID.randomUUID(), memories.revision(owner),
+                "I now commute by bicycle", "inferred", 0.8);
+        var candidate = memories.list(owner).getFirst();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> memories.approveReplacing(owner, candidate.id(), foreign.id()))
+                .isInstanceOf(com.chomiii.chat.ChatApiException.class);
+        assertThat(memories.list(other)).extracting(PersonalMemory::status).containsExactly("active");
+        assertThat(memories.list(owner)).extracting(PersonalMemory::status).containsExactly("suggested");
+    }
+
+    @Test
     void differentPersonalTopicsDoNotTriggerAConflict() {
         memories.create(owner, "I commute by bus");
         long revision = memories.revision(owner);

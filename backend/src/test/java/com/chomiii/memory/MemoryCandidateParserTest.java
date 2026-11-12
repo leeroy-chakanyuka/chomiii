@@ -24,7 +24,47 @@ class MemoryCandidateParserTest {
                 MemoryCandidateParser.parse(output, text, json);
         assertThat(result).hasSize(2);
         assertThat(result.get(0).source()).isEqualTo("conversation_fact");
+        assertThat(result.get(0).topic()).isNull();
         assertThat(result.get(1).source()).isEqualTo("inferred");
+    }
+
+    @Test
+    void optionalSlotTopicsAreSanitizedOrDropped() {
+        String text = "We moved to Bulawayo last month.";
+        String good = """
+                {"memories":[{"content":"I moved to Bulawayo","kind":"fact","confidence":0.95,
+                "evidence":"moved to Bulawayo","topic":"residence"}]}
+                """;
+        List<MemoryCandidateParser.Candidate> parsed = MemoryCandidateParser.parse(good, text, json);
+        assertThat(parsed).hasSize(1);
+        assertThat(parsed.get(0).topic()).isEqualTo("residence");
+
+        // An unusable topic never rejects the grounded candidate; it is dropped.
+        String sensitive = """
+                {"memories":[
+                  {"content":"I moved to Bulawayo","kind":"fact","confidence":0.95,
+                   "evidence":"moved to Bulawayo","topic":"religious beliefs"},
+                  {"content":"I moved to Bulawayo","kind":"fact","confidence":0.95,
+                   "evidence":"moved to Bulawayo"}
+                ]}
+                """;
+        List<MemoryCandidateParser.Candidate> dropped =
+                MemoryCandidateParser.parse(sensitive, text, json);
+        assertThat(dropped).hasSize(2);
+        assertThat(dropped).allSatisfy(candidate -> assertThat(candidate.topic()).isNull());
+
+        String unusable = """
+                {"memories":[
+                  {"content":"I moved to Bulawayo","kind":"fact","confidence":0.95,
+                   "evidence":"moved to Bulawayo","topic":"%s"},
+                  {"content":"I moved to Bulawayo","kind":"fact","confidence":0.95,
+                   "evidence":"moved to Bulawayo","topic":"   "}
+                ]}
+                """.formatted("x".repeat(61));
+        List<MemoryCandidateParser.Candidate> sanitized =
+                MemoryCandidateParser.parse(unusable, text, json);
+        assertThat(sanitized).hasSize(2);
+        assertThat(sanitized).allSatisfy(candidate -> assertThat(candidate.topic()).isNull());
     }
 
     @Test

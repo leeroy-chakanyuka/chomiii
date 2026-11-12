@@ -32,7 +32,8 @@ class MemoryLearningServiceTest {
             learned.countDown();
             return null;
         }).when(memories).learn(eq("owner"), any(), eq(5L),
-                eq("My usual groceries are oats and milk"), eq("conversation_fact"), eq(0.96));
+                eq("My usual groceries are oats and milk"), eq("conversation_fact"), eq(0.96),
+                org.mockito.ArgumentMatchers.isNull());
         AtomicReference<ChatProvider.ChatInput> request = new AtomicReference<>();
         ChatProvider provider = new ChatProvider() {
             @Override public String id() { return "gemini"; }
@@ -55,7 +56,40 @@ class MemoryLearningServiceTest {
             assertThat(learned.await(10, TimeUnit.SECONDS)).isTrue();
             assertThat(request.get().systemInstruction()).contains("conservative memory-extraction");
             verify(memories).learn(eq("owner"), any(), eq(5L),
-                    eq("My usual groceries are oats and milk"), eq("conversation_fact"), eq(0.96));
+                    eq("My usual groceries are oats and milk"), eq("conversation_fact"), eq(0.96),
+                    org.mockito.ArgumentMatchers.isNull());
+        }
+    }
+
+    @Test
+    void extractionSuppliesSlotTopicsWithoutExtraModelRequests() throws Exception {
+        MemoryService memories = mock(MemoryService.class);
+        CountDownLatch learned = new CountDownLatch(1);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            learned.countDown();
+            return null;
+        }).when(memories).learn(eq("owner"), any(), eq(5L),
+                eq("I moved to Bulawayo"), eq("conversation_fact"), eq(0.95), eq("residence"));
+        ChatProvider provider = new ChatProvider() {
+            @Override public String id() { return "gemini"; }
+            @Override public Generation open(ChatInput input, String key) {
+                return new Generation() {
+                    @Override public void stream(Consumer<String> delta) {
+                        delta.accept("{\"memories\":[{\"content\":\"I moved to Bulawayo\","
+                                + "\"kind\":\"fact\",\"confidence\":0.95,"
+                                + "\"evidence\":\"moved to Bulawayo\",\"topic\":\"residence\"}]}");
+                    }
+                    @Override public void close() {}
+                };
+            }
+        };
+        try (var worker = Executors.newSingleThreadExecutor(); var timer = newTimer()) {
+            var service = new MemoryLearningService(memories, new ObjectMapper(), worker, timer);
+            service.schedule("owner", UUID.randomUUID(), 5L, "We moved to Bulawayo last month.",
+                    provider, "gemini-3.5-flash-lite", "fake-key");
+            assertThat(learned.await(10, TimeUnit.SECONDS)).isTrue();
+            verify(memories).learn(eq("owner"), any(), eq(5L),
+                    eq("I moved to Bulawayo"), eq("conversation_fact"), eq(0.95), eq("residence"));
         }
     }
 
@@ -81,7 +115,7 @@ class MemoryLearningServiceTest {
                     "My usual groceries are oats and milk.", provider, "gemini-3.5-flash-lite", "fake-key");
             org.mockito.Mockito.verify(provider, org.mockito.Mockito.never()).open(any(), any());
             org.mockito.Mockito.verify(memories, org.mockito.Mockito.never()).learn(any(), any(), anyLong(),
-                    any(), any(), anyDouble());
+                    any(), any(), anyDouble(), any());
         }
     }
 
@@ -102,7 +136,7 @@ class MemoryLearningServiceTest {
         org.mockito.Mockito.doAnswer(invocation -> {
             if (((long) invocation.getArgument(2)) == 7L) nextLearned.countDown();
             return null;
-        }).when(memories).learn(any(), any(), anyLong(), any(), any(), anyDouble());
+        }).when(memories).learn(any(), any(), anyLong(), any(), any(), anyDouble(), org.mockito.ArgumentMatchers.any());
         ChatProvider provider = new ChatProvider() {
             @Override public String id() { return "gemini"; }
             @Override public Generation open(ChatInput input, String key) {
@@ -150,7 +184,7 @@ class MemoryLearningServiceTest {
                     .as("the single learning worker must serve the next extraction")
                     .isTrue();
             verify(memories, org.mockito.Mockito.never()).learn(eq("owner"), any(), eq(5L),
-                    any(), any(), anyDouble());
+                    any(), any(), anyDouble(), org.mockito.ArgumentMatchers.any());
         } finally {
             timer.shutdownNow();
         }
@@ -189,7 +223,7 @@ class MemoryLearningServiceTest {
                     provider, "gemini-3.5-flash-lite", "fake-key");
             worker.submit(() -> {}).get(10, TimeUnit.SECONDS);
             verify(memories, org.mockito.Mockito.never()).learn(any(), any(), anyLong(),
-                    any(), any(), anyDouble());
+                    any(), any(), anyDouble(), org.mockito.ArgumentMatchers.any());
         } finally {
             timer.shutdownNow();
         }

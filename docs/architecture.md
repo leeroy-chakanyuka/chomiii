@@ -196,10 +196,13 @@ tool has per-turn call, result, and execution-time limits. Recall off removes
 the tool and the automatic memory context. Set
 `chomiii.memory.search-tool.enabled=false` to disable the tool independently.
 
-`MemoryConflictDetector` conservatively identifies explicit changes in known
-commute, residence, and meal-preference slots. Potential conflicts remain
-suggestions until the user resolves the active record. It is not a general
-contradiction classifier, and it never overwrites a canonical memory.
+`MemoryConflictDetector` compares general claim words, scope, negation, and
+explicit change markers. The extraction response can also supply a subject
+label. The comparison is heuristic; uncertain changes remain suggestions.
+A person can explicitly approve a suggestion as a replacement for an active
+memory. The previous record is marked superseded, excluded from recall and
+derived indexes, and remains individually deletable. Delayed extraction is
+still checked against the owner's memory revision.
 
 Flyway V5 adds a durable job and vector per canonical memory. The vector is a
 JSON array of normalized 32-bit values stored in SQL `TEXT`, with the owner,
