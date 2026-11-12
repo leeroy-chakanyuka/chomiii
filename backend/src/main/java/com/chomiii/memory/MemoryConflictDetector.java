@@ -39,11 +39,22 @@ final class MemoryConflictDetector {
                 });
     }
 
+    /** Treat differently phrased facts about the same known slot as duplicates. */
+    static boolean equivalent(String candidate, List<PersonalMemory> existing) {
+        String mode = commuteMode(candidate);
+        String location = residence(candidate);
+        return existing.stream().filter(memory -> "active".equals(memory.status()))
+                .anyMatch(memory -> mode != null && mode.equals(commuteMode(memory.content()))
+                        || location != null && location.equals(residence(memory.content())));
+    }
+
     private static String commuteMode(String text) {
         if (text == null) return null;
         Matcher matcher = COMMUTE.matcher(text);
-        if (!matcher.find()) matcher = TAKE_TO_WORK.matcher(text);
-        if (!matcher.find(0)) return null;
+        if (!matcher.find()) {
+            matcher = TAKE_TO_WORK.matcher(text);
+            if (!matcher.find()) return null;
+        }
         String value = matcher.group(1).toLowerCase(Locale.ROOT);
         return switch (value) {
             case "bike", "bicycle", "cycling", "cycle" -> "bicycle";
