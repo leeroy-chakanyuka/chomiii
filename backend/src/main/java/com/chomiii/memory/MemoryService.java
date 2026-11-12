@@ -170,8 +170,10 @@ public class MemoryService {
         // Conservative contradiction protection: a clear newer commute or
         // residence statement is reviewable instead of silently coexisting
         // with an already-active incompatible memory.
-        if (isFact && MemoryConflictDetector.conflicts(clean, repository.list(owner))) {
-            isFact = false;
+        if (isFact) {
+            List<PersonalMemory> existing = repository.list(owner);
+            if (MemoryConflictDetector.equivalent(clean, existing)) return;
+            if (MemoryConflictDetector.conflicts(clean, existing)) isFact = false;
         }
         repository.createLearned(owner, conversation, clean, kind,
                 isFact ? "active" : "suggested", confidence);
