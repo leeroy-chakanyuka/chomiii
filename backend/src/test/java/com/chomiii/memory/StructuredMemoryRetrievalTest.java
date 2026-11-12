@@ -41,6 +41,30 @@ class StructuredMemoryRetrievalTest {
     }
 
     @Test
+    void planningRetrievesSupportingLocationForDinnerFromDifferentWords() {
+        var repository = mock(MemoryRepository.class);
+        var service = new MemoryService(repository);
+        var location = memory("I live in Goodwood");
+        var food = memory("I enjoy mild tacos");
+        var unrelated = memory("I collect vintage cameras");
+        when(repository.list("owner")).thenReturn(List.of(location, food, unrelated));
+
+        assertThat(service.forPlanning("owner", "I am hungry, help me arrange dinner"))
+                .extracting(PersonalMemory::id)
+                .contains(location.id(), food.id())
+                .doesNotContain(unrelated.id());
+    }
+
+    @Test
+    void planningDoesNotInjectUnrelatedFactsForAlgorithmQuestion() {
+        var repository = mock(MemoryRepository.class);
+        var service = new MemoryService(repository);
+        when(repository.list("owner")).thenReturn(List.of(
+                memory("I like mild tacos"), memory("I live in Goodwood")));
+        assertThat(service.forPlanning("owner", "Explain the binary search algorithm")).isEmpty();
+    }
+
+    @Test
     void characterBudgetAllowsMoreThanThreeRelevantFactsAndExcludesSuggestions() {
         var repository = mock(MemoryRepository.class);
         var service = new MemoryService(repository);
