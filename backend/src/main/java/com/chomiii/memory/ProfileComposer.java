@@ -82,7 +82,9 @@ final class ProfileComposer {
         List<ProfileParagraph> included = new ArrayList<>();
         for (ProfileParagraph paragraph : paragraphs) {
             String line = label(paragraph.category()) + ": " + paragraph.text() + "\n";
-            if (output.length() + line.length() > MAX_SNAPSHOT_CHARS) break;
+            // Skip an over-budget paragraph rather than starving smaller
+            // categories later in the declared order.
+            if (output.length() + line.length() > MAX_SNAPSHOT_CHARS) continue;
             output.append(line);
             included.add(paragraph);
         }
