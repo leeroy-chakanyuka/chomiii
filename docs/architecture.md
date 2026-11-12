@@ -232,3 +232,18 @@ model, send `POST /api/memories/reindex` with that browser's session cookie and
 the normal origin header. Reindexing removes the owner's old vectors and queues
 fresh jobs; a later eligible chat supplies the temporary provider key. Model
 calls can use quota or incur charges under the user's Google project.
+
+Google's [embedding guide](https://ai.google.dev/gemini-api/docs/embeddings)
+documents `client.models.embedContent(model, text, config)` with
+`EmbedContentConfig.builder().outputDimensionality(768).build()`. For
+`gemini-embedding-2`, documents use `title: none | text: ...`, queries use
+`task: search result | query: ...`, and the `taskType` field is unsupported.
+Google states that 768-dimensional outputs are normalized and that embeddings
+from `gemini-embedding-001` and `gemini-embedding-2` are incompatible.
+
+On 2026-11-12, Google's [pricing page](https://ai.google.dev/gemini-api/docs/pricing#gemini-embedding-2)
+listed standard text embedding as free on the free tier and $0.20 per million
+input tokens on the paid tier. The page states that free-tier content can be
+used to improve Google's products. [Rate limits](https://ai.google.dev/gemini-api/docs/rate-limits)
+are per project and vary by model and tier. Check the project's current limits
+and terms before enabling indexing.
