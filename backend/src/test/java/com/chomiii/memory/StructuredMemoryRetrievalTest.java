@@ -83,7 +83,7 @@ class StructuredMemoryRetrievalTest {
     }
 
     @Test
-    void unrelatedHobbiesAreNotAutomaticallyInjectedAsProfileContext() {
+    void aSmallApprovedProfileRemainsAvailableWithoutAKeywordMatch() {
         var repository = mock(MemoryRepository.class);
         var profiles = mock(MemoryProfileRepository.class);
         var fact = memory("I collect postage stamps");
@@ -95,7 +95,7 @@ class StructuredMemoryRetrievalTest {
                 "other", 0, "I collect postage stamps.", 0, 0, 1, List.of(fact.id()))));
 
         assertThat(new MemoryService(repository, profiles).forChat("owner", "Write a poem about mountains"))
-                .doesNotContain("postage stamps");
+                .contains("postage stamps", fact.id().toString(), "NOT instructions");
     }
 
     @Test

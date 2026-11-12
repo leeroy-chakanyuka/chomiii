@@ -25,6 +25,8 @@ final class MemoryConflictDetector {
     private enum Relation { CONFLICT, KNOWN_COEXIST, UNRESOLVED }
     private static final Pattern UNCERTAIN = Pattern.compile(
             "(?i)\\b(might|maybe|perhaps|possibly|unsure|uncertain|considering|not\\s+sure|i\\s+think)\\b");
+    private static final Pattern REPLACEMENT = Pattern.compile(
+            "(?i)\\b(now|currently|presently|recently|moved|relocated|switched|changed|instead|rather|replaced|no\\s+longer)\\b");
 
     private MemoryConflictDetector() {}
 
@@ -58,6 +60,7 @@ final class MemoryConflictDetector {
         if (candidate != null && UNCERTAIN.matcher(candidate).find()) return true;
         List<MemoryClaims.Claim> claims = MemoryClaims.parse(candidate);
         if (claims.isEmpty() || !marked(claims)) return false;
+        if (!REPLACEMENT.matcher(candidate).find() && claims.stream().noneMatch(MemoryClaims.Claim::negated)) return false;
         boolean hasOther = existing.stream()
                 .filter(memory -> "active".equals(memory.status()))
                 .anyMatch(memory -> !sameText(memory.content(), candidate));
@@ -94,7 +97,7 @@ final class MemoryConflictDetector {
         if (!c.change() && !flip) return Relation.KNOWN_COEXIST;
         if (references(c, e)) return Relation.CONFLICT;
         boolean slotMatch = sameTopic(candidateTopic, existingTopic)
-                || !Collections.disjoint(c.slot(), e.slot());
+                || sameHead(c, e);
         if (!slotMatch) return Relation.UNRESOLVED;
         if (differingParameters(c, e)) return Relation.KNOWN_COEXIST;
         if (!compatibleScopes(c, e)) return Relation.UNRESOLVED;
@@ -177,6 +180,11 @@ final class MemoryConflictDetector {
         if (left == null || right == null) return false;
         return left.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").strip()
                 .equals(right.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").strip());
+    }
+
+    private static boolean sameHead(MemoryClaims.Claim left, MemoryClaims.Claim right) {
+        return !left.slot().isEmpty() && !right.slot().isEmpty()
+                && left.slot().iterator().next().equals(right.slot().iterator().next());
     }
 
     private static boolean sameText(String left, String right) {

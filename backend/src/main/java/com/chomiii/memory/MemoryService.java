@@ -261,9 +261,10 @@ public class MemoryService {
         int profileStart = output.length();
         Set<UUID> profileIds = new LinkedHashSet<>();
         Set<UUID> relevantIds = relevant.stream().map(PersonalMemory::id).collect(java.util.stream.Collectors.toSet());
-        for (ProfileParagraph paragraph : profile.paragraphs()) {
-            boolean stable = Set.of("location", "work", "education", "projects").contains(paragraph.category());
-            if (!stable && paragraph.sourceIds().stream().noneMatch(relevantIds::contains)) continue;
+        var paragraphs = new java.util.ArrayList<>(profile.paragraphs());
+        paragraphs.sort(java.util.Comparator.comparingInt(paragraph ->
+                paragraph.sourceIds().stream().anyMatch(relevantIds::contains) ? 0 : 1));
+        for (ProfileParagraph paragraph : paragraphs) {
             String line = "Profile " + paragraph.category() + ": " + paragraph.text()
                     + " (memory IDs: " + paragraph.sourceIds() + ")\n";
             if (output.length() - profileStart + line.length() > MAX_PROFILE_CONTEXT_CHARS) continue;

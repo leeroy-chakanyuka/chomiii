@@ -148,7 +148,7 @@ class MemoryConflictDetectorTest {
     @Test
     void ambiguousChangesAreParkedInsteadOfSilentlyActivating() {
         var groceries = List.of(memory("My usual grocery list includes oat milk"));
-        assertThat(MemoryConflictDetector.ambiguous("I started learning pottery", null, groceries)).isTrue();
+        assertThat(MemoryConflictDetector.ambiguous("I started learning pottery", null, groceries)).isFalse();
         assertThat(MemoryConflictDetector.conflicts("I started learning pottery", groceries)).isFalse();
         assertThat(MemoryConflictDetector.conflicts(
                 "My usual grocery list has dairy milk instead of oat milk", groceries)).isTrue();
@@ -170,6 +170,14 @@ class MemoryConflictDetectorTest {
         var residence = List.of(memory("I live in Cape Town"));
         assertThat(MemoryConflictDetector.conflicts("I now work in Cape Town", residence)).isFalse();
         assertThat(MemoryConflictDetector.conflicts("I moved to Cape Town", residence)).isFalse();
+    }
+
+    @Test
+    void aCompletedQualificationDoesNotConflictWithEmploymentInTheSameField() {
+        var work = List.of(memory("I work as a dental hygienist at the Brightwater Clinic."));
+        String qualification = "I finished my dental hygiene diploma at Colton Community College in 2019.";
+        assertThat(MemoryConflictDetector.conflicts(qualification, work)).isFalse();
+        assertThat(MemoryConflictDetector.ambiguous(qualification, null, work)).isFalse();
     }
 
     @Test
