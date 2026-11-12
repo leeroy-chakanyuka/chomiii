@@ -4,7 +4,9 @@ import java.util.Map;
 
 public interface InternalTool {
     ToolDefinition definition();
-    Result execute(Map<String, Object> arguments);
+    Result execute(ToolExecutionContext context, Map<String, Object> arguments);
+
+    default boolean available(ToolExecutionContext context) { return true; }
 
     default String fingerprint(Map<String, Object> arguments) {
         return new java.util.TreeMap<>(arguments).toString();

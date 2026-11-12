@@ -5,8 +5,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.stereotype.Component;
 
 /** Registry of the tools made available to a turn. */
+@Component
 public final class ToolRegistry {
     public record Registered(ToolDefinition definition, InternalTool tool) {}
     private final Map<String, Registered> tools;
@@ -27,7 +29,24 @@ public final class ToolRegistry {
         return tools.values().stream().map(Registered::definition).toList();
     }
 
+    public List<ToolDefinition> available(ToolExecutionContext context) {
+        return tools.values().stream().filter(registered -> isAvailable(registered, context))
+                .map(Registered::definition).toList();
+    }
+
+    public Optional<Registered> findAvailable(String name, ToolExecutionContext context) {
+        return find(name).filter(registered -> isAvailable(registered, context));
+    }
+
     public Optional<Registered> find(String name) {
         return Optional.ofNullable(tools.get(name));
+    }
+
+    private static boolean isAvailable(Registered registered, ToolExecutionContext context) {
+        try {
+            return registered.tool().available(context);
+        } catch (RuntimeException unavailable) {
+            return false;
+        }
     }
 }

@@ -14,6 +14,8 @@ import com.chomiii.provider.ChatProvider;
 import com.chomiii.provider.ProviderCatalog;
 import com.chomiii.provider.ProviderFailure;
 import com.chomiii.tools.ToolTurn;
+import com.chomiii.tools.ToolRegistry;
+import com.chomiii.tools.ToolExecutionContext;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +55,7 @@ public class ChatStreamService {
     private final boolean memorySearchEnabled;
     private final EmbeddingIndexer embeddingIndexer;
     private final HybridMemorySearch hybridMemorySearch;
+    private final ToolRegistry toolRegistry;
     private final Semaphore slots = new Semaphore(8);
     private final ConcurrentHashMap<UUID, Active> active = new ConcurrentHashMap<>();
 
@@ -65,7 +68,8 @@ public class ChatStreamService {
     public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
             MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
             ExecutorService chatExecutor, boolean memorySearchEnabled) {
-        this(store, conversations, memories, learning, catalog, providers, chatExecutor, memorySearchEnabled, null, null);
+        this(store, conversations, memories, learning, catalog, providers, chatExecutor, memorySearchEnabled, null, null,
+                new ToolRegistry(List.of(new MemorySearchTool(memories, null))));
     }
 
     @Autowired
@@ -73,7 +77,7 @@ public class ChatStreamService {
             MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
             @Qualifier("chatExecutor") ExecutorService chatExecutor,
             @Value("${chomiii.memory.search-tool.enabled:true}") boolean memorySearchEnabled,
-            EmbeddingIndexer embeddingIndexer, HybridMemorySearch hybridMemorySearch) {
+            EmbeddingIndexer embeddingIndexer, HybridMemorySearch hybridMemorySearch, ToolRegistry toolRegistry) {
         this.store = store;
         this.conversations = conversations;
         this.memories = memories;
@@ -84,6 +88,7 @@ public class ChatStreamService {
         this.memorySearchEnabled = memorySearchEnabled;
         this.embeddingIndexer = embeddingIndexer;
         this.hybridMemorySearch = hybridMemorySearch;
+        this.toolRegistry = toolRegistry;
     }
 
     public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request, String key) {
@@ -210,9 +215,14 @@ public class ChatStreamService {
         String outcome = "failed";
         try {
             send(emitter, "start", Map.of("requestId", requestId.toString(), "messageId", assistantId.toString()));
-            List<PersonalMemory> allowedMemories = new ArrayList<>(planningMemories);
-            var tools = useMemory && memorySearchEnabled ? new ToolTurn(List.of(
-                    new MemorySearchTool(memories, owner, allowedMemories::addAll, hybridMemorySearch, key)), planning) : null;
+            var toolMemoryIds = new java.util.HashSet<UUID>();
+            var toolContext = new ToolExecutionContext(owner, key, useMemory && memorySearchEnabled, observation -> {
+                if ("memory.search".equals(observation.toolName())) toolMemoryIds.addAll(observation.references());
+            });
+            var session = new ToolTurn(toolRegistry, toolContext, planning);
+            var tools = session.definitions().isEmpty() ? null : session;
+            if (tools == null) session.close();
+            generation.setTools(tools);
             try (ChatProvider.Generation providerStream = tools == null
                     ? provider.open(input, key) : provider.open(input, key, tools)) {
                 generation.set(providerStream);
@@ -236,7 +246,7 @@ public class ChatStreamService {
                     }
                 };
                 if (planning) {
-                    var plan = PLANNING.read(providerStream, allowedMemories);
+                    var plan = PLANNING.readWithAdditionalMemoryIds(providerStream, planningMemories, toolMemoryIds);
                     if (generation.cancelled.get()) throw new CancellationException();
                     String rendered = PLANNING.render(plan);
                     if (rendered.length() > MAX_REPLY_CHARS) {
@@ -247,6 +257,8 @@ public class ChatStreamService {
                 } else {
                     providerStream.stream(delta);
                 }
+            } finally {
+                if (tools != null) tools.close();
             }
             if (generation.cancelled.get()) {
                 throw new CancellationException();
@@ -369,6 +381,7 @@ public class ChatStreamService {
         private final AtomicBoolean cancelled = new AtomicBoolean();
         private final AtomicBoolean finished = new AtomicBoolean();
         private final AtomicReference<ChatProvider.Generation> provider = new AtomicReference<>();
+        private final AtomicReference<ChatProvider.Tools> tools = new AtomicReference<>();
 
         private Active(String owner, UUID conversation) {
             this.owner = owner;
@@ -382,8 +395,15 @@ public class ChatStreamService {
             }
         }
 
+        private void setTools(ChatProvider.Tools session) {
+            tools.set(session);
+            if (session != null && cancelled.get()) session.close();
+        }
+
         private void cancelUnlessFinished() {
             if (!finished.get() && cancelled.compareAndSet(false, true)) {
+                ChatProvider.Tools session = tools.get();
+                if (session != null) session.close();
                 ChatProvider.Generation stream = provider.get();
                 if (stream != null) {
                     stream.close();

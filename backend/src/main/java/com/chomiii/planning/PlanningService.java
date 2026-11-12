@@ -89,7 +89,17 @@ public final class PlanningService {
         return readTimed(generation, memories, allowedCapabilities).plan();
     }
 
+    public Plan readWithAdditionalMemoryIds(ChatProvider.Generation generation, List<PersonalMemory> memories,
+            Set<java.util.UUID> additionalMemoryIds) {
+        return readTimed(generation, memories, allCapabilities(), additionalMemoryIds).plan();
+    }
+
     public TimedPlan readTimed(ChatProvider.Generation generation, List<PersonalMemory> memories, Set<String> allowedCapabilities) {
+        return readTimed(generation, memories, allowedCapabilities, Set.of());
+    }
+
+    private TimedPlan readTimed(ChatProvider.Generation generation, List<PersonalMemory> memories,
+            Set<String> allowedCapabilities, Set<java.util.UUID> additionalMemoryIds) {
         var output = new StringBuilder();
         var timedOut = new AtomicBoolean();
         long start = System.nanoTime();
@@ -101,8 +111,9 @@ public final class PlanningService {
             });
             if (timedOut.get() || System.nanoTime() - start >= timeout.toNanos()) throw timeout();
             long finishedStream = System.nanoTime();
-            var plan = parser.parse(output.toString(), memories.stream().map(PersonalMemory::id).collect(Collectors.toSet()),
-                    allowedCapabilities);
+            var memoryIds = memories.stream().map(PersonalMemory::id).collect(Collectors.toSet());
+            memoryIds.addAll(additionalMemoryIds);
+            var plan = parser.parse(output.toString(), memoryIds, allowedCapabilities);
             return new TimedPlan(plan, TimeUnit.NANOSECONDS.toMillis(finishedStream - start),
                     TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - finishedStream));
         } catch (RuntimeException failure) {

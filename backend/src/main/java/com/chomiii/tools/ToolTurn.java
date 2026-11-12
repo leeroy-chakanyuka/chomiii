@@ -14,6 +14,9 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /** Per-turn limits shared by internal tools. Arguments and results are untrusted. */
 public final class ToolTurn implements ChatProvider.Tools {
@@ -25,19 +28,23 @@ public final class ToolTurn implements ChatProvider.Tools {
             new ThreadPoolExecutor.AbortPolicy());
 
     private final ToolRegistry registry;
+    private final ToolExecutionContext context;
     private final boolean bufferText;
     private long remainingNanos = TimeUnit.SECONDS.toNanos(4);
     private final Set<String> searches = new HashSet<>();
+    private final AtomicBoolean cancelled = new AtomicBoolean();
+    private final AtomicReference<Future<?>> active = new AtomicReference<>();
     private int calls;
 
-    public ToolTurn(List<InternalTool> tools, boolean bufferText) {
-        this.registry = new ToolRegistry(tools);
+    public ToolTurn(ToolRegistry registry, ToolExecutionContext context, boolean bufferText) {
+        this.registry = registry;
+        this.context = context;
         this.bufferText = bufferText;
     }
 
     @Override
     public List<ToolDefinition> definitions() {
-        return registry.definitions().stream()
+        return registry.available(context).stream()
                 .filter(definition -> definition.effect() == ToolDefinition.Effect.READ)
                 .toList();
     }
@@ -49,8 +56,9 @@ public final class ToolTurn implements ChatProvider.Tools {
 
     @Override
     public synchronized Map<String, Object> invoke(String name, Map<String, Object> arguments) {
+        if (cancelled.get()) return ToolResponse.error(ToolResponse.ErrorCode.CANCELLED, "Tool call cancelled.");
         if (++calls > MAX_CALLS) return ToolResponse.error(ToolResponse.ErrorCode.CALL_LIMIT, "Tool call limit reached.");
-        ToolRegistry.Registered registered = registry.find(name).orElse(null);
+        ToolRegistry.Registered registered = registry.findAvailable(name, context).orElse(null);
         if (registered == null || registered.definition().effect() != ToolDefinition.Effect.READ
                 || arguments == null) return ToolResponse.error(ToolResponse.ErrorCode.NOT_AVAILABLE, "Invalid tool call.");
         InternalTool tool = registered.tool();
@@ -64,7 +72,12 @@ public final class ToolTurn implements ChatProvider.Tools {
             if (!searches.add(name + "|" + tool.fingerprint(arguments))) {
                 return ToolResponse.error(ToolResponse.ErrorCode.DUPLICATE_CALL, "Repeated tool call.");
             }
-            Future<InternalTool.Result> future = EXECUTOR.submit(() -> tool.execute(arguments));
+            Future<InternalTool.Result> future = EXECUTOR.submit(() -> {
+                if (cancelled.get()) throw new CancellationException();
+                return tool.execute(context, arguments);
+            });
+            active.set(future);
+            if (cancelled.get()) future.cancel(true);
             InternalTool.Result result;
             try {
                 result = future.get(Math.min(remainingNanos, TimeUnit.MILLISECONDS.toNanos(1_500)), TimeUnit.NANOSECONDS);
@@ -79,10 +92,15 @@ public final class ToolTurn implements ChatProvider.Tools {
                 return ToolResponse.error(failure.getCause() instanceof IllegalArgumentException
                                 ? ToolResponse.ErrorCode.INVALID_ARGUMENTS : ToolResponse.ErrorCode.FAILURE,
                         "Tool unavailable or invalid arguments.");
+            } catch (CancellationException failure) {
+                return ToolResponse.error(ToolResponse.ErrorCode.CANCELLED, "Tool call cancelled.");
+            } finally {
+                active.compareAndSet(future, null);
             }
             if (JSON.writeValueAsBytes(result.output()).length > MAX_RESULT_BYTES) {
                 return ToolResponse.error(ToolResponse.ErrorCode.RESULT_TOO_LARGE, "Tool result exceeds the context budget.");
             }
+            if (cancelled.get()) return ToolResponse.error(ToolResponse.ErrorCode.CANCELLED, "Tool call cancelled.");
             result.onDelivered().run();
             return ToolResponse.success(result.output());
         } catch (IllegalArgumentException failure) {
@@ -94,6 +112,13 @@ public final class ToolTurn implements ChatProvider.Tools {
         } finally {
             remainingNanos -= System.nanoTime() - started;
         }
+    }
+
+    @Override
+    public void close() {
+        cancelled.set(true);
+        Future<?> future = active.getAndSet(null);
+        if (future != null) future.cancel(true);
     }
 
 }

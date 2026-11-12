@@ -8,6 +8,8 @@ import com.chomiii.memory.PersonalMemory;
 import com.chomiii.memory.embedding.EmbeddingProvider;
 import com.chomiii.memory.embedding.EmbeddingVector;
 import com.chomiii.tools.ToolTurn;
+import com.chomiii.tools.ToolRegistry;
+import com.chomiii.tools.ToolExecutionContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -97,8 +99,9 @@ class MemoryAblationSuiteTest {
                                 // A scripted tool call, not a model decision.
                                 toolCalled = true;
                                 var hybrid = "C".equals(arm) ? semanticC : lexical;
-                                var tool = new MemorySearchTool(memories, session.owner(), ignored -> {}, hybrid, "synthetic");
-                                var result = new ToolTurn(List.of(tool), false)
+                                var tool = new MemorySearchTool(memories, hybrid);
+                                var toolContext = new ToolExecutionContext(session.owner(), "synthetic", true, ignored -> {});
+                                var result = new ToolTurn(new ToolRegistry(List.of(tool)), toolContext, false)
                                         .invoke("memory.search", Map.of("query", check.query()));
                                 toolFailed = result.containsKey("error");
                                 context += new ObjectMapper().writeValueAsString(result);

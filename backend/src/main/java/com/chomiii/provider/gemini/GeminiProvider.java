@@ -128,6 +128,7 @@ public class GeminiProvider implements ChatProvider {
                 clientReady = System.nanoTime();
                 int callsUsed = 0;
                 for (int round = 0; round < 3; round++) {
+                    if (cancelled.get()) throw failure(ProviderFailure.Code.CANCELLED);
                     boolean toolsAvailable = tools != null && callsUsed < 2 && !tools.definitions().isEmpty();
                     var config = GenerateContentConfig.builder()
                             .systemInstruction(Content.fromParts(Part.fromText(input.systemInstruction())));
@@ -205,6 +206,7 @@ public class GeminiProvider implements ChatProvider {
                         if (cancelled.get()) throw failure(ProviderFailure.Code.CANCELLED);
                         String name = call.name().orElse("");
                         Map<String, Object> result = tools.invoke(name, call.args().orElse(Map.of()));
+                        if (cancelled.get()) throw failure(ProviderFailure.Code.CANCELLED);
                         var functionResponse = FunctionResponse.builder().name(name).response(result);
                         call.id().ifPresent(functionResponse::id);
                         results.add(Part.builder().functionResponse(functionResponse.build()).build());
@@ -248,9 +250,11 @@ public class GeminiProvider implements ChatProvider {
         @Override
         public void close() {
             cancelled.set(true);
-            Call call = active.get();
-            if (call != null) {
-                call.cancel();
+            try {
+                if (tools != null) tools.close();
+            } finally {
+                Call call = active.get();
+                if (call != null) call.cancel();
             }
         }
     }

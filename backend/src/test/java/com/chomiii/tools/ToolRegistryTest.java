@@ -20,7 +20,7 @@ class ToolRegistryTest {
             @Override public ToolDefinition definition() {
                 return new ToolDefinition(name, "A test tool", SCHEMA, ToolDefinition.Effect.READ);
             }
-            @Override public Result execute(Map<String, Object> arguments) {
+            @Override public Result execute(ToolExecutionContext context, Map<String, Object> arguments) {
                 called.set(true);
                 return new Result(Map.of("value", arguments.get("query")), () -> {});
             }
@@ -40,7 +40,8 @@ class ToolRegistryTest {
     @Test
     void validatesArgumentsBeforeToolExecution() {
         var called = new AtomicBoolean();
-        var turn = new ToolTurn(List.of(tool("example.read", called)), false);
+        var turn = new ToolTurn(new ToolRegistry(List.of(tool("example.read", called))),
+                new ToolExecutionContext("owner", null, true, ignored -> {}), false);
 
         assertThat(turn.invoke("example.read", Map.of("query", "hello", "owner", "someone-else")))
                 .containsEntry("errorCode", "INVALID_ARGUMENTS");
@@ -80,5 +81,25 @@ class ToolRegistryTest {
         properties.clear();
 
         assertThat(((Map<?, ?>) definition.parameters().get("properties")).containsKey("query")).isTrue();
+    }
+
+    @Test
+    void unavailableToolsAreNeitherAdvertisedNorExecuted() {
+        var called = new AtomicBoolean();
+        InternalTool unavailable = new InternalTool() {
+            @Override public ToolDefinition definition() {
+                return new ToolDefinition("example.read", "A test tool", SCHEMA, ToolDefinition.Effect.READ);
+            }
+            @Override public boolean available(ToolExecutionContext context) { return false; }
+            @Override public Result execute(ToolExecutionContext context, Map<String, Object> arguments) {
+                called.set(true);
+                return new Result(Map.of(), () -> {});
+            }
+        };
+        var turn = new ToolTurn(new ToolRegistry(List.of(unavailable)),
+                new ToolExecutionContext("owner", null, true, ignored -> {}), false);
+        assertThat(turn.definitions()).isEmpty();
+        assertThat(turn.invoke("example.read", Map.of("query", "hello"))).containsEntry("errorCode", "NOT_AVAILABLE");
+        assertThat(called).isFalse();
     }
 }

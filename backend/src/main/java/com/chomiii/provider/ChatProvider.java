@@ -15,11 +15,12 @@ public interface ChatProvider {
         return open(input, apiKey);
     }
 
-    interface Tools {
+    interface Tools extends AutoCloseable {
         List<ToolDefinition> definitions();
         Map<String, Object> invoke(String name, Map<String, Object> arguments);
         default boolean bufferTextUntilFinal() { return false; }
         default void beforeContinuation(long inputBytes) { }
+        @Override default void close() { }
     }
 
     enum Role { USER, ASSISTANT }

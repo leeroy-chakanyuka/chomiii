@@ -83,6 +83,7 @@ final class EvaluationProvider implements ChatProvider {
                         budget.reserve(LiveBudget.Kind.TOOL_CONTINUATION, inputBytes);
                         tools.beforeContinuation(inputBytes);
                     }
+                    @Override public void close() { tools.close(); }
                 };
                 upstream = bounded == null ? delegate.open(input, apiKey) : delegate.open(input, apiKey, bounded);
             } catch (RuntimeException failure) {
