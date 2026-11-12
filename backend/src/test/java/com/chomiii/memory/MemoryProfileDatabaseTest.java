@@ -114,9 +114,20 @@ class MemoryProfileDatabaseTest {
         long revision = memories.revision(owner);
         memories.learn(owner, UUID.randomUUID(), revision,
                 "I live in Harare", "conversation_fact", 0.96);
-        assertThat(memories.list(owner)).anySatisfy(item -> {
-            if ("I live in Harare".equals(item.content())) assertThat(item.status()).isEqualTo("active");
-        });
+        var learned = memories.list(owner).stream()
+                .filter(item -> item.content().equals("I live in Harare"))
+                .findFirst().orElseThrow();
+        assertThat(learned.status()).isEqualTo("active");
+    }
+
+    @Test
+    void paraphrasedSameSlotFactDoesNotCreateASecondActiveMemory() {
+        memories.create(owner, "I commute by bus");
+        long revision = memories.revision(owner);
+        memories.learn(owner, UUID.randomUUID(), revision,
+                "I currently travel by bus", "conversation_fact", 0.96);
+        assertThat(memories.list(owner)).hasSize(1);
+        assertThat(memories.profile(owner).text()).contains("commute by bus");
     }
 
     @Test
