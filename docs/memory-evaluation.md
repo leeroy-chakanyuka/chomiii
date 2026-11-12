@@ -87,7 +87,16 @@ The second run reported 1,524 input tokens, 107 candidate-output tokens, and
 separate thought-token count. Token usage for the first run was not captured.
 Cost was not measured. One additional synthetic `gemini-embedding-2` request
 returned a normalized 768-dimensional vector. Its token usage was not captured.
-The milestone used nine live provider requests in total. These samples are too
+
+A separate fictional prompt explicitly asked Gemini to use `memory.search`.
+The model invoked the native function and continued the same turn with the
+requested food. That probe used a mocked memory service and two model requests;
+database isolation was tested separately. Gemini reported 1,068 input tokens,
+21 candidate-output tokens, and 1,089 total tokens. Thought tokens were not
+reported. The probe does not measure how often the model chooses to search in
+ordinary conversations.
+
+The milestone used eleven live provider requests in total. These samples are too
 small to measure p50/p95 latency or compare the four configurations.
 
 ## Reproduce the retrieval-only ablation
