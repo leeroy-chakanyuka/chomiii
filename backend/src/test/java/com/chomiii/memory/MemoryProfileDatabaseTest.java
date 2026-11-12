@@ -86,6 +86,40 @@ class MemoryProfileDatabaseTest {
     }
 
     @Test
+    void changedCommuteStaysSuggestedUntilOldFactIsResolved() {
+        var old = memories.create(owner, "I commute by bus");
+        long revision = memories.revision(owner);
+
+        memories.learn(owner, UUID.randomUUID(), revision,
+                "I now commute by bicycle", "conversation_fact", 0.96);
+
+        var candidate = memories.list(owner).stream()
+                .filter(item -> item.content().equals("I now commute by bicycle"))
+                .findFirst().orElseThrow();
+        assertThat(candidate.status()).isEqualTo("suggested");
+        assertThat(memories.profile(owner).text()).contains("bus").doesNotContain("bicycle");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> memories.approve(owner, candidate.id()))
+                .isInstanceOf(com.chomiii.chat.ChatApiException.class)
+                .hasMessageContaining("conflicts with an active memory");
+
+        memories.delete(owner, old.id());
+        memories.approve(owner, candidate.id());
+        assertThat(memories.profile(owner).text()).contains("bicycle").doesNotContain("bus");
+    }
+
+    @Test
+    void differentPersonalTopicsDoNotTriggerAConflict() {
+        memories.create(owner, "I commute by bus");
+        long revision = memories.revision(owner);
+        memories.learn(owner, UUID.randomUUID(), revision,
+                "I live in Harare", "conversation_fact", 0.96);
+        assertThat(memories.list(owner)).anySatisfy(item -> {
+            if ("I live in Harare".equals(item.content())) assertThat(item.status()).isEqualTo("active");
+        });
+    }
+
+    @Test
     void aCompactProfileIsAvailableWithoutAKeywordMatch() {
         var location = memories.create(owner, "I live in Harare");
 
