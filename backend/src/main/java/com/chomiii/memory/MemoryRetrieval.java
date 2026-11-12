@@ -49,7 +49,15 @@ final class MemoryRetrieval {
         if (required != null && !matchesRequired(content, required, memoryTopics)) return 0;
         long overlap = words(content).stream().filter(queryWords::contains).count();
         long topicOverlap = memoryTopics.stream().filter(queryTopics::contains).count();
-        return (int) (overlap * 5 + topicOverlap * 2 + (overview ? 1 : 0));
+        // A small, low-weight adjacent-context bridge from #9: dining often
+        // needs location; interviews can depend on schedule. Exact matches
+        // and same-topic facts still rank higher.
+        int supporting = 0;
+        if (queryTopics.contains(Topic.FOOD) && memoryTopics.contains(Topic.LOCATION)) supporting++;
+        if (queryTopics.contains(Topic.WORK) && memoryTopics.contains(Topic.SCHEDULES)) supporting++;
+        if (queryTopics.contains(Topic.SCHEDULES) && memoryTopics.contains(Topic.WORK)) supporting++;
+        if (queryTopics.contains(Topic.EDUCATION) && memoryTopics.contains(Topic.SCHEDULES)) supporting++;
+        return (int) (overlap * 5 + topicOverlap * 2 + supporting + (overview ? 1 : 0));
     }
 
     private static Set<String> words(String text) {
@@ -73,16 +81,16 @@ final class MemoryRetrieval {
                 .collect(Collectors.toSet());
         var topics = EnumSet.noneOf(Topic.class);
         if (contains(words, "food", "meal", "meals", "dinner", "supper", "lunch", "breakfast", "cook",
-                "cooking", "eat", "eating", "groceries", "grocery", "taco", "tacos", "salsa", "rice",
+                "cooking", "eat", "eating", "hungry", "groceries", "grocery", "taco", "tacos", "pizza", "takeaway", "delivery", "salsa", "rice",
                 "beans", "fish", "soup", "recipe", "restaurant")) topics.add(Topic.FOOD);
         if (contains(words, "work", "works", "working", "job", "career", "office", "engineer", "developer",
                 "software", "interview", "employer", "meeting", "meetings", "shift", "shifts")) topics.add(Topic.WORK);
-        if (contains(words, "schedule", "calendar", "busy", "available", "availability", "appointment", "appointments",
+        if (contains(words, "schedule", "calendar", "busy", "available", "availability", "meeting", "meetings", "deadline", "appointment", "appointments",
                 "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "weekday",
                 "weekend", "morning", "mornings", "evening", "evenings", "week", "interview")) topics.add(Topic.SCHEDULES);
         if (contains(words, "school", "university", "college", "study", "studying", "exam", "course", "degree")) topics.add(Topic.EDUCATION);
-        if (contains(words, "live", "lives", "city", "town", "location", "commute", "address", "suburb")) topics.add(Topic.LOCATION);
-        if (contains(words, "project", "projects", "startup", "app", "website", "building", "prototype")) topics.add(Topic.PROJECTS);
+        if (contains(words, "live", "lives", "city", "town", "location", "commute", "commuting", "address", "suburb", "transport", "bus", "train")) topics.add(Topic.LOCATION);
+        if (contains(words, "project", "projects", "startup", "app", "website", "building", "prototype", "repository", "backend", "frontend")) topics.add(Topic.PROJECTS);
         return topics;
     }
 
