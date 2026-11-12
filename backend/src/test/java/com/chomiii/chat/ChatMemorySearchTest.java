@@ -12,6 +12,7 @@ import com.chomiii.memory.PersonalMemory;
 import com.chomiii.provider.ChatProvider;
 import com.chomiii.provider.ProviderCatalog;
 import com.chomiii.tools.InternalTool;
+import com.chomiii.tools.ToolAuthorization;
 import com.chomiii.tools.ToolDefinition;
 import com.chomiii.tools.ToolExecutionContext;
 import com.chomiii.tools.ToolRegistry;
@@ -217,7 +218,7 @@ class ChatMemorySearchTest {
         try (var executor = Executors.newSingleThreadExecutor()) {
             var chat = new ChatStreamService(store, mock(ConversationRepository.class), mock(MemoryService.class),
                     mock(MemoryLearningService.class), new ProviderCatalog(List.of("gemini-3.5-flash-lite")),
-                    List.of(provider), executor, true, null, null, new ToolRegistry(List.of(tool)));
+                    List.of(provider), executor, true, null, null, authorized(tool));
             chat.start(UUID.randomUUID(), "owner-a", new ChatStreamController.MessageRequest(
                     UUID.randomUUID(), "gemini", "gemini-3.5-flash-lite", "Hello"), "test-key", false);
             assertThat(invoked.await(20, TimeUnit.SECONDS)).isTrue();
@@ -267,7 +268,7 @@ class ChatMemorySearchTest {
         try (var executor = Executors.newSingleThreadExecutor()) {
             var chat = new ChatStreamService(store, conversations, mock(MemoryService.class), mock(MemoryLearningService.class),
                     new ProviderCatalog(List.of("gemini-3.5-flash-lite")), List.of(provider), executor,
-                    true, null, null, new ToolRegistry(List.of(slow)));
+                    true, null, null, authorized(slow));
             chat.start(conversation, "owner", new ChatStreamController.MessageRequest(
                     request, "gemini", "gemini-3.5-flash-lite", "Hello"), "test-key", false);
             assertThat(entered.await(10, TimeUnit.SECONDS)).isTrue();
@@ -276,5 +277,16 @@ class ChatMemorySearchTest {
             assertThat(finished.await(10, TimeUnit.SECONDS)).isTrue();
             assertThat(status.get()).isEqualTo("interrupted");
         }
+    }
+
+    private static ToolRegistry authorized(InternalTool tool) {
+        return new ToolRegistry(List.of(tool), new ToolAuthorization() {
+            @Override public boolean mayExpose(ToolExecutionContext context, ToolDefinition definition) {
+                return "example.read".equals(definition.capability());
+            }
+            @Override public Decision authorize(ToolExecutionContext context, ToolDefinition definition, Map<String, Object> arguments) {
+                return mayExpose(context, definition) ? Decision.ALLOW : Decision.DENY;
+            }
+        });
     }
 }

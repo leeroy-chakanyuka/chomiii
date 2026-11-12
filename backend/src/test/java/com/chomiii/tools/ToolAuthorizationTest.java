@@ -76,7 +76,7 @@ class ToolAuthorizationTest {
             @Override public ToolDefinition definition() {
                 return new ToolDefinition("example.read", "Test tool", Map.of("type", "object", "properties",
                         Map.of("query", Map.of("type", "string")), "required", List.of("query"),
-                        "additionalProperties", false), "example.read", ToolDefinition.Effect.READ);
+                        "additionalProperties", false), "memory.read", ToolDefinition.Effect.READ);
             }
             @Override public Result execute(ToolExecutionContext context, Map<String, Object> arguments) {
                 entered.countDown();
@@ -112,6 +112,81 @@ class ToolAuthorizationTest {
         var turn = new ToolTurn(new ToolRegistry(List.of(read), broken),
                 context("owner-a", UUID.randomUUID(), UUID.randomUUID()), false);
 
+        assertThat(turn.invoke("example.read", Map.of()).toString())
+                .contains("NOT_AUTHORIZED").doesNotContain("private policy detail");
+        assertThat(called).isFalse();
+    }
+
+    @Test
+    void readEffectAloneDoesNotExposeOrAuthorizeUnknownCapabilities() {
+        var called = new AtomicBoolean();
+        var read = tool("private.admin", "private.admin", ToolDefinition.Effect.READ, called);
+        var turn = new ToolTurn(new ToolRegistry(List.of(read)), context("owner-a", UUID.randomUUID(), UUID.randomUUID()), false);
+
+        assertThat(turn.definitions()).isEmpty();
+        assertThat(turn.invoke("private.admin", Map.of())).containsEntry("errorCode", "NOT_AUTHORIZED");
+        assertThat(called).isFalse();
+    }
+
+    @Test
+    void memoryReadIsExposedAndExecutableOnlyWithTrustedRecallConsent() {
+        var called = new AtomicBoolean();
+        var turn = new ToolTurn(new ToolRegistry(List.of(tool("memory.search", "memory.read",
+                ToolDefinition.Effect.READ, called))), context("owner-a", UUID.randomUUID(), UUID.randomUUID()), false);
+
+        assertThat(turn.definitions()).extracting(ToolDefinition::name).containsExactly("memory.search");
+        assertThat(turn.invoke("memory.search", Map.of())).containsKey("output");
+        assertThat(called).isTrue();
+
+        var executedAfterRevocation = new AtomicBoolean();
+        var revoked = new ToolTurn(new ToolRegistry(List.of(tool("memory.search", "memory.read",
+                ToolDefinition.Effect.READ, executedAfterRevocation))),
+                new ToolExecutionContext("owner-a", UUID.randomUUID(), UUID.randomUUID(), null, false, ignored -> {}), false);
+
+        assertThat(revoked.definitions()).isEmpty();
+        assertThat(revoked.invoke("memory.search", Map.of())).containsEntry("errorCode", "NOT_AUTHORIZED");
+        assertThat(executedAfterRevocation).isFalse();
+    }
+
+    @Test
+    void modelArgumentsCannotChooseTheOwner() {
+        var called = new AtomicBoolean();
+        // A permissive schema on purpose: the authorization layer must still refuse owner choices.
+        InternalTool read = new InternalTool() {
+            @Override public ToolDefinition definition() {
+                return new ToolDefinition("example.read", "Permissive test tool", Map.of("type", "object"),
+                        "memory.read", ToolDefinition.Effect.READ);
+            }
+            @Override public Result execute(ToolExecutionContext context, Map<String, Object> arguments) {
+                called.set(true);
+                return new Result(Map.of(), () -> {});
+            }
+        };
+        for (String field : List.of("owner", "Owner", "owner_id", "ownerHash", "userId", "session_id")) {
+            var turn = new ToolTurn(new ToolRegistry(List.of(read)), context("owner-a", UUID.randomUUID(), UUID.randomUUID()), false);
+            assertThat(turn.definitions()).extracting(ToolDefinition::name).containsExactly("example.read");
+            assertThat(turn.invoke("example.read", Map.of(field, "someone-else")))
+                    .containsEntry("errorCode", "NOT_AUTHORIZED");
+        }
+        assertThat(called).isFalse();
+    }
+
+    @Test
+    void policyFailureWhileExposingHidesAndDeniesTools() {
+        var called = new AtomicBoolean();
+        var read = tool("example.read", "memory.read", ToolDefinition.Effect.READ, called);
+        ToolAuthorization broken = new ToolAuthorization() {
+            @Override public boolean mayExpose(ToolExecutionContext context, ToolDefinition definition) {
+                throw new IllegalStateException("private policy detail");
+            }
+            @Override public Decision authorize(ToolExecutionContext context, ToolDefinition definition, Map<String, Object> arguments) {
+                throw new IllegalStateException("private policy detail");
+            }
+        };
+        var turn = new ToolTurn(new ToolRegistry(List.of(read), broken),
+                context("owner-a", UUID.randomUUID(), UUID.randomUUID()), false);
+
+        assertThat(turn.definitions()).isEmpty();
         assertThat(turn.invoke("example.read", Map.of()).toString())
                 .contains("NOT_AUTHORIZED").doesNotContain("private policy detail");
         assertThat(called).isFalse();

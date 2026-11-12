@@ -18,7 +18,7 @@ class ToolRegistryTest {
     private static InternalTool tool(String name, AtomicBoolean called) {
         return new InternalTool() {
             @Override public ToolDefinition definition() {
-                return new ToolDefinition(name, "A test tool", SCHEMA, "test.read", ToolDefinition.Effect.READ);
+                return new ToolDefinition(name, "A test tool", SCHEMA, "memory.read", ToolDefinition.Effect.READ);
             }
             @Override public Result execute(ToolExecutionContext context, Map<String, Object> arguments) {
                 called.set(true);
@@ -88,7 +88,7 @@ class ToolRegistryTest {
         var called = new AtomicBoolean();
         InternalTool unavailable = new InternalTool() {
             @Override public ToolDefinition definition() {
-                return new ToolDefinition("example.read", "A test tool", SCHEMA, "test.read", ToolDefinition.Effect.READ);
+                return new ToolDefinition("example.read", "A test tool", SCHEMA, "memory.read", ToolDefinition.Effect.READ);
             }
             @Override public boolean available(ToolExecutionContext context) { return false; }
             @Override public Result execute(ToolExecutionContext context, Map<String, Object> arguments) {

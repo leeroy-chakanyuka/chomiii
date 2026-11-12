@@ -89,7 +89,15 @@ class ToolTurnTest {
     }
 
     private static ToolTurn turn(InternalTool tool) {
-        return new ToolTurn(new ToolRegistry(List.of(tool)),
+        ToolAuthorization policy = new ToolAuthorization() {
+            @Override public boolean mayExpose(ToolExecutionContext context, ToolDefinition definition) {
+                return "test.read".equals(definition.capability()) && definition.effect() == ToolDefinition.Effect.READ;
+            }
+            @Override public Decision authorize(ToolExecutionContext context, ToolDefinition definition, Map<String, Object> arguments) {
+                return mayExpose(context, definition) ? Decision.ALLOW : Decision.DENY;
+            }
+        };
+        return new ToolTurn(new ToolRegistry(List.of(tool), policy),
                 new ToolExecutionContext("owner", java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), null, true, ignored -> {}), false);
     }
 }

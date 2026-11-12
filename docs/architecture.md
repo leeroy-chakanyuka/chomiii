@@ -267,8 +267,9 @@ contain either `output` or an `error` with an `errorCode`. Cancellation closes
 the tool turn and interrupts an in-flight call. Tool results are untrusted data.
 
 `ToolExecutionContext` carries the server-resolved owner and the conversation
-and request IDs. The default `ReadOnlyToolAuthorization` permits eligible reads
-and denies writes. There is no grant store or approval interface yet. A future
+and request IDs. The default `ReadOnlyToolAuthorization` permits `memory.read`
+only when recall is enabled and denies other capabilities, including reads.
+There is no grant store or approval interface yet. A future
 policy can use the trusted context, capability, effect, and arguments to check
 persistent grants or a one-time approval before a write.
 
