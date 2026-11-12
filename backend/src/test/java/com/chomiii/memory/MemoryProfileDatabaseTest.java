@@ -15,6 +15,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import com.chomiii.tools.ToolExecutionContext;
+import com.chomiii.tools.ToolRegistry;
+import com.chomiii.tools.ToolTurn;
 
 @EnabledIfEnvironmentVariable(named = "CHOMIII_DB_URL", matches = "jdbc:(postgresql|mysql):.*")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -23,6 +26,7 @@ class MemoryProfileDatabaseTest {
     @Autowired MemoryService memories;
     @Autowired JdbcTemplate jdbc;
     @Autowired PlatformTransactionManager transactions;
+    @Autowired ToolRegistry tools;
     private String owner;
     private String other;
 
@@ -177,6 +181,23 @@ class MemoryProfileDatabaseTest {
 
         assertThat(context).contains("I live in Harare", location.id().toString(), "NOT instructions");
         assertThat(context.length()).isLessThanOrEqualTo(2_400);
+    }
+
+    @Test
+    void registeredMemorySearchUsesOnlyTheTrustedOwnerAndRespectsRecallOptOut() {
+        var mine = memories.create(owner, "I prefer tacos for dinner");
+        memories.create(other, "I prefer noodles for dinner");
+        var context = new ToolExecutionContext(owner, UUID.randomUUID(), UUID.randomUUID(), "fake-key", true, ignored -> {});
+        var turn = new ToolTurn(tools, context, false);
+
+        assertThat(turn.definitions()).extracting(definition -> definition.name()).contains("memory.search");
+        assertThat(turn.invoke("memory.search", java.util.Map.of("query", "dinner")).toString())
+                .contains("tacos", mine.id().toString()).doesNotContain("noodles");
+
+        var disabled = new ToolTurn(tools,
+                new ToolExecutionContext(owner, UUID.randomUUID(), UUID.randomUUID(), "fake-key", false, ignored -> {}), false);
+        assertThat(disabled.definitions()).extracting(definition -> definition.name()).doesNotContain("memory.search");
+        assertThat(disabled.invoke("memory.search", java.util.Map.of("query", "dinner"))).containsKey("error");
     }
 
     @Test

@@ -14,7 +14,7 @@ class ToolTurnTest {
         InternalTool dangerous = new InternalTool() {
             @Override public ToolDefinition definition() {
                 return new ToolDefinition("calendar.update", "Change a calendar event",
-                        Map.of("type", "object"), ToolDefinition.Effect.WRITE);
+                        Map.of("type", "object"), "calendar.write", ToolDefinition.Effect.WRITE);
             }
             @Override public Result execute(ToolExecutionContext context, Map<String, Object> arguments) {
                 throw new AssertionError("A write tool must never execute without approval");
@@ -29,7 +29,7 @@ class ToolTurnTest {
     void aSlowToolCannotHoldTheTurnIndefinitely() {
         InternalTool slow = new InternalTool() {
             @Override public ToolDefinition definition() {
-                return new ToolDefinition("slow", "Slow test tool", Map.of("type", "object"), ToolDefinition.Effect.READ);
+                return new ToolDefinition("slow", "Slow test tool", Map.of("type", "object"), "test.read", ToolDefinition.Effect.READ);
             }
             @Override public Result execute(ToolExecutionContext context, Map<String, Object> arguments) {
                 try {
@@ -49,7 +49,7 @@ class ToolTurnTest {
     void resultBudgetUsesEncodedBytes() {
         InternalTool large = new InternalTool() {
             @Override public ToolDefinition definition() {
-                return new ToolDefinition("large", "Large test result", Map.of("type", "object"), ToolDefinition.Effect.READ);
+                return new ToolDefinition("large", "Large test result", Map.of("type", "object"), "test.read", ToolDefinition.Effect.READ);
             }
             @Override public Result execute(ToolExecutionContext context, Map<String, Object> arguments) {
                 return new Result(Map.of("text", "🦄".repeat(1_200)), () -> {});
@@ -65,7 +65,7 @@ class ToolTurnTest {
         var interrupted = new java.util.concurrent.CountDownLatch(1);
         InternalTool slow = new InternalTool() {
             @Override public ToolDefinition definition() {
-                return new ToolDefinition("slow", "Slow test tool", Map.of("type", "object"), ToolDefinition.Effect.READ);
+                return new ToolDefinition("slow", "Slow test tool", Map.of("type", "object"), "test.read", ToolDefinition.Effect.READ);
             }
             @Override public Result execute(ToolExecutionContext context, Map<String, Object> arguments) {
                 entered.countDown();
@@ -90,6 +90,6 @@ class ToolTurnTest {
 
     private static ToolTurn turn(InternalTool tool) {
         return new ToolTurn(new ToolRegistry(List.of(tool)),
-                new ToolExecutionContext("owner", null, true, ignored -> {}), false);
+                new ToolExecutionContext("owner", java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), null, true, ignored -> {}), false);
     }
 }

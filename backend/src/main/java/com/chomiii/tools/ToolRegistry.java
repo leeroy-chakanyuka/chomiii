@@ -5,15 +5,22 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /** Registry of the tools made available to a turn. */
 @Component
 public final class ToolRegistry {
-    public record Registered(ToolDefinition definition, InternalTool tool) {}
+    record Registered(ToolDefinition definition, InternalTool tool) {}
     private final Map<String, Registered> tools;
+    private final ToolAuthorization authorization;
 
     public ToolRegistry(List<InternalTool> tools) {
+        this(tools, new ReadOnlyToolAuthorization());
+    }
+
+    @Autowired
+    public ToolRegistry(List<InternalTool> tools, ToolAuthorization authorization) {
         Map<String, Registered> registered = new LinkedHashMap<>();
         for (InternalTool tool : List.copyOf(tools)) {
             ToolDefinition definition = tool.definition();
@@ -23,6 +30,7 @@ public final class ToolRegistry {
             }
         }
         this.tools = Collections.unmodifiableMap(registered);
+        this.authorization = java.util.Objects.requireNonNull(authorization);
     }
 
     public List<ToolDefinition> definitions() {
@@ -30,15 +38,31 @@ public final class ToolRegistry {
     }
 
     public List<ToolDefinition> available(ToolExecutionContext context) {
-        return tools.values().stream().filter(registered -> isAvailable(registered, context))
+        return tools.values().stream().filter(registered -> mayExpose(registered, context) && isAvailable(registered, context))
                 .map(Registered::definition).toList();
     }
 
-    public Optional<Registered> findAvailable(String name, ToolExecutionContext context) {
+    Optional<Registered> findAvailable(String name, ToolExecutionContext context) {
         return find(name).filter(registered -> isAvailable(registered, context));
     }
 
-    public Optional<Registered> find(String name) {
+    boolean mayExpose(Registered registered, ToolExecutionContext context) {
+        try {
+            return authorization.mayExpose(context, registered.definition());
+        } catch (RuntimeException denied) {
+            return false;
+        }
+    }
+
+    boolean authorize(Registered registered, ToolExecutionContext context, Map<String, Object> arguments) {
+        try {
+            return authorization.authorize(context, registered.definition(), arguments) == ToolAuthorization.Decision.ALLOW;
+        } catch (RuntimeException denied) {
+            return false;
+        }
+    }
+
+    Optional<Registered> find(String name) {
         return Optional.ofNullable(tools.get(name));
     }
 

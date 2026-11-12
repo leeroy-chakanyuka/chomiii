@@ -192,7 +192,7 @@ class ChatMemorySearchTest {
         InternalTool tool = new InternalTool() {
             @Override public ToolDefinition definition() {
                 return new ToolDefinition("example.read", "Read a test value", Map.of("type", "object"),
-                        ToolDefinition.Effect.READ);
+                        "example.read", ToolDefinition.Effect.READ);
             }
             @Override public Result execute(ToolExecutionContext context, Map<String, Object> arguments) {
                 assertThat(context.owner()).isEqualTo("owner-a");
@@ -242,7 +242,7 @@ class ChatMemorySearchTest {
                 .when(store).finish(any(), anyString(), any(), any(), anyString(), anyString());
         InternalTool slow = new InternalTool() {
             @Override public ToolDefinition definition() {
-                return new ToolDefinition("example.read", "Read a test value", Map.of("type", "object"), ToolDefinition.Effect.READ);
+                return new ToolDefinition("example.read", "Read a test value", Map.of("type", "object"), "example.read", ToolDefinition.Effect.READ);
             }
             @Override public Result execute(ToolExecutionContext context, Map<String, Object> arguments) {
                 entered.countDown();

@@ -18,7 +18,7 @@ class ToolRegistryTest {
     private static InternalTool tool(String name, AtomicBoolean called) {
         return new InternalTool() {
             @Override public ToolDefinition definition() {
-                return new ToolDefinition(name, "A test tool", SCHEMA, ToolDefinition.Effect.READ);
+                return new ToolDefinition(name, "A test tool", SCHEMA, "test.read", ToolDefinition.Effect.READ);
             }
             @Override public Result execute(ToolExecutionContext context, Map<String, Object> arguments) {
                 called.set(true);
@@ -41,7 +41,7 @@ class ToolRegistryTest {
     void validatesArgumentsBeforeToolExecution() {
         var called = new AtomicBoolean();
         var turn = new ToolTurn(new ToolRegistry(List.of(tool("example.read", called))),
-                new ToolExecutionContext("owner", null, true, ignored -> {}), false);
+                new ToolExecutionContext("owner", java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), null, true, ignored -> {}), false);
 
         assertThat(turn.invoke("example.read", Map.of("query", "hello", "owner", "someone-else")))
                 .containsEntry("errorCode", "INVALID_ARGUMENTS");
@@ -77,7 +77,7 @@ class ToolRegistryTest {
         var properties = new java.util.HashMap<String, Object>();
         properties.put("query", new java.util.HashMap<>(Map.of("type", "string")));
         var definition = new ToolDefinition("example.read", "A test tool",
-                Map.of("type", "object", "properties", properties), ToolDefinition.Effect.READ);
+                Map.of("type", "object", "properties", properties), "test.read", ToolDefinition.Effect.READ);
         properties.clear();
 
         assertThat(((Map<?, ?>) definition.parameters().get("properties")).containsKey("query")).isTrue();
@@ -88,7 +88,7 @@ class ToolRegistryTest {
         var called = new AtomicBoolean();
         InternalTool unavailable = new InternalTool() {
             @Override public ToolDefinition definition() {
-                return new ToolDefinition("example.read", "A test tool", SCHEMA, ToolDefinition.Effect.READ);
+                return new ToolDefinition("example.read", "A test tool", SCHEMA, "test.read", ToolDefinition.Effect.READ);
             }
             @Override public boolean available(ToolExecutionContext context) { return false; }
             @Override public Result execute(ToolExecutionContext context, Map<String, Object> arguments) {
@@ -97,7 +97,7 @@ class ToolRegistryTest {
             }
         };
         var turn = new ToolTurn(new ToolRegistry(List.of(unavailable)),
-                new ToolExecutionContext("owner", null, true, ignored -> {}), false);
+                new ToolExecutionContext("owner", java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), null, true, ignored -> {}), false);
         assertThat(turn.definitions()).isEmpty();
         assertThat(turn.invoke("example.read", Map.of("query", "hello"))).containsEntry("errorCode", "NOT_AVAILABLE");
         assertThat(called).isFalse();

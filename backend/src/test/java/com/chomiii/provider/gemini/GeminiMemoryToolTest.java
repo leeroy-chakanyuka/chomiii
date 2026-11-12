@@ -40,7 +40,7 @@ class GeminiMemoryToolTest {
                 @Override public List<ToolDefinition> definitions() {
                     return List.of(new ToolDefinition("memory.search", "Search saved memories",
                             Map.of("type", "object", "properties", Map.of("query", Map.of("type", "string")),
-                                    "required", List.of("query")), ToolDefinition.Effect.READ));
+                                    "required", List.of("query")), "memory.read", ToolDefinition.Effect.READ));
                 }
                 @Override public Map<String, Object> invoke(String name, Map<String, Object> arguments) {
                     assertThat(name).isEqualTo("memory.search");

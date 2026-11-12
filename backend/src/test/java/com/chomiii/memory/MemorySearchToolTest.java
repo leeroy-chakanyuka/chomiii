@@ -23,7 +23,8 @@ class MemorySearchToolTest {
         var fact = new PersonalMemory(UUID.randomUUID(), "I like tacos", "user_explicit", Instant.now(), Instant.now());
         when(memories.search("owner-a", "dinner", null, 5)).thenReturn(List.of(fact));
         var delivered = new ArrayList<UUID>();
-        var context = new ToolExecutionContext("owner-a", null, true, observation -> delivered.addAll(observation.references()));
+        var context = new ToolExecutionContext("owner-a", UUID.randomUUID(), UUID.randomUUID(), null, true,
+                observation -> delivered.addAll(observation.references()));
         var turn = new ToolTurn(new ToolRegistry(List.of(new MemorySearchTool(memories, null))), context, false);
 
         assertThat(turn.invoke("memory.search", Map.of("query", "dinner")).toString())
@@ -42,7 +43,7 @@ class MemorySearchToolTest {
     void modelCannotSupplyAnOwnerOrExceedTheResultLimit() {
         var memories = mock(MemoryService.class);
         var turn = new ToolTurn(new ToolRegistry(List.of(new MemorySearchTool(memories, null))),
-                new ToolExecutionContext("owner-a", null, true, ignored -> {}), false);
+                new ToolExecutionContext("owner-a", UUID.randomUUID(), UUID.randomUUID(), null, true, ignored -> {}), false);
 
         assertThat(turn.invoke("memory.search", Map.of("query", "dinner", "owner", "owner-b")))
                 .containsKey("error");
@@ -58,9 +59,32 @@ class MemorySearchToolTest {
         when(memories.search("owner-a", "dinner", null, 5))
                 .thenThrow(new org.springframework.dao.DataAccessResourceFailureException("private database detail"));
         var turn = new ToolTurn(new ToolRegistry(List.of(new MemorySearchTool(memories, null))),
-                new ToolExecutionContext("owner-a", null, true, ignored -> {}), false);
+                new ToolExecutionContext("owner-a", UUID.randomUUID(), UUID.randomUUID(), null, true, ignored -> {}), false);
 
         assertThat(turn.invoke("memory.search", Map.of("query", "dinner")).toString())
                 .contains("error").doesNotContain("private database detail");
+    }
+
+    @Test
+    void sharedRegistryKeepsOwnersSeparateAndHidesMemoryWhenRecallIsOff() {
+        var memories = mock(MemoryService.class);
+        var a = new PersonalMemory(UUID.randomUUID(), "I like tacos", "user_explicit", Instant.now(), Instant.now());
+        var b = new PersonalMemory(UUID.randomUUID(), "I like noodles", "user_explicit", Instant.now(), Instant.now());
+        when(memories.search("owner-a", "dinner", null, 5)).thenReturn(List.of(a));
+        when(memories.search("owner-b", "dinner", null, 5)).thenReturn(List.of(b));
+        var registry = new ToolRegistry(List.of(new MemorySearchTool(memories, null)));
+        var first = new ToolTurn(registry,
+                new ToolExecutionContext("owner-a", UUID.randomUUID(), UUID.randomUUID(), null, true, ignored -> {}), false);
+        var second = new ToolTurn(registry,
+                new ToolExecutionContext("owner-b", UUID.randomUUID(), UUID.randomUUID(), null, true, ignored -> {}), false);
+        var disabled = new ToolTurn(registry,
+                new ToolExecutionContext("owner-a", UUID.randomUUID(), UUID.randomUUID(), null, false, ignored -> {}), false);
+
+        assertThat(first.invoke("memory.search", Map.of("query", "dinner")).toString())
+                .contains("tacos").doesNotContain("noodles");
+        assertThat(second.invoke("memory.search", Map.of("query", "dinner")).toString())
+                .contains("noodles").doesNotContain("tacos");
+        assertThat(disabled.definitions()).isEmpty();
+        assertThat(disabled.invoke("memory.search", Map.of("query", "dinner"))).containsKey("error");
     }
 }

@@ -36,7 +36,7 @@ class GeminiMemoryToolLiveTest {
         when(memories.search(eq("synthetic-owner"), anyString(), nullable(String.class), anyInt()))
                 .thenReturn(List.of(fact));
         var tool = new ToolTurn(new ToolRegistry(List.of(new MemorySearchTool(memories, null))),
-                new ToolExecutionContext("synthetic-owner", null, true, ignored -> {}), false);
+                new ToolExecutionContext("synthetic-owner", UUID.randomUUID(), UUID.randomUUID(), null, true, ignored -> {}), false);
         var continuations = new AtomicInteger();
         var invocations = new AtomicInteger();
         ChatProvider.Tools bounded = new ChatProvider.Tools() {

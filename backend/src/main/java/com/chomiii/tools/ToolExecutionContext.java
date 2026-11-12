@@ -12,19 +12,26 @@ public final class ToolExecutionContext {
     }
 
     private final String owner;
+    private final UUID conversationId;
+    private final UUID requestId;
     private final String apiKey;
     private final boolean memoryRecallEnabled;
     private final Consumer<Observation> observer;
 
-    public ToolExecutionContext(String owner, String apiKey, boolean memoryRecallEnabled, Consumer<Observation> observer) {
+    public ToolExecutionContext(String owner, UUID conversationId, UUID requestId, String apiKey,
+            boolean memoryRecallEnabled, Consumer<Observation> observer) {
         if (owner == null || owner.isBlank()) throw new IllegalArgumentException("Owner is required");
         this.owner = owner;
+        this.conversationId = Objects.requireNonNull(conversationId);
+        this.requestId = Objects.requireNonNull(requestId);
         this.apiKey = apiKey;
         this.memoryRecallEnabled = memoryRecallEnabled;
         this.observer = Objects.requireNonNull(observer);
     }
 
     public String owner() { return owner; }
+    public UUID conversationId() { return conversationId; }
+    public UUID requestId() { return requestId; }
     public String apiKey() { return apiKey; }
     public boolean memoryRecallEnabled() { return memoryRecallEnabled; }
     public void delivered(Observation observation) { observer.accept(observation); }

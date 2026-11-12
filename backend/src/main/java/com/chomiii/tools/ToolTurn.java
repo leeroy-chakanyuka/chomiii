@@ -44,9 +44,7 @@ public final class ToolTurn implements ChatProvider.Tools {
 
     @Override
     public List<ToolDefinition> definitions() {
-        return registry.available(context).stream()
-                .filter(definition -> definition.effect() == ToolDefinition.Effect.READ)
-                .toList();
+        return registry.available(context);
     }
 
     @Override
@@ -58,23 +56,34 @@ public final class ToolTurn implements ChatProvider.Tools {
     public synchronized Map<String, Object> invoke(String name, Map<String, Object> arguments) {
         if (cancelled.get()) return ToolResponse.error(ToolResponse.ErrorCode.CANCELLED, "Tool call cancelled.");
         if (++calls > MAX_CALLS) return ToolResponse.error(ToolResponse.ErrorCode.CALL_LIMIT, "Tool call limit reached.");
-        ToolRegistry.Registered registered = registry.findAvailable(name, context).orElse(null);
-        if (registered == null || registered.definition().effect() != ToolDefinition.Effect.READ
-                || arguments == null) return ToolResponse.error(ToolResponse.ErrorCode.NOT_AVAILABLE, "Invalid tool call.");
+        ToolRegistry.Registered registered = registry.find(name).orElse(null);
+        if (registered == null || arguments == null) {
+            return ToolResponse.error(ToolResponse.ErrorCode.NOT_AVAILABLE, "Invalid tool call.");
+        }
+        if (!registry.mayExpose(registered, context)) {
+            return ToolResponse.error(ToolResponse.ErrorCode.NOT_AUTHORIZED, "Tool is not authorized.");
+        }
+        if (registry.findAvailable(name, context).isEmpty()) {
+            return ToolResponse.error(ToolResponse.ErrorCode.NOT_AVAILABLE, "Invalid tool call.");
+        }
         InternalTool tool = registered.tool();
         if (remainingNanos <= 0) return ToolResponse.error(ToolResponse.ErrorCode.TIMEOUT, "Tool time limit reached.");
         long started = System.nanoTime();
         try {
-            if (JSON.writeValueAsBytes(arguments).length > 4_000) {
+            Map<String, Object> safeArguments = ToolValues.copy(arguments);
+            if (JSON.writeValueAsBytes(safeArguments).length > 4_000) {
                 return ToolResponse.error(ToolResponse.ErrorCode.INVALID_ARGUMENTS, "Invalid tool arguments.");
             }
-            ToolSchemaValidator.validate(registered.definition().parameters(), arguments);
-            if (!searches.add(name + "|" + tool.fingerprint(arguments))) {
+            ToolSchemaValidator.validate(registered.definition().parameters(), safeArguments);
+            if (!registry.authorize(registered, context, safeArguments)) {
+                return ToolResponse.error(ToolResponse.ErrorCode.NOT_AUTHORIZED, "Tool is not authorized.");
+            }
+            if (!searches.add(name + "|" + tool.fingerprint(safeArguments))) {
                 return ToolResponse.error(ToolResponse.ErrorCode.DUPLICATE_CALL, "Repeated tool call.");
             }
             Future<InternalTool.Result> future = EXECUTOR.submit(() -> {
                 if (cancelled.get()) throw new CancellationException();
-                return tool.execute(context, arguments);
+                return tool.execute(context, safeArguments);
             });
             active.set(future);
             if (cancelled.get()) future.cancel(true);

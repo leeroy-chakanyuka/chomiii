@@ -4,7 +4,7 @@ import java.util.Map;
 
 /** Provider-neutral function response payload. */
 public final class ToolResponse {
-    public enum ErrorCode { CALL_LIMIT, NOT_AVAILABLE, INVALID_ARGUMENTS, DUPLICATE_CALL, TIMEOUT, CANCELLED, FAILURE, RESULT_TOO_LARGE }
+    public enum ErrorCode { CALL_LIMIT, NOT_AVAILABLE, NOT_AUTHORIZED, INVALID_ARGUMENTS, DUPLICATE_CALL, TIMEOUT, CANCELLED, FAILURE, RESULT_TOO_LARGE }
 
     private ToolResponse() {}
 

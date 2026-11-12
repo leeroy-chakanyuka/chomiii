@@ -216,7 +216,8 @@ public class ChatStreamService {
         try {
             send(emitter, "start", Map.of("requestId", requestId.toString(), "messageId", assistantId.toString()));
             var toolMemoryIds = new java.util.HashSet<UUID>();
-            var toolContext = new ToolExecutionContext(owner, key, useMemory && memorySearchEnabled, observation -> {
+            var toolContext = new ToolExecutionContext(owner, conversation, requestId, key,
+                    useMemory && memorySearchEnabled, observation -> {
                 if ("memory.search".equals(observation.toolName())) toolMemoryIds.addAll(observation.references());
             });
             var session = new ToolTurn(toolRegistry, toolContext, planning);

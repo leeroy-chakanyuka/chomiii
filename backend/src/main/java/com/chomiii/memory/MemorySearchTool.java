@@ -21,7 +21,7 @@ public final class MemorySearchTool implements InternalTool {
                     "query", Map.of("type", "string", "description", "What personal context to find", "minLength", 1, "maxLength", 300),
                     "topic", Map.of("type", "string", "enum", List.copyOf(TOPICS)),
                     "limit", Map.of("type", "integer", "minimum", 1, "maximum", 5)),
-                    "required", List.of("query"), "additionalProperties", false), ToolDefinition.Effect.READ);
+                    "required", List.of("query"), "additionalProperties", false), "memory.read", ToolDefinition.Effect.READ);
     private final MemoryService memories;
     private final HybridMemorySearch hybrid;
 

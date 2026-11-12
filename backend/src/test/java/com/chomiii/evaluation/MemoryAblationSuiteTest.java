@@ -100,7 +100,8 @@ class MemoryAblationSuiteTest {
                                 toolCalled = true;
                                 var hybrid = "C".equals(arm) ? semanticC : lexical;
                                 var tool = new MemorySearchTool(memories, hybrid);
-                                var toolContext = new ToolExecutionContext(session.owner(), "synthetic", true, ignored -> {});
+                                var toolContext = new ToolExecutionContext(session.owner(), session.conversation(),
+                                        java.util.UUID.randomUUID(), "synthetic", true, ignored -> {});
                                 var result = new ToolTurn(new ToolRegistry(List.of(tool)), toolContext, false)
                                         .invoke("memory.search", Map.of("query", check.query()));
                                 toolFailed = result.containsKey("error");
