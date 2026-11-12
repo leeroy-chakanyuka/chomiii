@@ -3,7 +3,6 @@ package com.chomiii.tools;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
-import com.chomiii.provider.ChatProvider;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -13,8 +12,8 @@ class ToolTurnTest {
     @Test
     void aSlowToolCannotHoldTheTurnIndefinitely() {
         InternalTool slow = new InternalTool() {
-            @Override public ChatProvider.ToolSpec definition() {
-                return new ChatProvider.ToolSpec("slow", "Slow test tool", Map.of("type", "object"));
+            @Override public ToolDescriptor definition() {
+                return new ToolDescriptor("slow", "Slow test tool", Map.of("type", "object"), true);
             }
             @Override public Result execute(Map<String, Object> arguments) {
                 try {
@@ -33,8 +32,8 @@ class ToolTurnTest {
     @Test
     void resultBudgetUsesEncodedBytes() {
         InternalTool large = new InternalTool() {
-            @Override public ChatProvider.ToolSpec definition() {
-                return new ChatProvider.ToolSpec("large", "Large test result", Map.of("type", "object"));
+            @Override public ToolDescriptor definition() {
+                return new ToolDescriptor("large", "Large test result", Map.of("type", "object"), true);
             }
             @Override public Result execute(Map<String, Object> arguments) {
                 return new Result(Map.of("text", "🦄".repeat(1_200)), () -> {});
