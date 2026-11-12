@@ -108,8 +108,9 @@ export function MemoryPanel({ onClose, useMemory = true, onMemoryChange }: {
         Chomi automatically learns selected useful facts from conversations. After an eligible
         completed reply, it may send your message to your selected AI provider again to extract
         memories, using additional model tokens and your API key.
-        Clear personal facts may become active memories; uncertain inferences stay here
-        as suggestions until you approve them. You can inspect, correct, reject or delete
+        Clear personal facts may become active memories; uncertain or conflicting information
+        stays here as suggestions until you approve it. Resolve an outdated active fact
+        before approving a contradictory suggestion. You can inspect, correct, reject or delete
         what Chomi remembers. Relevant active memories may be sent to your AI provider
         in future chats. Learning never grants permission to access apps or spend money.
       </p>
@@ -165,7 +166,7 @@ export function MemoryPanel({ onClose, useMemory = true, onMemoryChange }: {
             </> : <>
               <p>{item.content}</p>
               <span className="memory-meta">
-                {item.status === 'suggested' ? 'Suggested inference — not used in chat' :
+                {item.status === 'suggested' ? 'Suggested memory — review before use' :
                   item.source === 'user_explicit' ? 'You saved this' : 'Learned from conversation'}
                 {' · '}{Math.round(item.confidence * 100)}% confidence
                 {' · updated '}{new Date(item.updatedAt).toLocaleDateString()}
