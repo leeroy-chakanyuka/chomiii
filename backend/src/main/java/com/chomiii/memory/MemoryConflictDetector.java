@@ -13,6 +13,10 @@ import java.util.regex.Pattern;
  * an existing user-controlled memory.
  */
 final class MemoryConflictDetector {
+    // Different locations or transport modes may coexist; an explicit change
+    // marker is required before one fact can block another.
+    private static final Pattern CHANGE = Pattern.compile(
+            "(?i)\\b(now|currently|moved|switched|instead|no\\s+longer|changed)\\b");
     private static final Pattern COMMUTE = Pattern.compile(
             "(?i)\\bi\\s+(?:(?:now|currently|usually)\\s+)?(?:commute|travel)" +
             "(?:\\s+to\\s+(?:work|school|university))?\\s+(?:by|on)\\s+(?:the\\s+|a\\s+)?([\\p{L}]+)");
@@ -26,6 +30,7 @@ final class MemoryConflictDetector {
     private MemoryConflictDetector() {}
 
     static boolean conflicts(String candidate, List<PersonalMemory> existing) {
+        if (candidate == null || !CHANGE.matcher(candidate).find()) return false;
         String candidateMode = commuteMode(candidate);
         String candidateResidence = residence(candidate);
         if (candidateMode == null && candidateResidence == null) return false;
