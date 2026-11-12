@@ -142,6 +142,34 @@ class MemoryProfileDatabaseTest {
     }
 
     @Test
+    void coexistingCommutesStayActiveAndExplicitCorrectionsRemainReviewable() {
+        var work = memories.create(owner, "I commute to work by train");
+        var dinner = memories.create(owner, "I prefer tacos for dinner");
+        var conversation = UUID.randomUUID();
+        long revision = memories.revision(owner);
+
+        memories.learn(owner, conversation, revision, "I now commute to school by bus", "conversation_fact", 0.96);
+        memories.learn(owner, conversation, revision, "I now commute to work by bus", "conversation_fact", 0.96);
+        memories.learn(owner, conversation, revision, "I now prefer noodles for dinner", "conversation_fact", 0.96);
+
+        var records = memories.list(owner);
+        assertThat(records).anySatisfy(memory -> {
+            assertThat(memory.content()).isEqualTo("I now commute to school by bus");
+            assertThat(memory.status()).isEqualTo("active");
+            assertThat(memory.sourceConversationId()).isEqualTo(conversation);
+        });
+        assertThat(records).filteredOn(memory -> memory.content().equals("I now commute to work by bus")
+                        || memory.content().equals("I now prefer noodles for dinner"))
+                .hasSize(2).allSatisfy(memory -> {
+                    assertThat(memory.status()).isEqualTo("suggested");
+                    assertThat(memory.source()).isEqualTo("conversation_fact");
+                    assertThat(memory.sourceConversationId()).isEqualTo(conversation);
+                });
+        assertThat(records).extracting(PersonalMemory::id).contains(work.id(), dinner.id());
+        assertThat(memories.profile(owner).text()).contains("train", "tacos").doesNotContain("noodles");
+    }
+
+    @Test
     void aCompactProfileIsAvailableWithoutAKeywordMatch() {
         var location = memories.create(owner, "I live in Harare");
 
