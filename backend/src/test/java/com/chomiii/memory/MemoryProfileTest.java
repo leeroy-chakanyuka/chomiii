@@ -29,6 +29,24 @@ import org.springframework.dao.DataAccessResourceFailureException;
  */
 class MemoryProfileTest {
 
+    @Test
+    void snapshotSkipsOversizedCategoriesButKeepsLaterUsefulOnes() {
+        UUID food = UUID.randomUUID();
+        UUID location = UUID.randomUUID();
+        UUID work = UUID.randomUUID();
+        UUID schedules = UUID.randomUUID();
+        var paragraphs = List.of(
+                new ProfileParagraph("food", "f".repeat(580), List.of(food)),
+                new ProfileParagraph("location", "l".repeat(580), List.of(location)),
+                new ProfileParagraph("work", "w".repeat(580), List.of(work)),
+                new ProfileParagraph("schedules", "Meeting on Tuesday.", List.of(schedules)));
+        var selection = ProfileComposer.select(paragraphs);
+        assertThat(selection.text()).contains("Food:", "Location:", "Schedules: Meeting on Tuesday.");
+        assertThat(selection.text()).doesNotContain("Work: ");
+        assertThat(selection.included()).extracting(ProfileParagraph::category)
+                .containsExactly("food", "location", "schedules");
+    }
+
     private static PersonalMemory active(UUID id, String content) {
         return new PersonalMemory(id, content, "user_explicit", Instant.now(), Instant.now());
     }
