@@ -121,6 +121,17 @@ class MemoryProfileDatabaseTest {
     }
 
     @Test
+    void differentHomesDoNotAutomaticallyCountAsAConflictWithoutAChangeStatement() {
+        memories.create(owner, "I live in Goodwood");
+        long revision = memories.revision(owner);
+        memories.learn(owner, UUID.randomUUID(), revision,
+                "I live in Franschhoek", "conversation_fact", 0.96);
+        assertThat(memories.list(owner)).filteredOn(item -> "active".equals(item.status()))
+                .hasSize(2);
+        assertThat(memories.profile(owner).text()).contains("Goodwood", "Franschhoek");
+    }
+
+    @Test
     void paraphrasedSameSlotFactDoesNotCreateASecondActiveMemory() {
         memories.create(owner, "I commute by bus");
         long revision = memories.revision(owner);
