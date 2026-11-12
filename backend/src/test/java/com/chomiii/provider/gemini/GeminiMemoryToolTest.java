@@ -20,8 +20,8 @@ class GeminiMemoryToolTest {
         server.createContext("/", exchange -> {
             requests.add(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
             String response = requests.size() == 1
-                    ? "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"functionCall\":{\"id\":\"call-1\",\"name\":\"memory.search\",\"args\":{\"query\":\"dinner\"}},\"thoughtSignature\":\"YWJj\"}]}}]}\n\n"
-                    : "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"You like tacos.\"}]}}]}\n\n";
+                    ? "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"functionCall\":{\"id\":\"call-1\",\"name\":\"memory.search\",\"args\":{\"query\":\"dinner\"}},\"thoughtSignature\":\"YWJj\"}]} }],\"usageMetadata\":{\"promptTokenCount\":10,\"candidatesTokenCount\":2,\"totalTokenCount\":12}}\n\n"
+                    : "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"You like tacos.\"}]} }],\"usageMetadata\":{\"promptTokenCount\":20,\"candidatesTokenCount\":3,\"totalTokenCount\":23}}\n\n";
             exchange.getResponseHeaders().set("Content-Type", "text/event-stream");
             exchange.sendResponseHeaders(200, 0);
             try (var out = exchange.getResponseBody()) {
@@ -34,6 +34,7 @@ class GeminiMemoryToolTest {
             var input = new ChatProvider.ChatInput("gemini-3.5-flash-lite", "Be helpful.", List.of(
                     new ChatProvider.Message(ChatProvider.Role.USER, "What should I eat?")));
             var calls = new ArrayList<Map<String, Object>>();
+            var continuationBytes = new java.util.concurrent.atomic.AtomicLong();
             ChatProvider.Tools tools = new ChatProvider.Tools() {
                 @Override public List<ChatProvider.ToolSpec> definitions() {
                     return List.of(new ChatProvider.ToolSpec("memory.search", "Search saved memories",
@@ -45,15 +46,22 @@ class GeminiMemoryToolTest {
                     calls.add(arguments);
                     return Map.of("memories", List.of(Map.of("content", "I like tacos")));
                 }
+                @Override public void beforeContinuation(long inputBytes) { continuationBytes.set(inputBytes); }
             };
             var answer = new StringBuilder();
             try (var generation = provider.open(input, "test-key", tools)) {
                 generation.stream(answer::append);
+                var usage = generation.usage().orElseThrow();
+                assertThat(usage.inputTokens()).isEqualTo(30);
+                assertThat(usage.outputTokens()).isEqualTo(5);
+                assertThat(usage.totalTokens()).isEqualTo(35);
+                assertThat(usage.requests()).isEqualTo(2);
             }
 
             assertThat(answer).hasToString("You like tacos.");
             assertThat(calls).containsExactly(Map.of("query", "dinner"));
             assertThat(requests).hasSize(2);
+            assertThat(continuationBytes.get()).isPositive();
             assertThat(requests.get(0)).contains("memory.search", "functionDeclarations");
             assertThat(requests.get(1)).contains("functionCall", "functionResponse", "I like tacos", "YWJj", "call-1");
         } finally {

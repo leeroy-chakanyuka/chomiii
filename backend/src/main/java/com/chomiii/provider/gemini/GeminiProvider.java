@@ -13,17 +13,20 @@ import com.google.genai.types.FunctionDeclaration;
 import com.google.genai.types.FunctionResponse;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
+import com.google.genai.types.GenerateContentResponseUsageMetadata;
 import com.google.genai.types.HttpOptions;
 import com.google.genai.types.HttpRetryOptions;
 import com.google.genai.types.Part;
 import com.google.genai.types.Tool;
 import java.io.InterruptedIOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -79,6 +82,7 @@ public class GeminiProvider implements ChatProvider {
         private final Tools tools;
         private final AtomicBoolean cancelled = new AtomicBoolean();
         private final AtomicReference<Call> active = new AtomicReference<>();
+        private volatile TokenUsage usage;
 
         private GeminiGeneration(ChatInput input, String apiKey, Tools tools) {
             this.input = input;
@@ -93,6 +97,8 @@ public class GeminiProvider implements ChatProvider {
             long streamOpen = 0;
             long firstText = 0;
             String outcome = "complete";
+            List<GenerateContentResponseUsageMetadata> usageByRound = new ArrayList<>();
+            int completedRounds = 0;
             if (cancelled.get()) {
                 throw failure(ProviderFailure.Code.CANCELLED);
             }
@@ -138,11 +144,19 @@ public class GeminiProvider implements ChatProvider {
                     StringBuilder buffered = new StringBuilder();
                     boolean receivedText = false;
                     int modelChars = 0;
+                    GenerateContentResponseUsageMetadata roundUsage = null;
+                    GenerateContentConfig requestConfig = config.build();
+                    if (round > 0 && tools != null) {
+                        long inputBytes = requestConfig.toJson().getBytes(StandardCharsets.UTF_8).length + 1_024L;
+                        for (Content message : messages) inputBytes += message.toJson().getBytes(StandardCharsets.UTF_8).length;
+                        tools.beforeContinuation(inputBytes);
+                    }
                     try (ResponseStream<GenerateContentResponse> response =
-                            client.models.generateContentStream(input.model(), messages, config.build())) {
+                            client.models.generateContentStream(input.model(), messages, requestConfig)) {
                         if (streamOpen == 0) streamOpen = System.nanoTime();
                         for (GenerateContentResponse chunk : response) {
                             if (cancelled.get()) throw failure(ProviderFailure.Code.CANCELLED);
+                            if (chunk.usageMetadata().isPresent()) roundUsage = chunk.usageMetadata().get();
                             chunk.checkFinishReason();
                             var candidates = chunk.candidates().orElse(List.of());
                             if (candidates.isEmpty()) continue;
@@ -174,6 +188,8 @@ public class GeminiProvider implements ChatProvider {
                             }
                         }
                     }
+                    completedRounds++;
+                    if (roundUsage != null) usageByRound.add(roundUsage);
                     if (calls.isEmpty()) {
                         if (!receivedText) throw failure(ProviderFailure.Code.EMPTY_RESPONSE);
                         if (!buffered.isEmpty()) delta.accept(buffered.toString());
@@ -216,11 +232,17 @@ public class GeminiProvider implements ChatProvider {
                 outcome = cancelled.get() ? "cancelled" : "failed";
                 throw exception;
             } finally {
+                if (completedRounds > 0) usage = tokenUsage(usageByRound, completedRounds);
                 log.info("gemini_timing model={} client_init_ms={} request_open_ms={} first_text_ms={} total_ms={} outcome={}",
                         input.model(), elapsed(started, clientReady), elapsed(clientReady, streamOpen),
                         elapsed(started, firstText),
                         elapsed(started, System.nanoTime()), outcome);
             }
+        }
+
+        @Override
+        public Optional<TokenUsage> usage() {
+            return Optional.ofNullable(usage);
         }
 
         @Override
@@ -231,6 +253,25 @@ public class GeminiProvider implements ChatProvider {
                 call.cancel();
             }
         }
+    }
+
+    private static TokenUsage tokenUsage(List<GenerateContentResponseUsageMetadata> rounds, int count) {
+        if (rounds.size() != count) return new TokenUsage(null, null, null, null, count);
+        return new TokenUsage(sum(rounds, GenerateContentResponseUsageMetadata::promptTokenCount),
+                sum(rounds, GenerateContentResponseUsageMetadata::candidatesTokenCount),
+                sum(rounds, GenerateContentResponseUsageMetadata::thoughtsTokenCount),
+                sum(rounds, GenerateContentResponseUsageMetadata::totalTokenCount), count);
+    }
+
+    private static Long sum(List<GenerateContentResponseUsageMetadata> rounds,
+            java.util.function.Function<GenerateContentResponseUsageMetadata, Optional<Integer>> field) {
+        long total = 0;
+        for (var round : rounds) {
+            var value = field.apply(round);
+            if (value.isEmpty()) return null;
+            total += value.get();
+        }
+        return total;
     }
 
     private static long elapsed(long start, long end) {

@@ -2,6 +2,7 @@ package com.chomiii.provider;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public interface ChatProvider {
@@ -23,6 +24,7 @@ public interface ChatProvider {
         List<ToolSpec> definitions();
         Map<String, Object> invoke(String name, Map<String, Object> arguments);
         default boolean bufferTextUntilFinal() { return false; }
+        default void beforeContinuation(long inputBytes) { }
     }
 
     enum Role { USER, ASSISTANT }
@@ -35,8 +37,12 @@ public interface ChatProvider {
         }
     }
 
+    record TokenUsage(Long inputTokens, Long outputTokens, Long thoughtTokens, Long totalTokens, int requests) {}
+
     interface Generation extends AutoCloseable {
         void stream(Consumer<String> delta);
+
+        default Optional<TokenUsage> usage() { return Optional.empty(); }
 
         @Override
         void close();

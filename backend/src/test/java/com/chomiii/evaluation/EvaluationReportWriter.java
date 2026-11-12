@@ -356,7 +356,7 @@ final class EvaluationReportWriter {
                 .append("- Known sensitive retained memories: ")
                 .append(completed.stream().mapToInt(item -> item.observation().score().falsePositiveCategories()
                         .getOrDefault("sensitive", 0)).sum()).append('\n')
-                .append("- Tool execution: not applicable; M2 has no tool executor.\n")
+                .append("- Tool execution safety: not measured by this evaluation.\n")
                 .append("- These counts cover only exercised cases; they are not a security certification.\n\n");
         if (metadata.repetitions() > 1) result.append(repeatability(run.cases()));
         result.append(EvaluationQualityGates.render(run, completed))

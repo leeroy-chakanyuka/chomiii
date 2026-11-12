@@ -85,7 +85,7 @@ final class EvaluationSuite {
                                         MemoryEvaluationRunner.scoringMemories(observation.memories(), observation.turns()), judgment);
                                 observation = new MemoryEvaluationRunner.Result(observation.fixtureId(), observation.mode(),
                                         observation.turns(), observation.memories(), observation.retrievals(), observation.lifecycle(),
-                                        observation.extractionScore(), score, observation.limitations());
+                                        observation.extractionScore(), score, observation.limitations(), observation.providerUsage());
                             } catch (Exception judgeFailure) {
                                 failed = true;
                                 error = "judge_" + judgeFailure.getClass().getSimpleName();
@@ -119,8 +119,25 @@ final class EvaluationSuite {
                 config.repetitions(), config.maxFixtures(), config.maxCalls(), config.timeoutSeconds(),
                 config.minProviderIntervalMillis(), config.maxProviderInputBytes(),
                 Map.copyOf(providerCalls), java.time.Duration.between(started, Instant.now()).toMillis(),
-                "not measured", judgeUsage(judge), estimatedCost(judge, environment), "not supported by provider boundary");
+                tokenUsage(cases, budget), judgeUsage(judge), estimatedCost(judge, environment), "not supported by provider boundary");
         return new Run(metadata, List.copyOf(cases));
+    }
+
+    private static String tokenUsage(List<Case> cases, LiveBudget budget) {
+        var usage = cases.stream().filter(item -> item.observation() != null)
+                .flatMap(item -> item.observation().providerUsage().stream()).toList();
+        int calls = budget.counts().entrySet().stream().filter(entry -> entry.getKey() != LiveBudget.Kind.JUDGE)
+                .mapToInt(Map.Entry::getValue).sum();
+        if (usage.isEmpty() || usage.stream().mapToInt(com.chomiii.provider.ChatProvider.TokenUsage::requests).sum() != calls
+                || usage.stream().anyMatch(item -> item.inputTokens() == null || item.outputTokens() == null
+                        || item.totalTokens() == null)) return "not measured";
+        long input = usage.stream().mapToLong(com.chomiii.provider.ChatProvider.TokenUsage::inputTokens).sum();
+        long output = usage.stream().mapToLong(com.chomiii.provider.ChatProvider.TokenUsage::outputTokens).sum();
+        long total = usage.stream().mapToLong(com.chomiii.provider.ChatProvider.TokenUsage::totalTokens).sum();
+        boolean thoughtsAvailable = usage.stream().allMatch(item -> item.thoughtTokens() != null);
+        String thoughts = thoughtsAvailable ? Long.toString(usage.stream()
+                .mapToLong(com.chomiii.provider.ChatProvider.TokenUsage::thoughtTokens).sum()) : "not reported";
+        return "input=" + input + ", output=" + output + ", thoughts=" + thoughts + ", total=" + total;
     }
 
     private static String judgeUsage(IndependentJudge judge) {
