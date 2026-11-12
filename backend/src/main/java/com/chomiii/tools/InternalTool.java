@@ -1,10 +1,9 @@
 package com.chomiii.tools;
 
-import com.chomiii.provider.ChatProvider;
 import java.util.Map;
 
 public interface InternalTool {
-    ChatProvider.ToolSpec definition();
+    ToolDefinition definition();
     Result execute(Map<String, Object> arguments);
 
     default String fingerprint(Map<String, Object> arguments) {

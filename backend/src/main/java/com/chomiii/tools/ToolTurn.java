@@ -34,7 +34,11 @@ public final class ToolTurn implements ChatProvider.Tools {
 
     @Override
     public List<ChatProvider.ToolSpec> definitions() {
-        return tools.stream().map(InternalTool::definition).toList();
+        return tools.stream()
+                .filter(tool -> tool.definition().effect() == ToolDefinition.Effect.READ)
+                .map(tool -> new ChatProvider.ToolSpec(tool.definition().name(),
+                        tool.definition().description(), tool.definition().parameters()))
+                .toList();
     }
 
     @Override
@@ -47,7 +51,8 @@ public final class ToolTurn implements ChatProvider.Tools {
         if (++calls > MAX_CALLS) return error("Tool call limit reached.");
         InternalTool tool = tools.stream().filter(candidate -> candidate.definition().name().equals(name))
                 .findFirst().orElse(null);
-        if (tool == null || arguments == null || arguments.size() > 3) return error("Invalid tool call.");
+        if (tool == null || tool.definition().effect() != ToolDefinition.Effect.READ
+                || arguments == null || arguments.size() > 3) return error("Invalid tool call.");
         if (remainingNanos <= 0) return error("Tool time limit reached.");
         long started = System.nanoTime();
         try {
