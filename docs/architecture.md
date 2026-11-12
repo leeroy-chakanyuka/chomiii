@@ -213,6 +213,9 @@ to process pending jobs for that owner. The key is never stored in the jobs.
 After a restart, pending jobs remain available. An interrupted running job can
 be reclaimed after its lease expires when that owner next completes a chat.
 Retries stop after five attempts. A failure leaves lexical recall available.
+Indexing is at least once: a crash after a provider response but before the
+database commit can repeat that request. A ready vector is reused while its
+content hash and embedding configuration match.
 
 With embeddings enabled, `memory.search` can combine lexical ranking with
 cosine similarity over compatible stored vectors. Automatic context attempts a
