@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 public class ProviderCatalog {
     private final List<Model> models;
 
-    public ProviderCatalog(@Value("${chomiii.gemini.models:gemini-3.5-flash-lite,gemini-3.6-flash}") List<String> ids) {
+    public ProviderCatalog(@Value("${chomiii.gemini.models:gemini-3.5-flash-lite,gemini-3.5-flash,gemini-3.6-flash}") List<String> ids) {
         models = ids.stream().map(String::trim).filter(id -> !id.isEmpty())
                 .map(id -> new Model(id, id)).toList();
         if (models.isEmpty()) {
