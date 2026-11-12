@@ -123,7 +123,7 @@ final class ProfileComposer {
                     text.append(sentence(truncateAtWord(item.text(), maxChars - 1)));
                     cited.add(item.memoryId());
                 }
-                break;
+                continue;
             }
             text.setLength(0);
             text.append(candidate);

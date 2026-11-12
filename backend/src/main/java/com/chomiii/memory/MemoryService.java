@@ -133,8 +133,9 @@ public class MemoryService {
         var result = new java.util.ArrayList<PersonalMemory>();
         int chars = 0;
         for (var memory : selected) {
-            chars += memory.content().length() + 100;
-            if (chars > MAX_CHAT_CONTEXT_CHARS) break;
+            int size = memory.content().length() + 100;
+            if (chars + size > MAX_CHAT_CONTEXT_CHARS) continue;
+            chars += size;
             result.add(memory);
         }
         return List.copyOf(result);
