@@ -21,20 +21,22 @@ public final class ToolTurn implements ChatProvider.Tools {
             new ArrayBlockingQueue<>(8), Thread.ofPlatform().daemon().name("internal-tool-", 0).factory(),
             new ThreadPoolExecutor.AbortPolicy());
 
-    private final List<InternalTool> tools;
+    private final ToolRegistry registry;
     private final boolean bufferText;
     private long remainingNanos = TimeUnit.SECONDS.toNanos(4);
     private final Set<String> searches = new HashSet<>();
     private int calls;
 
     public ToolTurn(List<InternalTool> tools, boolean bufferText) {
-        this.tools = List.copyOf(tools);
+        this.registry = new ToolRegistry(tools);
         this.bufferText = bufferText;
     }
 
     @Override
     public List<ChatProvider.ToolSpec> definitions() {
-        return tools.stream().map(InternalTool::definition).toList();
+        return registry.definitions().stream()
+                .map(item -> new ChatProvider.ToolSpec(item.name(), item.description(), item.parameters()))
+                .toList();
     }
 
     @Override
@@ -45,8 +47,7 @@ public final class ToolTurn implements ChatProvider.Tools {
     @Override
     public synchronized Map<String, Object> invoke(String name, Map<String, Object> arguments) {
         if (++calls > MAX_CALLS) return error("Tool call limit reached.");
-        InternalTool tool = tools.stream().filter(candidate -> candidate.definition().name().equals(name))
-                .findFirst().orElse(null);
+        InternalTool tool = registry.readOnly(name);
         if (tool == null || arguments == null || arguments.size() > 3) return error("Invalid tool call.");
         if (remainingNanos <= 0) return error("Tool time limit reached.");
         long started = System.nanoTime();
