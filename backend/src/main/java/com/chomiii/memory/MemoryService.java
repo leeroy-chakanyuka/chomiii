@@ -82,6 +82,15 @@ public class MemoryService {
     @Transactional
     public PersonalMemory approve(String owner, UUID id) {
         repository.lockOwner(owner);
+        PersonalMemory proposed = repository.find(owner, id)
+                .filter(memory -> "suggested".equals(memory.status()))
+                .orElseThrow(() -> new ChatApiException(HttpStatus.NOT_FOUND, "Suggested memory not found."));
+        // Explicit review must resolve a conflicting active fact first. Never
+        // silently overwrite a user-controlled record or approve both versions.
+        if (MemoryConflictDetector.conflicts(proposed.content(), repository.list(owner))) {
+            throw new ChatApiException(HttpStatus.CONFLICT,
+                    "This suggestion conflicts with an active memory. Edit or delete the outdated fact first.");
+        }
         if (!repository.approve(owner, id)) {
             throw new ChatApiException(HttpStatus.NOT_FOUND, "Suggested memory not found.");
         }
@@ -158,6 +167,12 @@ public class MemoryService {
                 || repository.count(owner) >= MAX_ITEMS
                 || repository.existsContent(owner, clean)) return;
         boolean isFact = "conversation_fact".equals(kind) && confidence >= 0.88;
+        // Conservative contradiction protection: a clear newer commute or
+        // residence statement is reviewable instead of silently coexisting
+        // with an already-active incompatible memory.
+        if (isFact && MemoryConflictDetector.conflicts(clean, repository.list(owner))) {
+            isFact = false;
+        }
         repository.createLearned(owner, conversation, clean, kind,
                 isFact ? "active" : "suggested", confidence);
         // Successful learned insertions advance a separate profile content
