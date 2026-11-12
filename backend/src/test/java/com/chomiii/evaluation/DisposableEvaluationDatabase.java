@@ -107,6 +107,9 @@ final class DisposableEvaluationDatabase implements AutoCloseable {
     }
 
     MemoryService memories() { return context.getBean(MemoryService.class); }
+    com.chomiii.memory.embedding.EmbeddingStore embeddings() {
+        return context.getBean(com.chomiii.memory.embedding.EmbeddingStore.class);
+    }
     ChatTurnStore turns() { return context.getBean(ChatTurnStore.class); }
     ConversationRepository conversations() { return conversations; }
 
