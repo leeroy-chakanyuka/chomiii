@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.chomiii.provider.ChatProvider;
+import com.chomiii.tools.ToolDefinition;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -30,7 +31,7 @@ class EvaluationToolBudgetTest {
             }
         };
         ChatProvider.Tools tools = new ChatProvider.Tools() {
-            @Override public List<ChatProvider.ToolSpec> definitions() { return List.of(); }
+            @Override public List<ToolDefinition> definitions() { return List.of(); }
             @Override public Map<String, Object> invoke(String name, Map<String, Object> arguments) { return Map.of(); }
         };
         var budget = new LiveBudget(true, 1);

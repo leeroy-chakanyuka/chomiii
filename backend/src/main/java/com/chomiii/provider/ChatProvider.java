@@ -1,5 +1,6 @@
 package com.chomiii.provider;
 
+import com.chomiii.tools.ToolDefinition;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -14,14 +15,8 @@ public interface ChatProvider {
         return open(input, apiKey);
     }
 
-    record ToolSpec(String name, String description, Map<String, Object> parameters) {
-        public ToolSpec {
-            parameters = Map.copyOf(parameters);
-        }
-    }
-
     interface Tools {
-        List<ToolSpec> definitions();
+        List<ToolDefinition> definitions();
         Map<String, Object> invoke(String name, Map<String, Object> arguments);
         default boolean bufferTextUntilFinal() { return false; }
         default void beforeContinuation(long inputBytes) { }

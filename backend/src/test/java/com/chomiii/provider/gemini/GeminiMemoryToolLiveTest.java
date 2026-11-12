@@ -14,6 +14,7 @@ import com.chomiii.memory.MemoryService;
 import com.chomiii.memory.PersonalMemory;
 import com.chomiii.provider.ChatProvider;
 import com.chomiii.tools.ToolTurn;
+import com.chomiii.tools.ToolDefinition;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +37,7 @@ class GeminiMemoryToolLiveTest {
         var continuations = new AtomicInteger();
         var invocations = new AtomicInteger();
         ChatProvider.Tools bounded = new ChatProvider.Tools() {
-            @Override public List<ChatProvider.ToolSpec> definitions() { return tool.definitions(); }
+            @Override public List<ToolDefinition> definitions() { return tool.definitions(); }
             @Override public Map<String, Object> invoke(String name, Map<String, Object> arguments) {
                 invocations.incrementAndGet();
                 return tool.invoke(name, arguments);

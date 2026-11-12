@@ -3,6 +3,7 @@ package com.chomiii.provider.gemini;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.chomiii.provider.ChatProvider;
+import com.chomiii.tools.ToolDefinition;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -36,10 +37,10 @@ class GeminiMemoryToolTest {
             var calls = new ArrayList<Map<String, Object>>();
             var continuationBytes = new java.util.concurrent.atomic.AtomicLong();
             ChatProvider.Tools tools = new ChatProvider.Tools() {
-                @Override public List<ChatProvider.ToolSpec> definitions() {
-                    return List.of(new ChatProvider.ToolSpec("memory.search", "Search saved memories",
+                @Override public List<ToolDefinition> definitions() {
+                    return List.of(new ToolDefinition("memory.search", "Search saved memories",
                             Map.of("type", "object", "properties", Map.of("query", Map.of("type", "string")),
-                                    "required", List.of("query"))));
+                                    "required", List.of("query")), ToolDefinition.Effect.READ));
                 }
                 @Override public Map<String, Object> invoke(String name, Map<String, Object> arguments) {
                     assertThat(name).isEqualTo("memory.search");

@@ -2,6 +2,7 @@ package com.chomiii.evaluation;
 
 import com.chomiii.provider.ChatProvider;
 import com.chomiii.provider.ProviderFailure;
+import com.chomiii.tools.ToolDefinition;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +74,7 @@ final class EvaluationProvider implements ChatProvider {
             }
             try {
                 Tools bounded = tools == null ? null : new Tools() {
-                    @Override public List<ToolSpec> definitions() { return tools.definitions(); }
+                    @Override public List<ToolDefinition> definitions() { return tools.definitions(); }
                     @Override public Map<String, Object> invoke(String name, Map<String, Object> arguments) {
                         return tools.invoke(name, arguments);
                     }
