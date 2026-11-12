@@ -196,6 +196,11 @@ tool has per-turn call, result, and execution-time limits. Recall off removes
 the tool and the automatic memory context. Set
 `chomiii.memory.search-tool.enabled=false` to disable the tool independently.
 
+`MemoryConflictDetector` conservatively identifies explicit changes in known
+commute, residence, and meal-preference slots. Potential conflicts remain
+suggestions until the user resolves the active record. It is not a general
+contradiction classifier, and it never overwrites a canonical memory.
+
 Flyway V5 adds a durable job and vector per canonical memory. The vector is a
 JSON array of normalized 32-bit values stored in SQL `TEXT`, with the owner,
 memory ID, content hash, model, dimensions, configuration, and timestamp.
@@ -247,3 +252,28 @@ input tokens on the paid tier. The page states that free-tier content can be
 used to improve Google's products. [Rate limits](https://ai.google.dev/gemini-api/docs/rate-limits)
 are per project and vary by model and tier. Check the project's current limits
 and terms before enabling indexing.
+
+## Internal tool runtime
+
+`ToolRegistry` discovers `InternalTool` beans and checks their immutable
+`ToolDefinition` schemas and unique names at startup. A definition declares a
+capability and a read or write effect. `ToolTurn` selects available tools,
+copies and validates the arguments, and asks `ToolAuthorization` before
+execution. The argument snapshot is immutable and has a size limit. Results
+contain either `output` or an `error` with an `errorCode`. Cancellation closes
+the tool turn and interrupts an in-flight call. Tool results are untrusted data.
+
+`ToolExecutionContext` carries the server-resolved owner and the conversation
+and request IDs. The default `ReadOnlyToolAuthorization` permits eligible reads
+and denies writes. There is no grant store or approval interface yet. A future
+policy can use the trusted context, capability, effect, and arguments to check
+persistent grants or a one-time approval before a write.
+
+To add a tool, implement `InternalTool` as a Spring bean with a `ToolDefinition`,
+availability check, and `execute` method. Schemas support objects, arrays,
+strings, numbers, integers, booleans, required fields, enums, and bounded
+values. The registry rejects unsupported schema keywords. To add an inference
+provider, implement `ChatProvider`, translate the shared definitions into the
+provider's native declarations, send calls through `ChatProvider.Tools`, and
+preserve native continuation state and cancellation. Tool business logic does
+not import the provider SDK.
