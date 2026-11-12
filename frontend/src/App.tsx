@@ -42,7 +42,8 @@ export default function App() {
         </div>}
       </header>
 
-      {memoriesOpen && <MemoryPanel onClose={() => setMemoriesOpen(false)} />}
+      {memoriesOpen && <MemoryPanel onClose={() => setMemoriesOpen(false)}
+        useMemory={chat.useMemory} onMemoryChange={chat.setUseMemory} />}
       {!chat.connected ? <section className="setup-panel">
         <p className="eyebrow">WELCOME TO CHOMI</p>
         <p className="setup-title">A little space to think out loud.</p>
@@ -138,11 +139,7 @@ export default function App() {
             </form>
             <div className="composer-footer">
               <p className="composer-hint">Enter to send · Shift+Enter for a new line</p>
-              <label className="memory-use-toggle">
-                <input type="checkbox" checked={chat.useMemory} disabled={chat.busy}
-                  onChange={event => chat.setUseMemory(event.target.checked)} />
-                Use saved memories
-              </label>
+
             </div>
           </div>
         </section>
