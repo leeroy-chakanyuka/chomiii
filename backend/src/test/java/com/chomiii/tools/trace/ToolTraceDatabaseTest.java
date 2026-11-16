@@ -99,6 +99,26 @@ class ToolTraceDatabaseTest {
     }
 
     @Test
+    void successRequiresAuthorizationAndStart() {
+        var requested = traces.recordRequested(owner, new ToolTraceCommand.Requested(conversation, request,
+                null, null, "memory.search", "memory.read", ToolDefinition.Effect.READ,
+                "gemini", "test-model", null, null, Map.of()));
+
+        assertThatThrownBy(() -> traces.recordFinished(owner, requested.invocationId(), "succeeded", null, Map.of()))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(traces.list(conversation, owner).getFirst().status()).isEqualTo("requested");
+
+        traces.recordAuthorized(owner, requested.invocationId(), null);
+        traces.recordStarted(owner, requested.invocationId());
+        var finished = traces.recordFinished(owner, requested.invocationId(), "succeeded", null, Map.of());
+
+        assertThat(finished.authorization()).isEqualTo("ALLOW");
+        assertThat(finished.status()).isEqualTo("succeeded");
+        assertThat(finished.startedAt()).isNotNull();
+        assertThat(finished.finishedAt()).isNotNull();
+    }
+
+    @Test
     void denialsAndUnknownToolAttemptsAreRecordedWithoutExecutingOrSavingNames() {
         var called = new java.util.concurrent.atomic.AtomicBoolean();
         InternalTool privateRead = tool("mail.read", "mail.read", () -> called.set(true));

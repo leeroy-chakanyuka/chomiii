@@ -62,9 +62,11 @@ class ToolTraceRepository {
         return jdbc.update("update tool_traces set status = ?, error_code = ?, result_summary = ?, "
                         + "finished_at = ?, duration_ms = ?, "
                         + "authorization_decision = case when ? = 1 then 'DENY' else authorization_decision end "
-                        + "where id = ? and owner_hash = ? and status in ('requested', 'running')",
+                        + "where id = ? and owner_hash = ? and ((? = 'succeeded' and status = 'running' "
+                        + "and authorization_decision = 'ALLOW' and started_at is not null) "
+                        + "or (? <> 'succeeded' and status in ('requested', 'running')))",
                 status, errorCode, resultSummary, Timestamp.from(finishedAt), durationMs, denied ? 1 : 0,
-                id.toString(), owner) == 1;
+                id.toString(), owner, status, status) == 1;
     }
 
     Optional<ToolTraceRow> find(UUID id, String owner) {
