@@ -30,6 +30,29 @@ final class MemoryConflictDetector {
 
     private MemoryConflictDetector() {}
 
+    /** Candidates for conflict and duplicate checks, not for ambiguity checks. */
+    static List<PersonalMemory> candidates(String candidate, String topic, List<PersonalMemory> existing) {
+        var lexical = MemoryRetrieval.select(existing, candidate, null, existing.size()).stream()
+                .map(PersonalMemory::id).collect(java.util.stream.Collectors.toSet());
+        List<MemoryClaims.Claim> claims = MemoryClaims.parse(candidate);
+        return existing.stream().filter(memory -> "active".equals(memory.status()))
+                .filter(memory -> lexical.contains(memory.id()) || potentiallyRelated(claims, topic, memory))
+                .toList();
+    }
+
+    private static boolean potentiallyRelated(List<MemoryClaims.Claim> claims, String topic, PersonalMemory memory) {
+        List<MemoryClaims.Claim> saved = MemoryClaims.parse(memory.content());
+        for (MemoryClaims.Claim c : claims) {
+            for (MemoryClaims.Claim e : saved) {
+                // Every conflict requires a reference, a matching head, or a matching topic.
+                // Equal slots (including empty or differently ordered sets) retain duplicates.
+                if (references(c, e) || sameHead(c, e) || sameTopic(topic, memory.claimTopic())
+                        || c.slot().equals(e.slot())) return true;
+            }
+        }
+        return false;
+    }
+
     static boolean conflicts(String candidate, List<PersonalMemory> existing) {
         return conflicts(candidate, null, existing);
     }

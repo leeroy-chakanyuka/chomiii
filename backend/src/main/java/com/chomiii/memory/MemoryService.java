@@ -87,8 +87,9 @@ public class MemoryService {
                 .orElseThrow(() -> new ChatApiException(HttpStatus.NOT_FOUND, "Suggested memory not found."));
         // Explicit review must resolve a conflicting active fact first. Never
         // silently overwrite a user-controlled record or approve both versions.
+        List<PersonalMemory> existing = repository.list(owner);
         if (MemoryConflictDetector.conflicts(proposed.content(), proposed.claimTopic(),
-                repository.list(owner))) {
+                MemoryConflictDetector.candidates(proposed.content(), proposed.claimTopic(), existing))) {
             throw new ChatApiException(HttpStatus.CONFLICT,
                     "This suggestion conflicts with an active memory. Replace, edit or delete the outdated fact first.");
         }
@@ -112,8 +113,10 @@ public class MemoryService {
         if (id.equals(supersededId) || proposed == null) {
             throw new ChatApiException(HttpStatus.NOT_FOUND, "Suggested memory not found.");
         }
-        if (MemoryConflictDetector.conflicts(proposed.content(), proposed.claimTopic(), repository.list(owner).stream()
-                .filter(memory -> !memory.id().equals(supersededId)).toList())) {
+        List<PersonalMemory> existing = repository.list(owner).stream()
+                .filter(memory -> !memory.id().equals(supersededId)).toList();
+        if (MemoryConflictDetector.conflicts(proposed.content(), proposed.claimTopic(),
+                MemoryConflictDetector.candidates(proposed.content(), proposed.claimTopic(), existing))) {
             throw new ChatApiException(HttpStatus.CONFLICT, "Resolve the other conflicting active memories first.");
         }
         if (!repository.supersede(owner, supersededId, id)) {
@@ -213,13 +216,15 @@ public class MemoryService {
         boolean isFact = "conversation_fact".equals(kind) && confidence >= 0.88;
         if (isFact) {
             List<PersonalMemory> existing = repository.list(owner);
-            if (MemoryConflictDetector.equivalent(clean, existing)) return;
+            List<PersonalMemory> candidates = MemoryConflictDetector.candidates(clean, topic, existing);
+            if (MemoryConflictDetector.equivalent(clean, candidates)) return;
             // Conservative contradiction protection: a change statement or
             // negation that incompatibly reworks an active same-slot fact is
             // reviewable instead of silently coexisting with it.
-            if (MemoryConflictDetector.conflicts(clean, topic, existing)) {
+            if (MemoryConflictDetector.conflicts(clean, topic, candidates)) {
                 isFact = false;
             } else if (MemoryConflictDetector.ambiguous(clean, topic, existing)) {
+                // Even an unrelated active fact can affect the detector's coexistence result.
                 // A change-worded statement the gate cannot match to a slot may
                 // still be a correction in any domain; it stays reviewable
                 // rather than auto-activating beside a possibly outdated fact.

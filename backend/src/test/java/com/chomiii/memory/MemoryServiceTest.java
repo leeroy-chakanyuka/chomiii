@@ -182,6 +182,20 @@ class MemoryServiceTest {
     }
 
     @Test
+    void learnedTopicConflictIsOwnerScopedEvenWithoutLexicalOverlap() {
+        MemoryRepository repo = mock(MemoryRepository.class);
+        MemoryService service = new MemoryService(repo);
+        UUID conversation = UUID.randomUUID();
+        var residence = new PersonalMemory(UUID.randomUUID(), "I live in Harare", "conversation_fact",
+                Instant.now(), Instant.now(), "active", 0.95, null, "residence");
+        when(repo.list("owner")).thenReturn(List.of(residence));
+        service.learn("owner", conversation, 0L, "I moved to Bulawayo", "conversation_fact", 0.95, "residence");
+        service.learn("other", conversation, 0L, "I moved to Bulawayo", "conversation_fact", 0.95, "residence");
+        verify(repo).createLearned("owner", conversation, "I moved to Bulawayo", "conversation_fact", "suggested", 0.95);
+        verify(repo).createLearned("other", conversation, "I moved to Bulawayo", "conversation_fact", "active", 0.95);
+    }
+
+    @Test
     void uncertainStatementsStayReviewableEvenWithoutExistingFacts() {
         MemoryRepository repo = mock(MemoryRepository.class);
         MemoryService service = new MemoryService(repo);

@@ -64,6 +64,43 @@ class MemoryConflictDetectorTest {
     }
 
     @Test
+    void lexicalCandidatesCannotSafelyReplaceTheFullConflictComparisonSet() {
+        var residence = memory("I live in Harare", "residence");
+        // Existing lexical retrieval cannot select this record from the new
+        // wording (neither the city nor "moved" occurs in the saved claim).
+        // Dropping it would turn a definite same-topic correction into an
+        // apparently safe insertion.
+        assertThat(MemoryRetrieval.select(List.of(residence), "I moved to Bulawayo", null, 100)).isEmpty();
+        assertThat(MemoryConflictDetector.conflicts("I moved to Bulawayo", "residence",
+                List.of(residence))).isTrue();
+        assertThat(MemoryConflictDetector.conflicts("I moved to Bulawayo", "residence",
+                MemoryRetrieval.select(List.of(residence), "I moved to Bulawayo", null, 100))).isFalse();
+        assertThat(MemoryConflictDetector.candidates("I moved to Bulawayo", "residence", List.of(residence)))
+                .containsExactly(residence);
+    }
+
+    @Test
+    void candidateMatchingPreservesConflictAndDuplicateResultsAcrossClaimShapes() {
+        var existing = List.of(memory("I live in Harare", "residence"),
+                memory("I commute to work by bus"), memory("My long-term project is learning pottery"),
+                memory("I prefer tacos for dinner on weekdays"), memory("I collect stamps"));
+        for (String candidate : List.of("I moved to Bulawayo", "I travel to work by bus",
+                "I switched from bus to train", "I finished the pottery project",
+                "I now prefer noodles for dinner on weekends", "I also live in Bulawayo",
+                "For the next two weeks I need appointments before nine", "I now use Rust")) {
+            var candidates = MemoryConflictDetector.candidates(candidate, "residence", existing);
+            assertThat(MemoryConflictDetector.conflicts(candidate, "residence", candidates))
+                    .as("conflict: %s", candidate)
+                    .isEqualTo(MemoryConflictDetector.conflicts(candidate, "residence", existing));
+            assertThat(MemoryConflictDetector.equivalent(candidate, candidates))
+                    .as("duplicate: %s", candidate)
+                    .isEqualTo(MemoryConflictDetector.equivalent(candidate, existing));
+        }
+        assertThat(MemoryConflictDetector.candidates("I now use Rust", null, existing))
+                .doesNotContain(existing.get(4));
+    }
+
+    @Test
     void multipleResidencesCoexistWithoutChangeStatements() {
         var homes = List.of(memory("I live in Goodwood"));
         assertThat(MemoryConflictDetector.conflicts("I live in Franschhoek", homes)).isFalse();
