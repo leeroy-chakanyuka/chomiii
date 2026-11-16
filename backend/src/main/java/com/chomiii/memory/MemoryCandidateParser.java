@@ -17,7 +17,7 @@ public final class MemoryCandidateParser {
             + "racial|pregnan(?:t|cy)|cancer|adhd|depression|suicide|"
             + "ignore[ -]previous|system[ -]prompt|developer[ -]instructions)\\b");
 
-    public record Candidate(String content, String source, double confidence) {}
+    public record Candidate(String content, String source, double confidence, String topic) {}
 
     private MemoryCandidateParser() {}
 
@@ -52,11 +52,23 @@ public final class MemoryCandidateParser {
                         || SENSITIVE.matcher(content).find()) continue;
                 if (!"fact".equals(kind) && !"inference".equals(kind)) continue;
                 found.add(new Candidate(content,
-                        "fact".equals(kind) ? "conversation_fact" : "inferred", confidence));
+                        "fact".equals(kind) ? "conversation_fact" : "inferred", confidence,
+                        sanitizedTopic(item.path("topic").asText(""))));
             }
             return List.copyOf(found);
         } catch (Exception invalid) {
             return List.of();
         }
+    }
+
+    /**
+     * An optional general subject label from the regular extraction pass.
+     * Unusable labels are dropped, never the grounded candidate itself.
+     */
+    private static String sanitizedTopic(String raw) {
+        String topic = raw == null ? "" : raw.replaceAll("\\s+", " ").strip();
+        if (topic.isEmpty() || topic.length() > 60) return null;
+        if (SENSITIVE.matcher(topic).find()) return null;
+        return topic;
     }
 }

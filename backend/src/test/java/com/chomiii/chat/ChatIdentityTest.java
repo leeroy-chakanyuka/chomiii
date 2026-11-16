@@ -46,7 +46,7 @@ class ChatIdentityTest {
             chat.start(UUID.randomUUID(), "session", new ChatStreamController.MessageRequest(
                     UUID.randomUUID(), "gemini", "gemini-3.5-flash-lite", untrustedUserText), "test-key");
             assertThat(received.await(10, TimeUnit.SECONDS)).isTrue();
-            assertThat(captured.get().systemInstruction()).contains("Chomiii", "warm", "no tools")
+            assertThat(captured.get().systemInstruction()).contains("Chomiii", "warm", "no live search")
                     .doesNotContain("USER_SENTINEL_72e4");
             assertThat(captured.get().messages()).containsExactly(
                     new ChatProvider.Message(ChatProvider.Role.USER, untrustedUserText));

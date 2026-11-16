@@ -69,7 +69,7 @@ class ChatMemoryLearningTest {
             learnedWithRevision.set(invocation.getArgument(2, Long.class));
             learned.countDown();
             return null;
-        }).when(memories).learn(anyString(), any(), anyLong(), anyString(), anyString(), anyDouble());
+        }).when(memories).learn(anyString(), any(), anyLong(), anyString(), anyString(), anyDouble(), any());
     }
 
     @AfterEach
@@ -127,7 +127,7 @@ class ChatMemoryLearningTest {
         // leaves no pending learning claim and makes no extraction request.
         assertThat(openCount.get()).isEqualTo(1);
         verify(memories, after(1_000).never()).learn(anyString(), any(), anyLong(),
-                anyString(), anyString(), anyDouble());
+                anyString(), anyString(), anyDouble(), any());
     }
 
     @Test
@@ -161,7 +161,7 @@ class ChatMemoryLearningTest {
         assertThat(chatClosed.await(10, TimeUnit.SECONDS)).isTrue();
         release.countDown();
         verify(memories, after(1_000).never()).learn(anyString(), any(), anyLong(),
-                anyString(), anyString(), anyDouble());
+                anyString(), anyString(), anyDouble(), any());
     }
 
     @Test
@@ -180,7 +180,7 @@ class ChatMemoryLearningTest {
         chat = chat(turnStore(), provider);
         chat.start(conversation(), OWNER, request(), "test-key");
         verify(memories, after(1_000).never()).learn(anyString(), any(), anyLong(),
-                anyString(), anyString(), anyDouble());
+                anyString(), anyString(), anyDouble(), any());
     }
 
     private ChatStreamService chat(ChatTurnStore store, CatalogProvider provider) {

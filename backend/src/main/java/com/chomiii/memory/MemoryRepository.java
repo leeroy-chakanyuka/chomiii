@@ -13,7 +13,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class MemoryRepository {
     private static final String FIELDS =
-            "id, content, source, status, confidence, source_conversation_id, created_at, updated_at";
+            "id, content, source, status, confidence, source_conversation_id, claim_topic, superseded_by, created_at, updated_at";
     private final JdbcTemplate jdbc;
 
     public MemoryRepository(JdbcTemplate jdbc) {
@@ -87,15 +87,33 @@ public class MemoryRepository {
     public boolean update(String owner, UUID id, String content) {
         return jdbc.update(
                 "update personal_memories set content = ?, source = 'user_explicit', "
-                        + "status = 'active', confidence = 1.000, updated_at = ? "
+                        + "status = 'active', confidence = 1.000, claim_topic = NULL, superseded_by = NULL, updated_at = ? "
                         + "where id = ? and owner_hash = ?",
                 content, Timestamp.from(Instant.now()), id.toString(), owner) == 1;
     }
 
+    /**
+     * Persists the extraction-supplied subject label for a just-inserted
+     * learned fact (content is unique per owner at this point). Called only
+     * when a label exists, so simpler stores never see the extra statement.
+     */
+    public void setClaimTopicByContent(String owner, String content, String topic) {
+        jdbc.update(
+                "update personal_memories set claim_topic = ? "
+                        + "where owner_hash = ? and lower(content) = lower(?)",
+                topic, owner, content);
+    }
+
     public boolean approve(String owner, UUID id) {
         return jdbc.update("update personal_memories set status = 'active', updated_at = ? "
-                        + "where id = ? and owner_hash = ? and status = 'suggested'",
+                        + "where id = ? and owner_hash = ? and status = 'suggested' and superseded_by is null",
                 Timestamp.from(Instant.now()), id.toString(), owner) == 1;
+    }
+
+    public boolean supersede(String owner, UUID id, UUID replacement) {
+        return jdbc.update("update personal_memories set superseded_by = ?, updated_at = ? "
+                        + "where id = ? and owner_hash = ? and status = 'active' and superseded_by is null",
+                replacement.toString(), Timestamp.from(Instant.now()), id.toString(), owner) == 1;
     }
 
     public boolean delete(String owner, UUID id) {
@@ -109,10 +127,12 @@ public class MemoryRepository {
 
     private static PersonalMemory fromRow(ResultSet row) throws SQLException {
         String conversation = row.getString("source_conversation_id");
+        String replacement = row.getString("superseded_by");
         return new PersonalMemory(UUID.fromString(row.getString("id")),
                 row.getString("content"), row.getString("source"),
                 row.getTimestamp("created_at").toInstant(), row.getTimestamp("updated_at").toInstant(),
-                row.getString("status"), row.getDouble("confidence"),
-                conversation == null ? null : UUID.fromString(conversation));
+                replacement == null ? row.getString("status") : "superseded", row.getDouble("confidence"),
+                conversation == null ? null : UUID.fromString(conversation),
+                row.getString("claim_topic"), replacement == null ? null : UUID.fromString(replacement));
     }
 }

@@ -4,6 +4,7 @@ export type ChatEvent =
   | { kind: 'start'; requestId: string; messageId: string }
   | { kind: 'delta'; text: string }
   | { kind: 'plan'; plan: Record<string, unknown> }
+  | { kind: 'tool'; trace: ToolTrace }
   | { kind: 'complete'; messageId: string; status: 'complete' }
   | { kind: 'error'; code: string; message: string; status: 'failed' | 'interrupted' }
 
@@ -18,6 +19,12 @@ export interface ChatMessage {
   createdAt: string
 }
 export interface Conversation extends ConversationSummary { messages: ChatMessage[] }
+export interface ToolTrace {
+  invocationId: string
+  requestId: string
+  toolName: string
+  status: 'requested' | 'running' | 'succeeded' | 'denied' | 'failed' | 'cancelled' | 'timeout'
+}
 
 function object(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -45,6 +52,17 @@ function message(value: unknown): ChatMessage {
     status, createdAt: text(value.createdAt) }
 }
 
+function toolTrace(value: unknown): ToolTrace {
+  if (!object(value)) throw new Error('The server returned an invalid tool activity.')
+  const status = value.status
+  if (status !== 'requested' && status !== 'running' && status !== 'succeeded' && status !== 'denied'
+    && status !== 'failed' && status !== 'cancelled' && status !== 'timeout') {
+    throw new Error('The server returned an invalid tool activity.')
+  }
+  return { invocationId: text(value.invocationId), requestId: text(value.requestId),
+    toolName: text(value.toolName), status }
+}
+
 function parseEvent(frame: string): ChatEvent | undefined {
   let event = ''
   const data: string[] = []
@@ -60,6 +78,7 @@ function parseEvent(frame: string): ChatEvent | undefined {
     case 'start': return { kind: 'start', requestId: text(payload.requestId), messageId: text(payload.messageId) }
     case 'delta': return { kind: 'delta', text: text(payload.text) }
     case 'plan': return { kind: 'plan', plan: payload }
+    case 'tool': return { kind: 'tool', trace: toolTrace(payload) }
     case 'complete':
       if (payload.status !== 'complete') throw new Error('The chat stream was invalid.')
       return { kind: 'complete', messageId: text(payload.messageId), status: 'complete' }
@@ -141,6 +160,12 @@ export async function createConversation(): Promise<Conversation> {
 
 export async function openConversation(id: string): Promise<Conversation> {
   return parseConversation(await jsonRequest(`/conversations/${encodeURIComponent(id)}`))
+}
+
+export async function conversationToolTraces(id: string): Promise<ToolTrace[]> {
+  const value = await jsonRequest(`/conversations/${encodeURIComponent(id)}/tool-traces`)
+  if (!Array.isArray(value)) throw new Error('Could not load tool activity.')
+  return value.map(toolTrace)
 }
 
 function parseConversation(value: unknown): Conversation {

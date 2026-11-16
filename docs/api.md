@@ -36,6 +36,7 @@ key deletes that record. Google account limits and charges are determined by Goo
 | `POST /api/conversations` | `201` detail | Create an empty owned conversation. Requires a session cookie and allowed Origin. |
 | `GET /api/conversations` | `200` array | List the owner's conversations by latest update. Creates a session if necessary. |
 | `GET /api/conversations/{id}` | `200` detail | Read messages in sequence order, including interrupted and failed turns. |
+| `GET /api/conversations/{id}/tool-traces` | `200` array | Read the owner's recorded tool activity for this conversation. A foreign ID returns `404`. |
 | `DELETE /api/conversations/{id}` | `204` | Delete the conversation and its messages. |
 | `POST /api/conversations/{id}/messages/stream` | `200 text/event-stream` | Persist a user message, then stream the assistant reply. |
 | `POST /api/conversations/{id}/messages/{requestId}/cancel` | `202` | Stop an active generation for the owner. |
@@ -83,19 +84,21 @@ cookie identifies the owner. A foreign memory ID returns `404`.
 | `POST /api/memories` | `201` memory | Save explicit `{"content":"My usual groceries are oats"}`. |
 | `PUT /api/memories/{id}` | `200` memory | Replace owned memory content. |
 | `POST /api/memories/{id}/approve` | `200` memory | Approve a tentative inferred memory for future recall. |
+| `POST /api/memories/{id}/approve-replacement` | `200` memory | Approve a suggestion and supersede the owned active memory identified by `{"supersededMemoryId":"..."}`. |
 | `DELETE /api/memories/{id}` | `204` | Hard-delete an owned memory record. |
 | `DELETE /api/memories` | `204` | Delete all memories for the current owner. |
 
 Entries have `id`, `content`, `source` (`user_explicit`, `conversation_fact`, or `inferred`),
-`status` (`active` or `suggested`), `confidence` (0–1), optional
-`sourceConversationId`, `createdAt` and `updatedAt`.
+`status` (`active`, `suggested`, or `superseded`), `confidence` (0–1), optional
+`sourceConversationId`, optional `supersededBy`, `createdAt` and `updatedAt`.
+Superseded records remain visible until deleted, but are excluded from recall.
 The confidence is an uncalibrated model estimate; suggested memories are
 not used as chat context before approval. Content is trimmed and must contain
 **1–500 Java characters**; the owner is limited to **100 records**.
 The same Origin and cookie restrictions apply as for conversation mutations.
 
-Chat normally retrieves up to three relevant saved memories (bounded
-total context), added as *user-role context*, not as instructions.
+Chat adds a bounded profile and relevant saved memories as *user-role context*,
+not as instructions.
 Set `X-Chomiii-Use-Memory: false` on a chat-stream request to skip
 memory retrieval for that turn. This is controlled by a visible checkbox
 in the PR frontend. Automatic learning happens server-side after eligible completed responses,
@@ -158,6 +161,11 @@ cancellation, the terminal event is instead:
 event:error
 data:{"code":"RATE_LIMITED","message":"Gemini's rate limit was reached. Try again later.","status":"failed"}
 ```
+
+Tool invocations also emit `tool` events with an invocation ID, request ID,
+tool name, and status. The trace endpoint returns the same lifecycle metadata.
+Argument and result summaries contain counts only; private values and API keys
+are not recorded. Unknown tool names are recorded as `unknown`.
 
 For a valid planning request, a `plan` event precedes the readable `delta`.
 Its JSON contains `id`, `goal`, `summary`, `memoryReferences`, `constraints`,

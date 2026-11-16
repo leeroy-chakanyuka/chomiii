@@ -4,7 +4,7 @@ export interface PersonalMemory {
   id: string
   content: string
   source: 'user_explicit' | 'conversation_fact' | 'inferred'
-  status: 'active' | 'suggested'
+  status: 'active' | 'suggested' | 'superseded'
   confidence: number
   sourceConversationId: string | null
   createdAt: string
@@ -14,7 +14,7 @@ export interface PersonalMemory {
 const root = () => healthUrl().replace(/\/health$/, '')
 
 const sources = ['user_explicit', 'conversation_fact', 'inferred'] as const
-const statuses = ['active', 'suggested'] as const
+const statuses = ['active', 'suggested', 'superseded'] as const
 
 function parseMemory(value: unknown): PersonalMemory {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -84,5 +84,13 @@ export async function clearMemories(): Promise<void> {
 export async function approveMemory(id: string): Promise<PersonalMemory> {
   const body: unknown = await (await request('/' + encodeURIComponent(id) + '/approve',
     { method: 'POST' })).json()
+  return parseMemory(body)
+}
+
+export async function approveMemoryReplacing(id: string, supersededMemoryId: string): Promise<PersonalMemory> {
+  const body: unknown = await (await request('/' + encodeURIComponent(id) + '/approve-replacement', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ supersededMemoryId }),
+  })).json()
   return parseMemory(body)
 }

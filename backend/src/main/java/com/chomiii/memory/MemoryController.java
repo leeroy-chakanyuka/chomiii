@@ -3,6 +3,7 @@ package com.chomiii.memory;
 import com.chomiii.session.AnonymousSessionFilter;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.UUID;
@@ -28,6 +29,7 @@ public class MemoryController {
     }
 
     public record SaveMemory(@NotBlank @Size(max = 500) String content) {}
+    public record ReplaceMemory(@NotNull UUID supersededMemoryId) {}
 
     @GetMapping
     public List<PersonalMemory> list(
@@ -42,6 +44,12 @@ public class MemoryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(memory.create(owner, request.content()));
     }
 
+    @PostMapping("/reindex")
+    public ResponseEntity<Void> reindex(@RequestAttribute(AnonymousSessionFilter.OWNER_ATTRIBUTE) String owner) {
+        memory.reindex(owner);
+        return ResponseEntity.accepted().build();
+    }
+
     @PutMapping("/{id}")
     public PersonalMemory replace(
             @RequestAttribute(AnonymousSessionFilter.OWNER_ATTRIBUTE) String owner,
@@ -54,6 +62,13 @@ public class MemoryController {
             @RequestAttribute(AnonymousSessionFilter.OWNER_ATTRIBUTE) String owner,
             @PathVariable UUID id) {
         return memory.approve(owner, id);
+    }
+
+    @PostMapping("/{id}/approve-replacement")
+    public PersonalMemory approveReplacement(
+            @RequestAttribute(AnonymousSessionFilter.OWNER_ATTRIBUTE) String owner,
+            @PathVariable UUID id, @Valid @RequestBody ReplaceMemory request) {
+        return memory.approveReplacing(owner, id, request.supersededMemoryId());
     }
 
     @DeleteMapping("/{id}")

@@ -3,6 +3,30 @@ import { fetchHealth, type HealthState } from './health'
 import { useChat } from './useChat'
 import { MarkdownReply } from './MarkdownReply'
 import { MemoryPanel } from './MemoryPanel'
+import type { ToolTrace } from './chatApi'
+
+function toolActivityText(trace: ToolTrace): string {
+  if (trace.toolName === 'memory.search') {
+    switch (trace.status) {
+      case 'requested': return 'Preparing memory search…'
+      case 'running': return 'Searching memories…'
+      case 'succeeded': return 'Memory search completed'
+      case 'denied': return 'Memory search was not allowed'
+      case 'failed': return 'Memory search failed'
+      case 'cancelled': return 'Memory search stopped'
+      case 'timeout': return 'Memory search timed out'
+    }
+  }
+  switch (trace.status) {
+    case 'requested': return 'Preparing a tool…'
+    case 'running': return 'Using a tool…'
+    case 'succeeded': return 'Tool completed'
+    case 'denied': return 'Tool was not allowed'
+    case 'failed': return 'Tool failed'
+    case 'cancelled': return 'Tool stopped'
+    case 'timeout': return 'Tool timed out'
+  }
+}
 
 export default function App() {
   const [memoriesOpen, setMemoriesOpen] = useState(false)
@@ -21,7 +45,7 @@ export default function App() {
     if (followOutput.current && scrollArea.current) {
       scrollArea.current.scrollTop = scrollArea.current.scrollHeight
     }
-  }, [chat.messages, chat.streamed])
+  }, [chat.messages, chat.streamed, chat.toolActivity])
 
   const selectedProvider = chat.catalog.find((item) => item.id === chat.provider)
 
@@ -42,7 +66,8 @@ export default function App() {
         </div>}
       </header>
 
-      {memoriesOpen && <MemoryPanel onClose={() => setMemoriesOpen(false)} />}
+      {memoriesOpen && <MemoryPanel onClose={() => setMemoriesOpen(false)}
+        useMemory={chat.useMemory} onMemoryChange={chat.setUseMemory} />}
       {!chat.connected ? <section className="setup-panel">
         <p className="eyebrow">WELCOME TO CHOMI</p>
         <p className="setup-title">A little space to think out loud.</p>
@@ -110,6 +135,13 @@ export default function App() {
                 {message.status === 'failed' || message.status === 'interrupted'
                   ? <small className="message-note">{message.status === 'failed' ? 'Response failed' : 'Response stopped'}</small> : null}
               </article>)}
+              {chat.toolActivity.length > 0 && <div className="tool-activity" aria-live="polite">
+                {chat.toolActivity.map(trace => <p key={trace.invocationId}>{toolActivityText(trace)}</p>)}
+              </div>}
+              {chat.toolActivityError && <div className="tool-activity-error" role="status">
+                <span>Tool activity could not be loaded.</span>
+                <button type="button" className="text-button" onClick={() => void chat.retryToolActivity()}>Retry</button>
+              </div>}
               {chat.busy && <article className="message assistant pending" aria-live="polite">
                 <span className="speaker">Chomi</span>
                 {chat.streamed ? <MarkdownReply content={chat.streamed} /> : <p>Thinking…</p>}
@@ -138,11 +170,7 @@ export default function App() {
             </form>
             <div className="composer-footer">
               <p className="composer-hint">Enter to send · Shift+Enter for a new line</p>
-              <label className="memory-use-toggle">
-                <input type="checkbox" checked={chat.useMemory} disabled={chat.busy}
-                  onChange={event => chat.setUseMemory(event.target.checked)} />
-                Use saved memories
-              </label>
+
             </div>
           </div>
         </section>
