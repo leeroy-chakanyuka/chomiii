@@ -49,4 +49,14 @@ describe('POST conversation stream', () => {
     expect(events).toContainEqual({ kind: 'plan', plan })
     expect(events).toContainEqual({ kind: 'delta', text: 'Proposed plan — nothing has been done yet' })
   })
+
+  it('delivers validated tool progress and completion events', async () => {
+    const event = { invocationId: 'tool-1', requestId: 'r', toolName: 'memory.search', status: 'running' }
+    const bytes = new TextEncoder().encode(`event:tool\ndata:${JSON.stringify(event)}\n\n`
+      + 'event:complete\ndata:{"messageId":"m","status":"complete"}\n\n')
+    const events: ChatEvent[] = []
+    await readEvents(new ReadableStream({ start(controller) { controller.enqueue(bytes); controller.close() } }),
+      (value) => events.push(value))
+    expect(events).toContainEqual({ kind: 'tool', trace: event })
+  })
 })

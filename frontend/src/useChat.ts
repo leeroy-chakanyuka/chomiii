@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  conversations, createConversation, deleteConversation, openConversation, providers,
+  conversations, conversationToolTraces, createConversation, deleteConversation, openConversation, providers,
   sendMessage, stopMessage,
-  type ChatMessage, type ConversationSummary, type Provider,
+  type ChatMessage, type ConversationSummary, type Provider, type ToolTrace,
 } from './chatApi'
 import { forgetRememberedKey, loadRememberedKey, rememberKey } from './rememberKey'
 
@@ -27,6 +27,8 @@ export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [streamed, setStreamed] = useState('')
+  const [toolActivity, setToolActivity] = useState<ToolTrace[]>([])
+  const [toolActivityError, setToolActivityError] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const sending = useRef(false)
@@ -36,6 +38,14 @@ export function useChat() {
   const firstVisibleMeasured = useRef(false)
   const hadSavedKey = useRef(false)
   const connectionInFlight = useRef(false)
+  const selectedIdRef = useRef<string | null>(null)
+  const traceRequest = useRef(0)
+  const traceActivityVersion = useRef(0)
+
+  function selectConversation(id: string | null) {
+    selectedIdRef.current = id
+    setSelectedId(id)
+  }
 
   useEffect(() => {
     try { window.localStorage.setItem('chomiii:use-memory', String(useMemory)) } catch { /* storage may be unavailable */ }
@@ -122,8 +132,12 @@ export function useChat() {
 
   function newChat() {
     if (sending.current) return
-    setSelectedId(null)
+    ++traceRequest.current
+    ++traceActivityVersion.current
+    selectConversation(null)
     setMessages([])
+    setToolActivity([])
+    setToolActivityError(false)
     setStreamed('')
     setInput('')
     setError('')
@@ -132,12 +146,44 @@ export function useChat() {
   async function switchChat(id: string) {
     if (sending.current) return
     setError('')
+    const request = ++traceRequest.current
+    const activityVersion = traceActivityVersion.current
+    const traceResult: Promise<{ traces: ToolTrace[]; failed: boolean }> = conversationToolTraces(id).then(
+      (traces) => ({ traces, failed: false }),
+      () => ({ traces: [], failed: true }),
+    )
+    setToolActivity([])
+    setToolActivityError(false)
     try {
       const conversation = await openConversation(id)
-      setSelectedId(conversation.id)
+      if (request !== traceRequest.current) return
+      selectConversation(conversation.id)
       setMessages(conversation.messages)
       setStreamed('')
-    } catch (cause) { setError(errorText(cause)) }
+      void traceResult.then((result) => {
+        if (request !== traceRequest.current || traceActivityVersion.current !== activityVersion
+          || selectedIdRef.current !== conversation.id) return
+        setToolActivity(result.traces)
+        setToolActivityError(result.failed)
+      })
+    } catch (cause) { if (request === traceRequest.current) setError(errorText(cause)) }
+  }
+
+  async function retryToolActivity() {
+    const id = selectedIdRef.current
+    if (!id) return
+    const request = ++traceRequest.current
+    const activityVersion = ++traceActivityVersion.current
+    try {
+      const traces = await conversationToolTraces(id)
+      if (request !== traceRequest.current || selectedIdRef.current !== id
+        || traceActivityVersion.current !== activityVersion) return
+      setToolActivity(traces)
+      setToolActivityError(false)
+    } catch {
+      if (request === traceRequest.current && selectedIdRef.current === id
+        && traceActivityVersion.current === activityVersion) setToolActivityError(true)
+    }
   }
 
   async function removeChat(id: string) {
@@ -157,6 +203,8 @@ export function useChat() {
     if (!key.trim()) { setError('Enter a Gemini API key.'); setConnected(false); return }
 
     sending.current = true
+    ++traceRequest.current
+    ++traceActivityVersion.current
     startedAt.current = performance.now()
     firstVisibleMeasured.current = false
     if (typeof performance.clearMeasures === 'function') {
@@ -177,7 +225,9 @@ export function useChat() {
       if (!conversationId) {
         const created = await createConversation()
         conversationId = created.id
-        setSelectedId(created.id)
+        selectConversation(created.id)
+        ++traceRequest.current
+        ++traceActivityVersion.current
         setHistory((previous) => [{ id: created.id, title: created.title,
           createdAt: created.createdAt, updatedAt: created.updatedAt }, ...previous])
       }
@@ -186,6 +236,16 @@ export function useChat() {
       await sendMessage({ conversationId, requestId, content, provider, model, apiKey: key,
         signal: abort.signal, useMemory, plan, onEvent(event) {
           if (event.kind === 'delta') setStreamed((previous) => previous + event.text)
+          if (event.kind === 'tool') {
+            ++traceActivityVersion.current
+            setToolActivity((previous) => {
+              const existing = previous.find((trace) => trace.invocationId === event.trace.invocationId)
+              if (existing && existing.status !== 'requested' && existing.status !== 'running'
+                && (event.trace.status === 'requested' || event.trace.status === 'running')) return previous
+              const remaining = previous.filter((trace) => trace.invocationId !== event.trace.invocationId)
+              return [...remaining, event.trace]
+            })
+          }
           if (event.kind === 'error') streamError = event.message
           if ((event.kind === 'complete' || event.kind === 'error') && startedAt.current !== null
             && typeof performance.measure === 'function') {
@@ -237,7 +297,7 @@ export function useChat() {
 
   return {
     catalog, history, loading, connected, connecting, key, setKey, remember, setRemember, provider, setProvider, model, setModel,
-    selectedId, messages, input, setInput, streamed, busy, error, useMemory, setUseMemory,
-    connect, changeKey, removeKey, newChat, switchChat, removeChat, submit, stop,
+    selectedId, messages, input, setInput, streamed, toolActivity, toolActivityError, busy, error, useMemory, setUseMemory,
+    connect, changeKey, removeKey, newChat, switchChat, retryToolActivity, removeChat, submit, stop,
   }
 }

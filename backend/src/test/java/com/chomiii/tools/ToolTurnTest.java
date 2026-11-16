@@ -88,6 +88,50 @@ class ToolTurnTest {
         }
     }
 
+    @Test
+    void aSlowTraceStartDoesNotHoldTheTurnAfterItsDeadline() throws Exception {
+        var traces = org.mockito.Mockito.mock(com.chomiii.tools.trace.ToolTraceService.class);
+        var requested = org.mockito.Mockito.mock(com.chomiii.tools.trace.ToolTraceDto.Trace.class);
+        var id = java.util.UUID.randomUUID();
+        org.mockito.Mockito.when(requested.invocationId()).thenReturn(id);
+        org.mockito.Mockito.when(traces.recordRequested(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(requested);
+        org.mockito.Mockito.when(traces.recordFinished(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(id),
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyMap()))
+                .thenReturn(requested);
+        var entered = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        org.mockito.Mockito.when(traces.recordStarted("owner", id)).thenAnswer(ignored -> {
+            entered.countDown();
+            boolean done = false;
+            while (!done) {
+                try { done = release.await(10, java.util.concurrent.TimeUnit.SECONDS); }
+                catch (InterruptedException interrupted) { /* Simulate a blocked database call. */ }
+            }
+            return java.time.Instant.now();
+        });
+        var executed = new java.util.concurrent.atomic.AtomicBoolean();
+        InternalTool read = new InternalTool() {
+            @Override public ToolDefinition definition() {
+                return new ToolDefinition("example.read", "Read", Map.of("type", "object"), "memory.read", ToolDefinition.Effect.READ);
+            }
+            @Override public Result execute(ToolExecutionContext context, Map<String, Object> arguments) {
+                executed.set(true);
+                return new Result(Map.of(), () -> {});
+            }
+        };
+        var context = new ToolExecutionContext("owner", java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), null, true, ignored -> {});
+        var turn = new ToolTurn(new ToolRegistry(List.of(read)), context, false, traces, "gemini", "model", ignored -> {});
+        try {
+            assertTimeoutPreemptively(Duration.ofSeconds(6),
+                    () -> assertThat(turn.invoke("example.read", Map.of())).containsEntry("errorCode", "TIMEOUT"));
+            assertThat(entered.await(1, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(executed).isFalse();
+        } finally {
+            release.countDown();
+        }
+    }
+
     private static ToolTurn turn(InternalTool tool) {
         ToolAuthorization policy = new ToolAuthorization() {
             @Override public boolean mayExpose(ToolExecutionContext context, ToolDefinition definition) {

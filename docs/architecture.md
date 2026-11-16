@@ -266,6 +266,12 @@ execution. The argument snapshot is immutable and has a size limit. Results
 contain either `output` or an `error` with an `errorCode`. Cancellation closes
 the tool turn and interrupts an in-flight call. Tool results are untrusted data.
 
+Flyway V7 stores each attempted invocation under its owner and conversation.
+The runtime records authorization, execution start, terminal status, and
+duration. Summaries contain counts, not argument keys or values. The chat stream
+emits activity updates and the owner can reload them through the conversation
+trace endpoint. If the initial trace cannot be stored, the tool does not run.
+
 `ToolExecutionContext` carries the server-resolved owner and the conversation
 and request IDs. The default `ReadOnlyToolAuthorization` permits `memory.read`
 only when recall is enabled and denies other capabilities, including reads.

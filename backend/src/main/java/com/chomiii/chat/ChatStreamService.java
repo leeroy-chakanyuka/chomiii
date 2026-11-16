@@ -16,6 +16,7 @@ import com.chomiii.provider.ProviderFailure;
 import com.chomiii.tools.ToolTurn;
 import com.chomiii.tools.ToolRegistry;
 import com.chomiii.tools.ToolExecutionContext;
+import com.chomiii.tools.trace.ToolTraceService;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +57,7 @@ public class ChatStreamService {
     private final EmbeddingIndexer embeddingIndexer;
     private final HybridMemorySearch hybridMemorySearch;
     private final ToolRegistry toolRegistry;
+    private final ToolTraceService toolTraces;
     private final Semaphore slots = new Semaphore(8);
     private final ConcurrentHashMap<UUID, Active> active = new ConcurrentHashMap<>();
 
@@ -72,12 +74,21 @@ public class ChatStreamService {
                 new ToolRegistry(List.of(new MemorySearchTool(memories, null))));
     }
 
+    public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
+            MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
+            ExecutorService chatExecutor, boolean memorySearchEnabled,
+            EmbeddingIndexer embeddingIndexer, HybridMemorySearch hybridMemorySearch, ToolRegistry toolRegistry) {
+        this(store, conversations, memories, learning, catalog, providers, chatExecutor, memorySearchEnabled,
+                embeddingIndexer, hybridMemorySearch, toolRegistry, null);
+    }
+
     @Autowired
     public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
             MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
             @Qualifier("chatExecutor") ExecutorService chatExecutor,
             @Value("${chomiii.memory.search-tool.enabled:true}") boolean memorySearchEnabled,
-            EmbeddingIndexer embeddingIndexer, HybridMemorySearch hybridMemorySearch, ToolRegistry toolRegistry) {
+            EmbeddingIndexer embeddingIndexer, HybridMemorySearch hybridMemorySearch, ToolRegistry toolRegistry,
+            ToolTraceService toolTraces) {
         this.store = store;
         this.conversations = conversations;
         this.memories = memories;
@@ -89,6 +100,7 @@ public class ChatStreamService {
         this.embeddingIndexer = embeddingIndexer;
         this.hybridMemorySearch = hybridMemorySearch;
         this.toolRegistry = toolRegistry;
+        this.toolTraces = toolTraces;
     }
 
     public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request, String key) {
@@ -220,7 +232,8 @@ public class ChatStreamService {
                     useMemory && memorySearchEnabled, observation -> {
                 if ("memory.search".equals(observation.toolName())) toolMemoryIds.addAll(observation.references());
             });
-            var session = new ToolTurn(toolRegistry, toolContext, planning);
+            var session = new ToolTurn(toolRegistry, toolContext, planning, toolTraces, provider.id(), input.model(),
+                    trace -> send(emitter, "tool", trace));
             var tools = session.definitions().isEmpty() ? null : session;
             if (tools == null) session.close();
             generation.setTools(tools);

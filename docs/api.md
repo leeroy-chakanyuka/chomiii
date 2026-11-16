@@ -36,6 +36,7 @@ key deletes that record. Google account limits and charges are determined by Goo
 | `POST /api/conversations` | `201` detail | Create an empty owned conversation. Requires a session cookie and allowed Origin. |
 | `GET /api/conversations` | `200` array | List the owner's conversations by latest update. Creates a session if necessary. |
 | `GET /api/conversations/{id}` | `200` detail | Read messages in sequence order, including interrupted and failed turns. |
+| `GET /api/conversations/{id}/tool-traces` | `200` array | Read the owner's recorded tool activity for this conversation. A foreign ID returns `404`. |
 | `DELETE /api/conversations/{id}` | `204` | Delete the conversation and its messages. |
 | `POST /api/conversations/{id}/messages/stream` | `200 text/event-stream` | Persist a user message, then stream the assistant reply. |
 | `POST /api/conversations/{id}/messages/{requestId}/cancel` | `202` | Stop an active generation for the owner. |
@@ -160,6 +161,11 @@ cancellation, the terminal event is instead:
 event:error
 data:{"code":"RATE_LIMITED","message":"Gemini's rate limit was reached. Try again later.","status":"failed"}
 ```
+
+Tool invocations also emit `tool` events with an invocation ID, request ID,
+tool name, and status. The trace endpoint returns the same lifecycle metadata.
+Argument and result summaries contain counts only; private values and API keys
+are not recorded. Unknown tool names are recorded as `unknown`.
 
 For a valid planning request, a `plan` event precedes the readable `delta`.
 Its JSON contains `id`, `goal`, `summary`, `memoryReferences`, `constraints`,
