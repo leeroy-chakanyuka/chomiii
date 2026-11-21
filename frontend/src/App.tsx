@@ -4,12 +4,14 @@ import { useChat } from './useChat'
 import { MarkdownReply } from './MarkdownReply'
 import { MemoryPanel } from './MemoryPanel'
 import type { ToolTrace } from './chatApi'
+import { ApprovalCard } from './ApprovalCard'
 
 function toolActivityText(trace: ToolTrace): string {
   if (trace.toolName === 'memory.search') {
     switch (trace.status) {
       case 'requested': return 'Preparing memory search…'
       case 'running': return 'Searching memories…'
+      case 'awaiting_approval': return 'Waiting for your approval…'
       case 'succeeded': return 'Memory search completed'
       case 'denied': return 'Memory search was not allowed'
       case 'failed': return 'Memory search failed'
@@ -20,6 +22,7 @@ function toolActivityText(trace: ToolTrace): string {
   switch (trace.status) {
     case 'requested': return 'Preparing a tool…'
     case 'running': return 'Using a tool…'
+    case 'awaiting_approval': return 'Waiting for your approval…'
     case 'succeeded': return 'Tool completed'
     case 'denied': return 'Tool was not allowed'
     case 'failed': return 'Tool failed'
@@ -142,6 +145,36 @@ export default function App() {
                 <span>Tool activity could not be loaded.</span>
                 <button type="button" className="text-button" onClick={() => void chat.retryToolActivity()}>Retry</button>
               </div>}
+              {chat.approvalsError && <div className="tool-activity-error" role="status">
+                <span>Approvals could not be loaded.</span>
+                <button type="button" className="text-button" onClick={() => void chat.retryApprovals()}>Retry approvals</button>
+              </div>}
+              {chat.approvals.map((approval) => <ApprovalCard key={approval.id} preview={approval.preview}
+                expiresAt={approval.expiresAt} status={chat.approvalBusy === approval.id ? 'submitting' : approval.status}
+                confirmedResult={approval.result} error={approval.error}
+                onApprove={() => { if (chat.selectedId) return chat.approve(chat.selectedId, approval) }}
+                onReject={() => { if (chat.selectedId) return chat.reject(chat.selectedId, approval) }} />)}
+              {chat.plansError && <div className="tool-activity-error" role="status">
+                <span>Saved plans could not be loaded.</span>
+                <button type="button" className="text-button" onClick={() => void chat.retryPlans()}>Retry plans</button>
+              </div>}
+              {chat.plans.map((plan) => <section className="approval-card" aria-label="Saved plan" key={plan.id}>
+                <h2>{plan.goal}</h2><p>{plan.summary}</p>
+                <p role="status">Plan status: {plan.state === 'BLOCKED' ? 'Paused — waiting for approval or a prerequisite' : plan.state === 'FAILED' ? 'Failed — no further steps were completed' : plan.state}</p>
+                <ol>{plan.steps.map((step) => <li key={step.id}>{step.title} — {step.state.replaceAll('_', ' ').toLowerCase()}
+                  {step.dependsOn.length > 0 && <small> (after {step.dependsOn.join(', ')})</small>}
+                  {step.observation && <div aria-label="Task results">
+                    {step.observation.todos.length === 0 ? <small>No tasks found.</small> : <ul>{step.observation.todos.map((todo) =>
+                      <li key={todo.id}>{todo.title} — {todo.status}</li>)}</ul>}
+                    {step.observation.truncated && <small>Some tasks were omitted.</small>}
+                  </div>}</li>)}</ol>
+                {plan.state === 'PROPOSED' || plan.state === 'BLOCKED' ? <button type="button" disabled={chat.planBusy !== null || chat.busy}
+                  onClick={() => chat.selectedId && void chat.runPlan(chat.selectedId, plan.id)}>{chat.planBusy === plan.id ? 'Starting…' : 'Continue plan'}</button> : null}
+                <button type="button" disabled={chat.busy || chat.planBusy !== null}
+                  onClick={() => chat.revisePlan(plan)}>{chat.revisingPlan?.id === plan.id ? 'Revising this plan' : 'Revise plan'}</button>
+                {plan.state === 'RUNNING' && <button type="button" disabled={chat.planBusy !== null}
+                  onClick={() => chat.selectedId && void chat.cancelPlan(chat.selectedId, plan.id)}>{chat.planBusy === plan.id ? 'Stopping…' : 'Pause plan'}</button>}
+              </section>)}
               {chat.busy && <article className="message assistant pending" aria-live="polite">
                 <span className="speaker">Chomi</span>
                 {chat.streamed ? <MarkdownReply content={chat.streamed} /> : <p>Thinking…</p>}
@@ -149,6 +182,9 @@ export default function App() {
             </div>
           </div>
           <div className="composer-area">
+            {chat.revisingPlan && <p role="status">Revising plan: {chat.revisingPlan.goal}
+              <button type="button" className="text-button" disabled={chat.busy || chat.planBusy !== null}
+                onClick={() => chat.revisePlan(null)}>Clear selection</button></p>}
             {chat.error && <p role="alert" className="error">{chat.error}</p>}
             <form className="composer" onSubmit={(event) => { event.preventDefault(); void chat.submit() }}>
               <label className="visually-hidden" htmlFor="message">Message</label>

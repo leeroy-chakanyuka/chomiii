@@ -1,0 +1,27 @@
+CREATE TABLE action_approvals (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    owner_hash CHAR(64) NOT NULL,
+    conversation_id CHAR(36) NOT NULL,
+    request_id CHAR(36) NOT NULL,
+    proposal_identity CHAR(64) NOT NULL,
+    tool_name VARCHAR(64) NOT NULL,
+    capability VARCHAR(64) NOT NULL,
+    effect VARCHAR(10) NOT NULL,
+    arguments_json TEXT NOT NULL,
+    arguments_digest CHAR(64) NOT NULL,
+    definition_digest CHAR(64) NOT NULL,
+    preview TEXT,
+    expires_at TIMESTAMP(6) NOT NULL,
+    status VARCHAR(12) NOT NULL,
+    plan_id CHAR(36),
+    step_id CHAR(36),
+    result_ref CHAR(36),
+    CONSTRAINT approvals_owner_fk FOREIGN KEY (owner_hash) REFERENCES browser_sessions(owner_hash) ON DELETE CASCADE,
+    CONSTRAINT approvals_conversation_fk FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    CONSTRAINT approvals_status_check CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'CONSUMED')),
+    CONSTRAINT approvals_effect_check CHECK (effect IN ('READ', 'WRITE')),
+    CONSTRAINT approvals_plan_step_check CHECK ((plan_id IS NULL AND step_id IS NULL) OR (plan_id IS NOT NULL AND step_id IS NOT NULL)),
+    CONSTRAINT approvals_proposal_unique UNIQUE (proposal_identity),
+    CONSTRAINT approvals_result_check CHECK ((status = 'CONSUMED' AND result_ref IS NOT NULL) OR (status <> 'CONSUMED' AND result_ref IS NULL))
+);
+CREATE INDEX approvals_owner_conversation_idx ON action_approvals(owner_hash, conversation_id);

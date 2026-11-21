@@ -1,6 +1,7 @@
 package com.chomiii.evaluation;
 
 import com.chomiii.chat.ChatTurnStore;
+import com.chomiii.planning.Plan;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -25,6 +26,12 @@ final class EvaluationTurnStore extends ChatTurnStore {
             String content, String status) {
         delegate.finish(conversation, owner, request, assistant, content, status);
         completed.add(new Completion(request, status, System.nanoTime()));
+    }
+
+    @Override public void finishWithPlan(UUID conversation, String owner, UUID request, UUID assistant,
+            String content, Plan plan) {
+        delegate.finishWithPlan(conversation, owner, request, assistant, content, plan);
+        completed.add(new Completion(request, "complete", System.nanoTime()));
     }
 
     Completion awaitCompletion(long timeoutSeconds) throws InterruptedException {

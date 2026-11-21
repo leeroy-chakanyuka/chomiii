@@ -1,6 +1,7 @@
 package com.chomiii.chat;
 
 import com.chomiii.agent.AgentInstructions;
+import com.chomiii.approval.ApprovalFacade;
 import com.chomiii.memory.MemoryService;
 import com.chomiii.memory.MemoryLearningService;
 import com.chomiii.memory.MemorySearchTool;
@@ -58,6 +59,7 @@ public class ChatStreamService {
     private final HybridMemorySearch hybridMemorySearch;
     private final ToolRegistry toolRegistry;
     private final ToolTraceService toolTraces;
+    private final ApprovalFacade approvals;
     private final Semaphore slots = new Semaphore(8);
     private final ConcurrentHashMap<UUID, Active> active = new ConcurrentHashMap<>();
 
@@ -82,13 +84,23 @@ public class ChatStreamService {
                 embeddingIndexer, hybridMemorySearch, toolRegistry, null);
     }
 
-    @Autowired
     public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
             MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
             @Qualifier("chatExecutor") ExecutorService chatExecutor,
             @Value("${chomiii.memory.search-tool.enabled:true}") boolean memorySearchEnabled,
             EmbeddingIndexer embeddingIndexer, HybridMemorySearch hybridMemorySearch, ToolRegistry toolRegistry,
             ToolTraceService toolTraces) {
+        this(store, conversations, memories, learning, catalog, providers, chatExecutor, memorySearchEnabled,
+                embeddingIndexer, hybridMemorySearch, toolRegistry, toolTraces, null);
+    }
+
+    @Autowired
+    public ChatStreamService(ChatTurnStore store, ConversationRepository conversations, MemoryService memories,
+            MemoryLearningService learning, ProviderCatalog catalog, List<ChatProvider> providers,
+            @Qualifier("chatExecutor") ExecutorService chatExecutor,
+            @Value("${chomiii.memory.search-tool.enabled:true}") boolean memorySearchEnabled,
+            EmbeddingIndexer embeddingIndexer, HybridMemorySearch hybridMemorySearch, ToolRegistry toolRegistry,
+            ToolTraceService toolTraces, ApprovalFacade approvals) {
         this.store = store;
         this.conversations = conversations;
         this.memories = memories;
@@ -101,6 +113,7 @@ public class ChatStreamService {
         this.hybridMemorySearch = hybridMemorySearch;
         this.toolRegistry = toolRegistry;
         this.toolTraces = toolTraces;
+        this.approvals = approvals;
     }
 
     public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request, String key) {
@@ -109,6 +122,10 @@ public class ChatStreamService {
 
     public SseEmitter start(UUID conversation, String owner, ChatStreamController.MessageRequest request,
             String key, boolean useMemory) {
+        if ((request.revisePlanId() == null) != (request.reviseVersion() == null)
+                || request.reviseVersion() != null && request.reviseVersion() < 0) {
+            throw new ChatApiException(HttpStatus.BAD_REQUEST, "Provide a plan ID and version together.");
+        }
         if (key == null || key.isBlank() || key.length() > 512) {
             throw new ChatApiException(HttpStatus.BAD_REQUEST, "Enter a Gemini API key.");
         }
@@ -116,6 +133,14 @@ public class ChatStreamService {
                 .findFirst().orElse(null);
         if (!catalog.supports(request.provider(), request.model()) || provider == null) {
             throw new ChatApiException(HttpStatus.BAD_REQUEST, "Unsupported provider or model.");
+        }
+        com.chomiii.planning.execution.PlanExecution revision = null;
+        if (request.revisePlanId() != null) {
+            try {
+                revision = store.revisionSnapshot(owner, conversation, request.revisePlanId(), request.reviseVersion());
+            } catch (IllegalArgumentException | IllegalStateException invalid) {
+                throw new ChatApiException(HttpStatus.CONFLICT, "This plan is unavailable or has changed.");
+            }
         }
         if (!slots.tryAcquire()) {
             throw new ChatApiException(HttpStatus.TOO_MANY_REQUESTS, "Too many generations are in progress.");
@@ -140,7 +165,7 @@ public class ChatStreamService {
         // Retrieval is an optional, owner-scoped source of untrusted context.
         // Reserve its budget BEFORE selecting history so the full model input
         // stays within the established message and character bounds.
-        boolean plan = request.plan() != null ? request.plan() : PlanningRouter.matches(request.content());
+        boolean plan = revision != null || (request.plan() != null ? request.plan() : PlanningRouter.matches(request.content()));
         List<PersonalMemory> planningMemories;
         ChatProvider.ChatInput input;
         try {
@@ -157,8 +182,9 @@ public class ChatStreamService {
                 }
             }
             if (plan) {
-                input = PLANNING.input(request.model(), pending.history(), request.content().strip(),
-                        planningMemories, memoryContext);
+                input = revision == null
+                        ? PLANNING.input(request.model(), pending.history(), request.content().strip(), planningMemories, memoryContext)
+                        : PLANNING.revisionInput(request.model(), request.content().strip(), planningMemories, memoryContext, revision);
             } else {
                 boolean hasMemory = !memoryContext.isBlank();
                 int memoryChars = hasMemory ? memoryContext.length() : 0;
@@ -186,7 +212,8 @@ public class ChatStreamService {
         try {
             executor.execute(() -> run(request.requestId(), pending.assistantId(), owner, conversation,
                     provider, input, key, generation, emitter, memoryRevision, requestStartedNanos,
-                    storeReadyNanos, contextReadyNanos, plan, planningMemories, useMemory));
+                    storeReadyNanos, contextReadyNanos, plan, planningMemories, useMemory,
+                    request.revisePlanId(), request.reviseVersion()));
         } catch (RuntimeException exception) {
             active.remove(request.requestId(), generation);
             slots.release();
@@ -205,12 +232,14 @@ public class ChatStreamService {
             throw new ChatApiException(HttpStatus.CONFLICT, "This generation is no longer running.");
         }
         generation.cancelUnlessFinished();
+        if (approvals != null) approvals.cancelRequest(owner, conversation, requestId);
     }
 
     public void cancelConversation(UUID conversation, String owner) {
         active.forEach((requestId, generation) -> {
             if (generation.conversation.equals(conversation) && generation.owner.equals(owner)) {
                 generation.cancelUnlessFinished();
+                if (approvals != null) approvals.cancelRequest(owner, conversation, requestId);
             }
         });
     }
@@ -218,9 +247,12 @@ public class ChatStreamService {
     private void run(UUID requestId, UUID assistantId, String owner, UUID conversation, ChatProvider provider,
             ChatProvider.ChatInput input, String key, Active generation, SseEmitter emitter, Long memoryRevision,
             long requestStartedNanos, long storeReadyNanos, long contextReadyNanos,
-            boolean planning, List<PersonalMemory> planningMemories, boolean useMemory) {
+            boolean planning, List<PersonalMemory> planningMemories, boolean useMemory, UUID previousId, Long previousVersion) {
         long workerStartedNanos = System.nanoTime();
         StringBuilder response = new StringBuilder();
+        boolean[] bufferingForApproval = {false};
+        var proposedActions = new ArrayList<Object>();
+        com.chomiii.planning.Plan proposedPlan = null;
         long[] firstDeltaNanos = {0L};
         long[] firstSentNanos = {0L};
         long finishMs = -1;
@@ -232,8 +264,11 @@ public class ChatStreamService {
                     useMemory && memorySearchEnabled, observation -> {
                 if ("memory.search".equals(observation.toolName())) toolMemoryIds.addAll(observation.references());
             });
-            var session = new ToolTurn(toolRegistry, toolContext, planning, toolTraces, provider.id(), input.model(),
-                    trace -> send(emitter, "tool", trace));
+            boolean bufferForApproval = planning || approvals != null && toolRegistry.available(toolContext).stream()
+                    .anyMatch(definition -> definition.effect() == com.chomiii.tools.ToolDefinition.Effect.WRITE);
+            bufferingForApproval[0] = bufferForApproval;
+            var session = new ToolTurn(toolRegistry, toolContext, bufferForApproval, toolTraces, provider.id(), input.model(),
+                    trace -> send(emitter, "tool", trace), planning ? null : approvals, proposedActions::add);
             var tools = session.definitions().isEmpty() ? null : session;
             if (tools == null) session.close();
             generation.setTools(tools);
@@ -254,8 +289,8 @@ public class ChatStreamService {
                         firstDeltaNanos[0] = System.nanoTime();
                     }
                     response.append(chunk);
-                    send(emitter, "delta", Map.of("text", chunk));
-                    if (firstSentNanos[0] == 0L) {
+                    if (!bufferForApproval) send(emitter, "delta", Map.of("text", chunk));
+                    if (!bufferForApproval && firstSentNanos[0] == 0L) {
                         firstSentNanos[0] = System.nanoTime();
                     }
                 };
@@ -266,7 +301,7 @@ public class ChatStreamService {
                     if (rendered.length() > MAX_REPLY_CHARS) {
                         throw new ChatApiException(HttpStatus.BAD_GATEWAY, "The plan was too large.");
                     }
-                    send(emitter, "plan", plan);
+                    proposedPlan = plan;
                     delta.accept(rendered);
                 } else {
                     providerStream.stream(delta);
@@ -277,19 +312,39 @@ public class ChatStreamService {
             if (generation.cancelled.get()) {
                 throw new CancellationException();
             }
+            if (session.hasProposal()) {
+                response.setLength(0);
+                response.append("Please review the proposed to-do before I make any changes.");
+            }
             long finishStartedNanos = System.nanoTime();
-            store.finish(conversation, owner, requestId, assistantId, response.toString(), "complete");
+            if (proposedPlan != null && previousId != null) store.finishWithPlan(conversation, owner, requestId, assistantId,
+                    response.toString(), proposedPlan, previousId, previousVersion);
+            else if (proposedPlan != null) store.finishWithPlan(conversation, owner, requestId, assistantId, response.toString(), proposedPlan);
+            else store.finish(conversation, owner, requestId, assistantId, response.toString(), "complete");
             finishMs = elapsedMillis(finishStartedNanos, System.nanoTime());
             generation.finished.set(true);
             outcome = "complete";
+            if (proposedPlan != null) send(emitter, "plan", proposedPlan);
+            for (Object action : proposedActions) send(emitter, "approval", action);
+            if (bufferForApproval) {
+                send(emitter, "delta", Map.of("text", response.toString()));
+                firstSentNanos[0] = System.nanoTime();
+            }
             send(emitter, "complete", Map.of("messageId", assistantId.toString(), "status", "complete"));
         } catch (RuntimeException exception) {
             if (generation.finished.get()) {
                 return;
             }
+            if (bufferingForApproval[0]) response.setLength(0);
             boolean interrupted = generation.cancelled.get() || exception instanceof CancellationException
                     || exception instanceof ProviderFailure failure && failure.code() == ProviderFailure.Code.CANCELLED;
             outcome = interrupted ? "interrupted" : "failed";
+            if (approvals != null) {
+                try {
+                    if (interrupted) approvals.cancelRequest(owner, conversation, requestId);
+                    else approvals.failRequest(owner, conversation, requestId);
+                } catch (RuntimeException unavailable) { log.warn("approval cleanup unavailable"); }
+            }
             String code = interrupted ? "INTERRUPTED" : exception instanceof ProviderFailure failure
                     ? failure.code().name() : planning && exception instanceof IllegalArgumentException ? "INVALID_PLAN"
                     : exception instanceof ChatApiException ? "OUTPUT_LIMIT" : "UNAVAILABLE";

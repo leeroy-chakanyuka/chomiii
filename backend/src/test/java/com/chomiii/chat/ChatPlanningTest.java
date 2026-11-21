@@ -116,6 +116,12 @@ class ChatPlanningTest {
             finished.countDown();
             return null;
         }).when(store).finish(any(), anyString(), any(), any(), anyString(), anyString());
+        org.mockito.Mockito.doAnswer(call -> {
+            content.set(call.getArgument(4));
+            status.set("complete");
+            finished.countDown();
+            return null;
+        }).when(store).finishWithPlan(any(), anyString(), any(), any(), anyString(), any());
         ChatProvider provider = new ChatProvider() {
             @Override public String id() { return "gemini"; }
             @Override public Generation open(ChatInput value, String key) {

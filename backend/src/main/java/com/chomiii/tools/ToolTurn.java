@@ -1,6 +1,7 @@
 package com.chomiii.tools;
 
 import com.chomiii.provider.ChatProvider;
+import com.chomiii.approval.ApprovalFacade;
 import com.chomiii.tools.trace.ToolTraceCommand;
 import com.chomiii.tools.trace.ToolTraceDto;
 import com.chomiii.tools.trace.ToolTraceService;
@@ -39,6 +40,9 @@ public final class ToolTurn implements ChatProvider.Tools {
     private final String provider;
     private final String model;
     private final Consumer<ToolTraceDto.Trace> traceObserver;
+    private final ApprovalFacade approvals;
+    private final Consumer<Object> approvalObserver;
+    private final AtomicBoolean proposed = new AtomicBoolean();
     private long remainingNanos = TimeUnit.SECONDS.toNanos(4);
     private final Set<String> searches = new HashSet<>();
     private final AtomicBoolean cancelled = new AtomicBoolean();
@@ -51,6 +55,12 @@ public final class ToolTurn implements ChatProvider.Tools {
 
     public ToolTurn(ToolRegistry registry, ToolExecutionContext context, boolean bufferText,
             ToolTraceService traces, String provider, String model, Consumer<ToolTraceDto.Trace> traceObserver) {
+        this(registry, context, bufferText, traces, provider, model, traceObserver, null, ignored -> {});
+    }
+
+    public ToolTurn(ToolRegistry registry, ToolExecutionContext context, boolean bufferText,
+            ToolTraceService traces, String provider, String model, Consumer<ToolTraceDto.Trace> traceObserver,
+            ApprovalFacade approvals, Consumer<Object> approvalObserver) {
         this.registry = registry;
         this.context = context;
         this.bufferText = bufferText;
@@ -58,7 +68,11 @@ public final class ToolTurn implements ChatProvider.Tools {
         this.provider = provider;
         this.model = model;
         this.traceObserver = traceObserver;
+        this.approvals = approvals;
+        this.approvalObserver = approvalObserver;
     }
+
+    public boolean hasProposal() { return proposed.get(); }
 
     @Override
     public List<ToolDefinition> definitions() {
@@ -100,7 +114,7 @@ public final class ToolTurn implements ChatProvider.Tools {
         }
         if (call != null) {
             try {
-                publish(finish(call, response));
+                if (!"APPROVAL_REQUIRED".equals(response.get("errorCode"))) publish(finish(call, response));
             } catch (RuntimeException failure) {
                 return ToolResponse.error(ToolResponse.ErrorCode.FAILURE, "Tool trace unavailable.");
             }
@@ -130,8 +144,36 @@ public final class ToolTurn implements ChatProvider.Tools {
                 return ToolResponse.error(ToolResponse.ErrorCode.INVALID_ARGUMENTS, "Invalid tool arguments.");
             }
             ToolSchemaValidator.validate(registered.definition().parameters(), safeArguments);
-            if (!registry.authorize(registered, context, safeArguments)) {
+            var decision = registry.decision(registered, context, safeArguments);
+            if (decision != ToolAuthorization.Decision.ALLOW && decision != ToolAuthorization.Decision.REQUIRE_APPROVAL) {
                 return ToolResponse.error(ToolResponse.ErrorCode.NOT_AUTHORIZED, "Tool is not authorized.");
+            }
+            if (decision == ToolAuthorization.Decision.REQUIRE_APPROVAL) {
+                if (approvals == null || traces == null || call == null) {
+                    return ToolResponse.error(ToolResponse.ErrorCode.NOT_AVAILABLE, "Approval unavailable.");
+                }
+                var approval = approvals.propose(context, registered.definition(), safeArguments, call.id);
+                proposed.set(true);
+                try {
+                if (cancelled.get()) {
+                    approvals.cancelRequest(context.owner(), context.conversationId(), context.requestId());
+                    return ToolResponse.error(ToolResponse.ErrorCode.CANCELLED, "Tool call cancelled.");
+                }
+                traces.list(context.conversationId(), context.owner()).stream()
+                        .filter(trace -> trace.invocationId().equals(call.id)).findFirst().ifPresent(this::publish);
+                if (cancelled.get()) {
+                    approvals.cancelRequest(context.owner(), context.conversationId(), context.requestId());
+                    return ToolResponse.error(ToolResponse.ErrorCode.CANCELLED, "Tool call cancelled.");
+                }
+                approvalObserver.accept(approval);
+                return ToolResponse.error(ToolResponse.ErrorCode.APPROVAL_REQUIRED, "Explicit approval is required; the action has not been performed.");
+                } catch (RuntimeException failure) {
+                    approvals.cancelRequest(context.owner(), context.conversationId(), context.requestId());
+                    throw failure;
+                }
+            }
+            if (registered.definition().effect() == ToolDefinition.Effect.WRITE) {
+                return ToolResponse.error(ToolResponse.ErrorCode.NOT_AUTHORIZED, "Writes cannot execute in a generation.");
             }
             if (call != null) traces.recordAuthorized(context.owner(), call.id, null);
             if (!searches.add(name + "|" + tool.fingerprint(safeArguments))) {

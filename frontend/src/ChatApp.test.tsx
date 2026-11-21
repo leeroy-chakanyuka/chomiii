@@ -1,8 +1,148 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import App from './App'
+import type { Approval } from './chatApi'
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+
+it('waits for the matching conversation before applying approvals and drops approvals after open failure', async () => {
+  let releaseSecond: ((response: Response) => void) | undefined
+  const summaries = ['first', 'second', 'broken'].map((id) => ({ id, title: `${id} conversation`, createdAt: 'now', updatedAt: 'now' }))
+  const approvalFor = (id: string) => ({ id, requestId: 'r', toolName: 'message.send', preview: `Preview ${id}`,
+    expiresAt: '2035-01-01T00:00:00Z', status: 'pending' })
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
+    const path = String(input)
+    if (path.endsWith('/health')) return new Response('{"status":"UP","service":"chomiii"}')
+    if (path.endsWith('/chat/providers')) return new Response('[{"id":"gemini","name":"Gemini","defaultModel":"m","models":[{"id":"m","name":"M"}]}]')
+    if (path.endsWith('/conversations')) return new Response(JSON.stringify(summaries))
+    if (path.endsWith('/tool-traces')) return new Response('[]')
+    if (path.endsWith('/conversations/first/approvals')) return new Response(JSON.stringify([approvalFor('first')]))
+    if (path.endsWith('/conversations/second/approvals')) return new Response(JSON.stringify([approvalFor('second')]))
+    if (path.endsWith('/conversations/broken/approvals')) return new Response(JSON.stringify([approvalFor('broken')]))
+    if (path.endsWith('/conversations/first')) return new Response(JSON.stringify({ ...summaries[0], messages: [] }))
+    if (path.endsWith('/conversations/second')) return new Promise<Response>((resolve) => { releaseSecond = resolve })
+    if (path.endsWith('/conversations/broken')) return new Response('unavailable', { status: 503 })
+    throw new Error(`Unexpected request: ${path}`)
+  }))
+  render(<App />)
+  fireEvent.change(await screen.findByLabelText('Gemini API key'), { target: { value: 'key' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Start chatting' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'first conversation' }))
+  expect(await screen.findByText('Preview first')).toBeVisible()
+
+  fireEvent.click(screen.getByRole('button', { name: 'second conversation' }))
+  await waitFor(() => expect(releaseSecond).toBeDefined())
+  await waitFor(() => expect(screen.queryByText('Preview second')).not.toBeInTheDocument())
+  expect(screen.queryByText('Preview first')).not.toBeInTheDocument()
+  releaseSecond?.(new Response(JSON.stringify({ ...summaries[1], messages: [] })))
+  expect(await screen.findByText('Preview second')).toBeVisible()
+
+  fireEvent.click(screen.getByRole('button', { name: 'broken conversation' }))
+  await waitFor(() => expect(screen.queryByText('Preview broken')).not.toBeInTheDocument())
+  expect(screen.queryByText('Preview second')).not.toBeInTheDocument()
+})
+
+it('renders SSE approvals, sends explicit decisions, and restores server approval state on reopen', async () => {
+  const baseApproval = (id: string): Approval => ({ id, requestId: 'req', toolName: 'message.send', preview: `Preview ${id}`,
+    expiresAt: '2035-01-01T00:00:00Z', status: 'pending' })
+  const approvals = new Map<string, Approval>([['a1', baseApproval('a1')], ['a2', baseApproval('a2')]])
+  let stream: ReadableStreamDefaultController<Uint8Array> | undefined
+  const fake = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const path = String(input)
+    if (path.endsWith('/health')) return new Response('{"status":"UP","service":"chomiii"}')
+    if (path.endsWith('/chat/providers')) return new Response(JSON.stringify([
+      { id: 'gemini', name: 'Gemini', defaultModel: 'model', models: [{ id: 'model', name: 'Model' }] },
+    ]))
+    if (path.endsWith('/conversations') && init?.method === 'POST') return new Response(JSON.stringify({
+      id: 'chat', title: 'Saved approvals', createdAt: 'now', updatedAt: 'now', messages: [],
+    }), { status: 201 })
+    if (path.endsWith('/conversations')) return new Response(JSON.stringify([
+      { id: 'chat', title: 'Saved approvals', createdAt: 'now', updatedAt: 'now' },
+    ]))
+    if (path.endsWith('/conversations/chat/approvals')) return new Response(JSON.stringify([...approvals.values()]))
+    if (path.includes('/conversations/chat/approvals/') && init?.method === 'POST') {
+      const match = path.match(/approvals\/(a[12])\/(approve|reject)$/)
+      if (!match) throw new Error(`Unexpected decision: ${path}`)
+      expect(init.body).toBeUndefined()
+      const existing = approvals.get(match[1])
+      if (!existing) throw new Error('Unknown approval')
+      const value: Approval = { ...existing, status: match[2] === 'approve' ? 'approved' : 'rejected' }
+      approvals.set(match[1], value)
+      return new Response(JSON.stringify(value))
+    }
+    if (path.endsWith('/conversations/chat/tool-traces')) return new Response('[]')
+    if (path.endsWith('/conversations/chat')) return new Response(JSON.stringify({ id: 'chat', title: 'Saved approvals',
+      createdAt: 'now', updatedAt: 'now', messages: [] }))
+    if (path.endsWith('/messages/stream')) return new Response(new ReadableStream<Uint8Array>({ start(controller) { stream = controller } }))
+    throw new Error(`Unexpected request: ${path}`)
+  })
+  vi.stubGlobal('fetch', fake)
+  render(<App />)
+  fireEvent.change(await screen.findByLabelText('Gemini API key'), { target: { value: 'key' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Start chatting' }))
+  fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Please send' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+  await waitFor(() => expect(stream).toBeDefined())
+  stream?.enqueue(new TextEncoder().encode(`event:approval\ndata:${JSON.stringify(baseApproval('a1'))}\n\n`
+    + `event:approval\ndata:${JSON.stringify(baseApproval('a2'))}\n\n`))
+  expect(await screen.findByText('Preview a1')).toBeVisible()
+  expect(await screen.findByText('Preview a2')).toBeVisible()
+  fireEvent.click(within(screen.getByText('Preview a1').closest('section')!).getByRole('button', { name: 'Approve action' }))
+  await waitFor(() => expect(within(screen.getByText('Preview a1').closest('section')!).getByRole('status')).toHaveTextContent('Approved'))
+  fireEvent.click(within(screen.getByText('Preview a2').closest('section')!).getByRole('button', { name: 'Reject action' }))
+  await waitFor(() => expect(within(screen.getByText('Preview a2').closest('section')!).getByRole('status')).toHaveTextContent('Rejected'))
+  stream?.enqueue(new TextEncoder().encode('event:complete\ndata:{"messageId":"m","status":"complete"}\n\n'))
+  stream?.close()
+  fireEvent.click(await screen.findByRole('button', { name: 'Saved approvals' }))
+  await waitFor(() => expect(within(screen.getByText('Preview a1').closest('section')!).getByRole('status')).toHaveTextContent('Approved'))
+  expect(within(screen.getByText('Preview a2').closest('section')!).getByRole('status')).toHaveTextContent('Rejected')
+})
+
+it('ignores delayed approval loads and decisions after switching conversations', async () => {
+  const load: { release?: (response: Response) => void } = {}
+  let releaseDecision: ((response: Response) => void) | undefined
+  const saved = [
+    { id: 'old', title: 'Old conversation', createdAt: 'now', updatedAt: 'now' },
+    { id: 'new', title: 'New conversation', createdAt: 'now', updatedAt: 'now' },
+  ]
+  const pending = { id: 'approval-old', requestId: 'r', toolName: 'message.send', preview: 'Old secret preview',
+    expiresAt: '2035-01-01T00:00:00Z', status: 'pending' }
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const path = String(input)
+    if (path.endsWith('/health')) return new Response('{"status":"UP","service":"chomiii"}')
+    if (path.endsWith('/chat/providers')) return new Response('[{"id":"gemini","name":"Gemini","defaultModel":"m","models":[{"id":"m","name":"M"}]}]')
+    if (path.endsWith('/conversations')) return new Response(JSON.stringify(saved))
+    if (path.endsWith('/conversations/old')) return new Response(JSON.stringify({ ...saved[0], messages: [] }))
+    if (path.endsWith('/conversations/new')) return new Response(JSON.stringify({ ...saved[1], messages: [] }))
+    if (path.endsWith('/tool-traces')) return new Response('[]')
+    if (path.endsWith('/conversations/old/approvals')) return new Promise<Response>((resolve) => { load.release = resolve })
+    if (path.endsWith('/conversations/new/approvals')) return new Response('[]')
+    if (path.endsWith('/approvals/approval-old/approve') && init?.method === 'POST') {
+      return new Promise<Response>((resolve) => { releaseDecision = resolve })
+    }
+    throw new Error(`Unexpected request: ${path}`)
+  }))
+  render(<App />)
+  fireEvent.change(await screen.findByLabelText('Gemini API key'), { target: { value: 'key' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Start chatting' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Old conversation' }))
+  await waitFor(() => expect(load.release).toBeDefined())
+  fireEvent.click(screen.getByRole('button', { name: 'New conversation' }))
+  await screen.findByText('What’s on your mind?')
+  load.release?.(new Response(JSON.stringify([pending])))
+  await waitFor(() => expect(screen.queryByText('Old secret preview')).not.toBeInTheDocument())
+
+  const firstLoad = load.release
+  fireEvent.click(screen.getByRole('button', { name: 'Old conversation' }))
+  await waitFor(() => expect(load.release).not.toBe(firstLoad))
+  load.release?.(new Response(JSON.stringify([pending])))
+  fireEvent.click(await screen.findByRole('button', { name: 'Approve action' }))
+  await waitFor(() => expect(releaseDecision).toBeDefined())
+  fireEvent.click(screen.getByRole('button', { name: 'New conversation' }))
+  await screen.findByText('What’s on your mind?')
+  releaseDecision?.(new Response(JSON.stringify({ ...pending, status: 'approved' })))
+  await waitFor(() => expect(screen.queryByText('Old secret preview')).not.toBeInTheDocument())
+})
 
 it('shows Gemini setup and asks for a key before starting chat', async () => {
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
@@ -63,8 +203,12 @@ it('shows a message immediately, updates from real stream frames, and loads the 
   await waitFor(() => expect(stream).toBeDefined())
   stream?.enqueue(new TextEncoder().encode('event:tool\ndata:{"invocationId":"tool-1","requestId":"r","toolName":"memory.search","status":"running"}\n\n'))
   await screen.findByText('Searching memories…')
+  stream?.enqueue(new TextEncoder().encode('event:tool\ndata:{"invocationId":"tool-1","requestId":"r","toolName":"memory.search","status":"awaiting_approval"}\n\n'))
+  await screen.findByText('Waiting for your approval…')
   stream?.enqueue(new TextEncoder().encode('event:tool\ndata:{"invocationId":"tool-1","requestId":"r","toolName":"memory.search","status":"succeeded"}\n\n'))
   await screen.findByText('Memory search completed')
+  stream?.enqueue(new TextEncoder().encode('event:tool\ndata:{"invocationId":"tool-1","requestId":"r","toolName":"memory.search","status":"awaiting_approval"}\n\n'))
+  await waitFor(() => expect(screen.getByText('Memory search completed')).toBeVisible())
   stream?.enqueue(new TextEncoder().encode('event:delta\ndata:{"text":"Hello"}\n\n'))
   await screen.findByText('Hello')
   expect(screen.queryByText('Hello world')).not.toBeInTheDocument()
@@ -222,6 +366,7 @@ it('shows missing tool activity, retries it, and does not leak it after switchin
         models: [{ id: 'gemini-3.5-flash-lite', name: 'Gemini Flash-Lite' }] },
     ]))
     if (url.endsWith('/conversations')) return new Response(JSON.stringify(conversations))
+    if (url.endsWith('/approvals')) return new Response('[]')
     if (url.endsWith('/conversations/old/tool-traces')) {
       if (failOldTrace) { failOldTrace = false; return new Response('unavailable', { status: 503 }) }
       return new Promise<Response>((resolve) => { releaseOldTrace = resolve })
@@ -241,7 +386,7 @@ it('shows missing tool activity, retries it, and does not leak it after switchin
   fireEvent.click(screen.getByRole('button', { name: 'Start chatting' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Old chat' }))
   await screen.findByText('Readable old chat')
-  expect(await screen.findByRole('status')).toHaveTextContent('Tool activity could not be loaded.')
+  expect(await screen.findByText('Tool activity could not be loaded.')).toBeVisible()
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
   await waitFor(() => expect(releaseOldTrace).toBeDefined())
   fireEvent.click(screen.getByRole('button', { name: 'New chat' }))
@@ -285,4 +430,63 @@ it('shows a conversation while its tool history request is still pending', async
   expect(releaseTrace).toBeDefined()
   expect(screen.queryByText('Tool activity could not be loaded.')).not.toBeInTheDocument()
   releaseTrace?.(new Response('[]'))
+})
+
+it('selects a saved plan for revision and submits the revision through the stream', async () => {
+  let stream: ReadableStreamDefaultController<Uint8Array> | undefined
+  const bodies: Record<string, unknown>[] = []
+  const plan = { id: 'plan-1', goal: 'Plan a trip', summary: 'Visit the coast', state: 'PROPOSED', version: 7,
+    updatedAt: '2020-01-01T00:00:00Z', steps: [
+      { id: 'todo-step', title: 'Check itinerary', state: 'COMPLETED', dependsOn: [],
+        observation: { todos: [{ id: 'todo-1', title: 'Book a hotel', status: 'pending' }], truncated: true } },
+      { id: 'empty-step', title: 'Review notes', state: 'COMPLETED', dependsOn: [],
+        observation: { todos: [], truncated: false } },
+    ] }
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input)
+    if (url.endsWith('/health')) return new Response('{"status":"UP","service":"chomiii"}')
+    if (url.endsWith('/chat/providers')) return new Response('[{"id":"gemini","name":"Gemini","defaultModel":"m","models":[{"id":"m","name":"M"}]}]')
+    if (url.endsWith('/conversations') && init?.method === 'POST') return new Response(JSON.stringify({ id: 'chat', title: 'Trip', createdAt: '2020-01-01', updatedAt: '2020-01-01', messages: [] }))
+    if (url.endsWith('/conversations')) return new Response('[]')
+    if (url.endsWith('/conversations/chat/plans')) return new Response(JSON.stringify([plan]))
+    if (url.endsWith('/conversations/chat/approvals') || url.endsWith('/conversations/chat/tool-traces')) return new Response('[]')
+    if (url.endsWith('/messages/stream')) {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>
+      bodies.push(body)
+      return new Response(new ReadableStream<Uint8Array>({ start(controller) { stream = controller } }))
+    }
+    if (url.endsWith('/conversations/chat')) return new Response(JSON.stringify({ id: 'chat', title: 'Trip', createdAt: '2020-01-01', updatedAt: '2020-01-01', messages: [] }))
+    throw new Error(`Unexpected request: ${url}`)
+  }))
+  render(<App />)
+  fireEvent.change(await screen.findByLabelText('Gemini API key'), { target: { value: 'key' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Start chatting' }))
+  fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Start trip plan' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Make a plan' }))
+  await waitFor(() => expect(stream).toBeDefined())
+  stream?.enqueue(new TextEncoder().encode('event:complete\ndata:{"messageId":"m1","status":"complete"}\n\n'))
+  stream?.close()
+  await screen.findByRole('heading', { name: 'Plan a trip' })
+  expect(screen.getByText('Book a hotel — pending')).toBeVisible()
+  expect(screen.getByText('Some tasks were omitted.')).toBeVisible()
+  expect(screen.getByText('No tasks found.')).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Revise plan' }))
+  expect(screen.getByText(/Revising plan: Plan a trip/)).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Clear selection' }))
+  expect(screen.queryByText(/Revising plan:/)).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Revise plan' }))
+  fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Add two days' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+  await waitFor(() => expect(bodies).toHaveLength(2))
+  expect(bodies[1]).toMatchObject({ content: 'Add two days', plan: true, revisePlanId: 'plan-1', reviseVersion: 7 })
+  expect(screen.getByRole('button', { name: 'Revising this plan' })).toBeDisabled()
+  stream?.enqueue(new TextEncoder().encode('event:complete\ndata:{"messageId":"m","status":"complete"}\n\n'))
+  stream?.close()
+  await waitFor(() => expect(screen.queryByText(/Revising plan:/)).not.toBeInTheDocument())
+  fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'A normal follow-up' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+  await waitFor(() => expect(bodies).toHaveLength(3))
+  expect(bodies[2]).toMatchObject({ content: 'A normal follow-up' })
+  expect(bodies[2]).not.toHaveProperty('revisePlanId')
+  expect(bodies[2]).not.toHaveProperty('reviseVersion')
 })

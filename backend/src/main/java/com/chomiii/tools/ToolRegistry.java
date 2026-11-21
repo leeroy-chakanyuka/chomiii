@@ -37,6 +37,21 @@ public final class ToolRegistry {
         return tools.values().stream().map(Registered::definition).toList();
     }
 
+    public Optional<ToolDefinition> definition(String name) {
+        return find(name).map(Registered::definition);
+    }
+
+    public InternalTool.Result executeAuthorized(ToolExecutionContext context, String name, Map<String, Object> arguments) {
+        Registered registered = find(name).orElseThrow(() -> new IllegalArgumentException("Unknown tool"));
+        Map<String, Object> safe = ToolValues.copy(arguments);
+        ToolSchemaValidator.validate(registered.definition().parameters(), safe);
+        if (!mayExpose(registered, context) || !isAvailable(registered, context)
+                || decision(registered, context, safe) != ToolAuthorization.Decision.ALLOW) {
+            throw new SecurityException("Tool is not authorized");
+        }
+        return registered.tool().execute(context, safe);
+    }
+
     public List<ToolDefinition> available(ToolExecutionContext context) {
         return tools.values().stream().filter(registered -> mayExpose(registered, context) && isAvailable(registered, context))
                 .map(Registered::definition).toList();
@@ -55,10 +70,14 @@ public final class ToolRegistry {
     }
 
     boolean authorize(Registered registered, ToolExecutionContext context, Map<String, Object> arguments) {
+        return decision(registered, context, arguments) == ToolAuthorization.Decision.ALLOW;
+    }
+
+    ToolAuthorization.Decision decision(Registered registered, ToolExecutionContext context, Map<String, Object> arguments) {
         try {
-            return authorization.authorize(context, registered.definition(), arguments) == ToolAuthorization.Decision.ALLOW;
+            return authorization.authorize(context, registered.definition(), arguments);
         } catch (RuntimeException denied) {
-            return false;
+            return ToolAuthorization.Decision.DENY;
         }
     }
 

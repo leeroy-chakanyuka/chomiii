@@ -151,3 +151,19 @@ a { color: #165a50; text-underline-offset: 3px; }
 
 /* M2: automatic-learning disclosure kept visible while chatting, not only in the panel. */
 .empty-state .learning-note { margin-top: 20px; max-width: 520px; }
+
+/* Standalone conversational action approval card. */
+.approval-card { width: min(100%, 620px); margin: 18px 0; padding: 18px 20px;
+  border: 1px solid #dbe3db; border-left: 4px solid #568875; border-radius: 12px;
+  background: #fcfcfa; box-shadow: 0 2px 8px rgba(24, 40, 33, .05); }
+.approval-card h2 { margin: 0 0 12px; color: #263c34; font-size: 17px; letter-spacing: -.02em; }
+.approval-card p { margin: 8px 0; color: #53645b; line-height: 1.5; font-size: 14px; }
+.approval-card .approval-preview { margin: 12px 0; padding: 12px 14px; border-radius: 8px;
+  background: #f0f4ef; color: #263c34; white-space: pre-wrap; overflow-wrap: anywhere; }
+.approval-card time { font-weight: 600; color: #354d42; }
+.approval-card > div { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 15px; }
+.approval-card button { min-height: 40px; padding: 8px 14px; border: 1px solid #bacac2;
+  border-radius: 8px; background: white; color: #225649; font-weight: 650; }
+.approval-card button:first-child { background: #176859; border-color: #176859; color: white; }
+.approval-card button:hover:not(:disabled) { filter: brightness(.95); }
+.approval-card [role='alert'] { color: #a32f2b; }

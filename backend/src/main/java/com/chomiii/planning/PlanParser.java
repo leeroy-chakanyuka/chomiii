@@ -32,7 +32,11 @@ public final class PlanParser {
             List<String> constraints, List<DraftQuestion> missingInformation, List<DraftStep> steps) {}
     public record DraftMemory(String id, String relevance) {}
     public record DraftQuestion(String id, String question, String kind, List<String> blocks) {}
-    public record DraftStep(String id, String title, String capability, List<String> dependsOn) {}
+    public record DraftStep(String id, String title, String capability, List<String> dependsOn, Map<String, Object> arguments) {
+        public DraftStep(String id, String title, String capability, List<String> dependsOn) {
+            this(id, title, capability, dependsOn, Map.of());
+        }
+    }
 
     public Plan parse(String output, Set<UUID> authorizedMemoryIds) {
         return parse(output, authorizedMemoryIds, CapabilityCatalog.all().stream()
@@ -42,7 +46,14 @@ public final class PlanParser {
     public Plan parse(String output, Set<UUID> authorizedMemoryIds, Set<String> allowedCapabilities) {
         if (output == null || output.length() > MAX_OUTPUT) throw invalid();
         try {
-            Draft draft = JSON.readValue(output, Draft.class);
+            var root = JSON.readTree(output);
+            if (root != null && root.path("steps").isArray()) {
+                for (var step : root.path("steps")) {
+                    if (step instanceof com.fasterxml.jackson.databind.node.ObjectNode object && !object.has("arguments"))
+                        object.putObject("arguments");
+                }
+            }
+            Draft draft = JSON.treeToValue(root, Draft.class);
             return validate(draft, Set.copyOf(authorizedMemoryIds), Set.copyOf(allowedCapabilities));
         } catch (com.fasterxml.jackson.core.JsonProcessingException | NullPointerException invalid) {
             throw invalid();
@@ -72,11 +83,21 @@ public final class PlanParser {
             text(step.title(), 300);
             CapabilityCatalog.get(step.capability());
             if (!allowedCapabilities.contains(step.capability())) throw invalid();
+            if (dynamicCompletion(step)) {
+                if (!(step.arguments().get("listStepId") instanceof String listId)
+                        || !(step.arguments().get("title") instanceof String title)
+                        || title.isBlank() || title.length() > 200 || !title.equals(title.strip())) throw invalid();
+                id(listId);
+            } else CapabilityCatalog.validateArguments(step.capability(), step.arguments());
             limit(step.dependsOn(), 10);
             if (steps.putIfAbsent(step.id(), step) != null) throw invalid();
         }
         for (DraftStep step : steps.values()) {
             validateReferences(step.dependsOn(), steps.keySet());
+            if (dynamicCompletion(step)) {
+                String listId = (String) step.arguments().get("listStepId");
+                if (!step.dependsOn().contains(listId) || !"todo.list".equals(steps.get(listId).capability())) throw invalid();
+            }
         }
         var visiting = new HashSet<String>();
         var done = new HashSet<String>();
@@ -113,9 +134,14 @@ public final class PlanParser {
             DraftStep step = steps.get(stepId);
             var capability = CapabilityCatalog.get(step.capability());
             resultSteps.add(new Plan.Step(step.id(), step.title().strip(), capability.id(), step.dependsOn(),
-                    capability.approvalHint(), capability.availability(), blocked.contains(step.id()) ? "blocked" : "planned"));
+                    capability.approvalHint(), capability.availability(), blocked.contains(step.id()) ? "blocked" : "planned", step.arguments()));
         }
         return new Plan(UUID.randomUUID(), goal, summary, references, constraints, questions, resultSteps, false);
+    }
+
+    private static boolean dynamicCompletion(DraftStep step) {
+        return "todo.complete".equals(step.capability()) && step.arguments() != null
+                && step.arguments().keySet().equals(Set.of("listStepId", "title"));
     }
 
     private static void visit(String id, Map<String, DraftStep> steps, Set<String> visiting, Set<String> done,

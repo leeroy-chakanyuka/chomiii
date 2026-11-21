@@ -151,10 +151,10 @@ class ChatMemorySearchTest {
         var completed = new CountDownLatch(1);
         var savedStatus = new AtomicReference<String>();
         org.mockito.Mockito.doAnswer(call -> {
-            savedStatus.set(call.getArgument(5));
+            savedStatus.set("complete");
             completed.countDown();
             return null;
-        }).when(store).finish(any(), anyString(), any(), any(), anyString(), anyString());
+        }).when(store).finishWithPlan(any(), anyString(), any(), any(), anyString(), any());
         ChatProvider provider = new ChatProvider() {
             @Override public String id() { return "gemini"; }
             @Override public Generation open(ChatInput input, String key) { throw new AssertionError("Tool was not supplied"); }

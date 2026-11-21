@@ -51,6 +51,22 @@ class ToolTraceRepository {
                 uuidOrNull(approvalId), id.toString(), owner) == 1;
     }
 
+    boolean markAwaitingApproval(UUID id, String owner, UUID conversationId, UUID requestId, String toolName, String capability, String effect, UUID approvalId) {
+        return jdbc.update("update tool_traces set approval_id = ? where id = ? and owner_hash = ? "
+                        + "and conversation_id = ? and request_id = ? and tool_name = ? and capability = ? and effect = ? "
+                        + "and plan_id is null and step_id is null and status = 'requested' and authorization_decision is null and approval_id is null",
+                approvalId.toString(), id.toString(), owner, conversationId.toString(), requestId.toString(), toolName, capability, effect) == 1;
+    }
+
+    Optional<UUID> pendingForApproval(String owner, UUID conversationId, UUID approvalId) {
+        return jdbc.query("select t.id from tool_traces t join conversations c on c.id = t.conversation_id "
+                        + "and c.owner_hash = t.owner_hash where t.owner_hash = ? and t.conversation_id = ? "
+                        + "and t.approval_id = ? and t.status = 'requested' and t.authorization_decision is null "
+                        + "order by t.requested_at, t.id",
+                (row, index) -> UUID.fromString(row.getString(1)), owner, conversationId.toString(), approvalId.toString())
+                .stream().findFirst();
+    }
+
     boolean markStarted(UUID id, String owner, Instant startedAt) {
         return jdbc.update("update tool_traces set status = 'running', started_at = ? "
                         + "where id = ? and owner_hash = ? and status = 'requested' and authorization_decision = 'ALLOW'",
