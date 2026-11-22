@@ -23,6 +23,7 @@ public class PlanExecutionController {
     public PlanExecutionController(PlanExecutionService plans, PlanRunner runner) { this.plans = plans; this.runner = runner; }
 
     public record StepView(String id, String title, PlanExecution.State state, List<String> dependsOn,
+            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) UUID pendingApprovalId,
             @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) PlanExecution.Observation observation) {}
     public record PlanView(UUID id, String goal, String summary, PlanExecution.State state, long version,
             List<StepView> steps, Instant updatedAt) {}
@@ -49,7 +50,7 @@ public class PlanExecutionController {
         var proposal = execution.proposal();
         var steps = proposal.steps().stream().map(step -> {
             var saved = execution.steps().stream().filter(s -> s.id().equals(step.id())).findFirst().orElseThrow();
-            return new StepView(step.id(), step.title(), saved.state(), step.dependsOn(), saved.observation());
+            return new StepView(step.id(), step.title(), saved.state(), step.dependsOn(), saved.pendingApprovalId(), saved.observation());
         }).toList();
         return new PlanView(proposal.id(), proposal.goal(), proposal.summary(), execution.state(), execution.version(),
                 steps, execution.updatedAt());

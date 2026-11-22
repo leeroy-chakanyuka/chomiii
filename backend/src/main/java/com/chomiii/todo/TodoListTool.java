@@ -30,9 +30,9 @@ public final class TodoListTool implements InternalTool {
         String status = (String) arguments.get("status");
         var filter = status == null ? null : status.equals("open") ? TodoService.Status.OPEN : TodoService.Status.COMPLETED;
         int limit = arguments.containsKey("limit") ? ((Number) arguments.get("limit")).intValue() : 10;
-        var hits = todos.list(context.owner(), filter, limit);
+        var hits = todos.list(context.owner(), filter, limit + 1);
         List<Map<String, Object>> records = new ArrayList<>();
-        for (var todo : hits) {
+        for (var todo : hits.subList(0, Math.min(limit, hits.size()))) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", todo.id().toString());
             item.put("title", todo.title());

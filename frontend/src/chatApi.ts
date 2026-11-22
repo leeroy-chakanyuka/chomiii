@@ -33,7 +33,7 @@ export interface Approval {
 }
 export type PlanState = 'PROPOSED' | 'AWAITING_APPROVAL' | 'RUNNING' | 'BLOCKED' | 'COMPLETED' | 'FAILED' | 'CANCELLED'
 export interface TodoObservation { todos: { id: string; title: string; status: string }[]; truncated: boolean }
-export interface PlanStep { id: string; title: string; state: string; dependsOn: string[]; observation?: TodoObservation }
+export interface PlanStep { id: string; title: string; state: string; dependsOn: string[]; pendingApprovalId?: string; observation?: TodoObservation }
 export interface SavedPlan { id: string; goal: string; summary: string; state: PlanState; version: number; steps: PlanStep[]; updatedAt: string }
 
 function approval(value: unknown): Approval {
@@ -217,6 +217,7 @@ function savedPlan(value: unknown): SavedPlan {
       observation = { todos, truncated: step.observation.truncated }
     }
     return { id: text(step.id), title: text(step.title), state: text(step.state), dependsOn: step.dependsOn as string[],
+      ...(step.pendingApprovalId != null ? { pendingApprovalId: text(step.pendingApprovalId) } : {}),
       ...(observation ? { observation } : {}) }
   })
   return { id: text(value.id), goal: text(value.goal), summary: text(value.summary), state: value.state as PlanState,

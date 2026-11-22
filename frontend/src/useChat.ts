@@ -263,7 +263,7 @@ export function useChat() {
       const result = action === 'run' ? await runPlan(id, planId) : await cancelPlan(id, planId)
       if (selectedIdRef.current !== id || token !== planBusyToken.current) return
       setPlans((previous) => previous.map((plan) => plan.id === planId ? result : plan))
-      if (action === 'run') void retryApprovals()
+      void retryApprovals()
     } catch (cause) {
       if (selectedIdRef.current === id && token === planBusyToken.current) setError(errorText(cause))
     } finally {

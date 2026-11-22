@@ -76,9 +76,9 @@ class TodoToolTest {
 
     @Test void listScopesOwnersFiltersAndFitsByteBudget() throws Exception {
         UUID id = UUID.randomUUID();
-        when(service.list("alice", TodoService.Status.OPEN, 20)).thenReturn(
+        when(service.list("alice", TodoService.Status.OPEN, 21)).thenReturn(
                 java.util.stream.IntStream.range(0, 20).mapToObj(i -> todo(id, "\u0001".repeat(200), "open")).toList());
-        when(service.list("bob", null, 10)).thenReturn(List.of(todo(id, "Bob only", "open")));
+        when(service.list("bob", null, 11)).thenReturn(List.of(todo(id, "Bob only", "open")));
         var tool = new TodoListTool(service);
         var result = tool.execute(context, Map.of("status", "open", "limit", 20)).output();
         assertThat(result).containsEntry("truncated", true);

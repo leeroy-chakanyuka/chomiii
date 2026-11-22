@@ -37,6 +37,7 @@ export default function App() {
   const chat = useChat()
   const scrollArea = useRef<HTMLDivElement>(null)
   const followOutput = useRef(true)
+  const [expiryTick, refreshApprovalExpiry] = useState(0)
 
   useEffect(() => {
     let current = true
@@ -49,6 +50,17 @@ export default function App() {
       scrollArea.current.scrollTop = scrollArea.current.scrollHeight
     }
   }, [chat.messages, chat.streamed, chat.toolActivity])
+
+  useEffect(() => {
+    const nextExpiry = chat.approvals
+      .filter((approval) => approval.status === 'pending')
+      .map((approval) => new Date(approval.expiresAt).getTime())
+      .filter((expiry) => Number.isFinite(expiry) && expiry > Date.now())
+      .sort((left, right) => left - right)[0]
+    if (nextExpiry === undefined) return
+    const timer = setTimeout(() => refreshApprovalExpiry((value) => value + 1), Math.min(nextExpiry - Date.now() + 1, 2_147_000_000))
+    return () => clearTimeout(timer)
+  }, [chat.approvals, expiryTick])
 
   const selectedProvider = chat.catalog.find((item) => item.id === chat.provider)
 
@@ -160,7 +172,18 @@ export default function App() {
               </div>}
               {chat.plans.map((plan) => <section className="approval-card" aria-label="Saved plan" key={plan.id}>
                 <h2>{plan.goal}</h2><p>{plan.summary}</p>
-                <p role="status">Plan status: {plan.state === 'BLOCKED' ? 'Paused — waiting for approval or a prerequisite' : plan.state === 'FAILED' ? 'Failed — no further steps were completed' : plan.state}</p>
+                <p role="status">Plan status: {plan.state === 'PROPOSED' ? 'Ready to start' : plan.state === 'AWAITING_APPROVAL' ? 'Waiting for your approval' : plan.state === 'RUNNING' ? 'In progress' : plan.state === 'BLOCKED' ? 'Blocked — review the step details before continuing' : plan.state === 'FAILED' ? `Failed after ${plan.steps.filter((step) => step.state === 'COMPLETED').length} completed step(s); review results before revising` : plan.state === 'CANCELLED' ? `Cancelled after ${plan.steps.filter((step) => step.state === 'COMPLETED').length} completed step(s); results are preserved` : 'Completed'}</p>
+                {(() => {
+                  const mayRun = plan.state !== 'CANCELLED' && plan.state !== 'COMPLETED' && plan.state !== 'RUNNING'
+                  const awaiting = plan.steps.filter((step) => step.state === 'AWAITING_APPROVAL')
+                  const waitsForDecision = awaiting.some((step) => {
+                    const approval = chat.approvals.find((item) => item.id === step.pendingApprovalId)
+                    return !approval || !(approval.status === 'expired' || (approval.status === 'pending'
+                      && Date.parse(approval.expiresAt) <= Date.now()))
+                  })
+                  const hasRunnableStep = plan.steps.some((step) => step.state === 'PROPOSED'
+                    && step.dependsOn.every((id) => plan.steps.some((dependency) => dependency.id === id && dependency.state === 'COMPLETED')))
+                  return <>
                 <ol>{plan.steps.map((step) => <li key={step.id}>{step.title} — {step.state.replaceAll('_', ' ').toLowerCase()}
                   {step.dependsOn.length > 0 && <small> (after {step.dependsOn.join(', ')})</small>}
                   {step.observation && <div aria-label="Task results">
@@ -168,12 +191,15 @@ export default function App() {
                       <li key={todo.id}>{todo.title} — {todo.status}</li>)}</ul>}
                     {step.observation.truncated && <small>Some tasks were omitted.</small>}
                   </div>}</li>)}</ol>
-                {plan.state === 'PROPOSED' || plan.state === 'BLOCKED' ? <button type="button" disabled={chat.planBusy !== null || chat.busy}
-                  onClick={() => chat.selectedId && void chat.runPlan(chat.selectedId, plan.id)}>{chat.planBusy === plan.id ? 'Starting…' : 'Continue plan'}</button> : null}
-                <button type="button" disabled={chat.busy || chat.planBusy !== null}
-                  onClick={() => chat.revisePlan(plan)}>{chat.revisingPlan?.id === plan.id ? 'Revising this plan' : 'Revise plan'}</button>
-                {plan.state === 'RUNNING' && <button type="button" disabled={chat.planBusy !== null}
-                  onClick={() => chat.selectedId && void chat.cancelPlan(chat.selectedId, plan.id)}>{chat.planBusy === plan.id ? 'Stopping…' : 'Pause plan'}</button>}
+                {mayRun && hasRunnableStep && !waitsForDecision && <button type="button" disabled={chat.planBusy !== null || chat.busy}
+                  onClick={() => chat.selectedId && void chat.runPlan(chat.selectedId, plan.id)}>{chat.planBusy === plan.id ? 'Continuing…' : 'Continue plan'}</button>}
+                {mayRun && <button type="button" disabled={chat.busy || chat.planBusy !== null}
+                  onClick={() => chat.revisePlan(plan)}>{chat.revisingPlan?.id === plan.id ? 'Revising this plan' : 'Revise plan'}</button>}
+                {mayRun && <button type="button" disabled={chat.planBusy !== null || chat.busy}
+                  onClick={() => chat.selectedId && void chat.cancelPlan(chat.selectedId, plan.id)}>{chat.planBusy === plan.id ? 'Cancelling…' : 'Cancel plan'}</button>}
+                {plan.state === 'RUNNING' && <p>Steps already in progress cannot be paused. Previously committed actions are kept.</p>}
+                  </>
+                })()}
               </section>)}
               {chat.busy && <article className="message assistant pending" aria-live="polite">
                 <span className="speaker">Chomi</span>

@@ -91,12 +91,12 @@ public class PlanRunner {
             var result = tools.executeAuthorized(context, definition.name(), arguments);
             traces.recordFinished(owner, trace, "succeeded", null, result.output());
             plan = plans.completeFromObservation(owner, planId, plan.version(), ready.id(), trace,
-                    normalize(result.output(), arguments));
+                    normalize(result.output()));
         }
         return plan;
     }
 
-    private static PlanExecution.Observation normalize(Map<String, Object> output, Map<String, Object> arguments) {
+    private static PlanExecution.Observation normalize(Map<String, Object> output) {
         if (!(output.get("todos") instanceof List<?> rows) || !(output.get("truncated") instanceof Boolean truncated)
                 || rows.size() > 20) throw new IllegalStateException("Invalid todo list result");
         var todos = new java.util.ArrayList<PlanExecution.Todo>();
@@ -108,8 +108,7 @@ public class PlanRunner {
             UUID.fromString(id);
             todos.add(new PlanExecution.Todo(id, title, status));
         }
-        int limit = arguments.containsKey("limit") ? ((Number) arguments.get("limit")).intValue() : 10;
-        return new PlanExecution.Observation(todos, truncated || rows.size() >= limit);
+        return new PlanExecution.Observation(todos, truncated);
     }
 
     private static PlanExecution.Step step(PlanExecution plan, String id) {

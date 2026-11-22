@@ -85,10 +85,19 @@ class PlanObservationDatabaseTest {
         assertThat(ambiguous.steps().get(1).pendingApprovalId()).isNull();
     }
 
-    @Test void fullListIsConservativelyTruncatedAndCannotResolve() {
+    @Test void exactLimitIsCompleteAndCanResolve() {
         setup();
         add("Milk");
         for (int i = 0; i < 9; i++) add("Task " + i);
+        var result = run("Milk");
+        assertThat(result.steps().get(0).observation().truncated()).isFalse();
+        assertThat(result.steps().get(1).state()).isEqualTo(PlanExecution.State.AWAITING_APPROVAL);
+    }
+
+    @Test void listBeyondLimitIsTruncatedAndCannotResolve() {
+        setup();
+        add("Milk");
+        for (int i = 0; i < 10; i++) add("Task " + i);
         var result = run("Milk");
         assertThat(result.steps().get(0).observation().truncated()).isTrue();
         assertThat(result.steps().get(1).state()).isEqualTo(PlanExecution.State.BLOCKED);
