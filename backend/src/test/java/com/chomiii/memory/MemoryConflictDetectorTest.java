@@ -224,4 +224,28 @@ class MemoryConflictDetectorTest {
         assertThat(MemoryConflictDetector.conflicts(candidate, existing)).isFalse();
         assertThat(MemoryConflictDetector.ambiguous(candidate, null, existing)).isTrue();
     }
+
+    @Test
+    void unrelatedScopedFactDoesNotResolveAnAmbiguousCorrection() {
+        var existing = List.of(memory("I write Python"), memory("I jog on weekdays"));
+        assertThat(MemoryConflictDetector.ambiguous("I now use Rust on weekends", null, existing)).isTrue();
+    }
+
+    @Test
+    void existingCoexistenceMarkerDoesNotExcuseLaterCorrection() {
+        var existing = List.of(memory("I also commute by bus"));
+        assertThat(MemoryConflictDetector.conflicts("I now commute by train", existing)).isTrue();
+    }
+
+    @Test
+    void temporaryFactIsNotADuplicateOfAStandingFact() {
+        assertThat(MemoryConflictDetector.equivalent("I commute by bus",
+                List.of(memory("For the next two weeks I commute by bus")))).isFalse();
+        assertThat(MemoryConflictDetector.equivalent("For the next two weeks I commute by bus",
+                List.of(memory("I commute by bus")))).isFalse();
+        assertThat(MemoryConflictDetector.equivalent("For the next three weeks I commute by bus",
+                List.of(memory("For the next two weeks I commute by bus")))).isFalse();
+        assertThat(MemoryConflictDetector.conflicts("I now commute by train",
+                List.of(memory("For the next two weeks I commute by bus")))).isFalse();
+    }
 }

@@ -182,6 +182,28 @@ class MemoryServiceTest {
     }
 
     @Test
+    void unrelatedScopedMemoryCannotActivateAnUnresolvedCorrection() {
+        MemoryRepository repo = mock(MemoryRepository.class);
+        MemoryService service = new MemoryService(repo);
+        UUID conversation = UUID.randomUUID();
+        when(repo.list("owner")).thenReturn(List.of(memory("I write Python"), memory("I jog on weekdays")));
+        service.learn("owner", conversation, 0L, "I now use Rust on weekends", "conversation_fact", 0.95);
+        verify(repo).createLearned("owner", conversation, "I now use Rust on weekends",
+                "conversation_fact", "suggested", 0.95);
+    }
+
+    @Test
+    void standingFactIsNotDiscardedAsDuplicateOfTemporaryMemory() {
+        MemoryRepository repo = mock(MemoryRepository.class);
+        MemoryService service = new MemoryService(repo);
+        UUID conversation = UUID.randomUUID();
+        when(repo.list("owner")).thenReturn(List.of(memory("For the next two weeks I commute by bus")));
+        service.learn("owner", conversation, 0L, "I commute by bus", "conversation_fact", 0.95);
+        verify(repo).createLearned("owner", conversation, "I commute by bus",
+                "conversation_fact", "active", 0.95);
+    }
+
+    @Test
     void learnedTopicConflictIsOwnerScopedEvenWithoutLexicalOverlap() {
         MemoryRepository repo = mock(MemoryRepository.class);
         MemoryService service = new MemoryService(repo);

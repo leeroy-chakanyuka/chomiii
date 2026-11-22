@@ -49,6 +49,13 @@ request for a mountain poem. Commit `37bcd12` restricts generic topic matches
 and only injects unrelated profile categories for stable work, location,
 education, or project context. The table above is from the subsequent run.
 
+That category restriction describes the evaluated version, not the current
+default. With recall enabled, the current app prioritizes relevant paragraphs
+but can send any active profile category that fits its 700-character initial
+profile budget, including an unrelated hobby. Stable work, location, education,
+and project context remains available proactively. Turning recall off excludes
+this profile from the turn. The table has not been rerun for this broader policy.
+
 The ablation does not measure outdated-memory retrieval, answer quality,
 personalization, avoided clarification questions, real embedding quality,
 or real model tool decisions. A reviewed dataset with conflicting and corrected
