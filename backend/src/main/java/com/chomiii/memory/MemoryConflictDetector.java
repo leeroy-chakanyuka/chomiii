@@ -114,14 +114,16 @@ final class MemoryConflictDetector {
 
     private static Relation relate(MemoryClaims.Claim c, String candidateTopic,
             MemoryClaims.Claim e, String existingTopic) {
-        if (c.coexist() || e.coexist() || c.temporary()) return Relation.KNOWN_COEXIST;
-        if (disjointScopes(c, e)) return Relation.KNOWN_COEXIST;
+        if (c.coexist() || c.temporary()) return Relation.KNOWN_COEXIST;
+        if (e.temporary()) return Relation.UNRESOLVED;
         boolean flip = c.negated() != e.negated();
-        if (!c.change() && !flip) return Relation.KNOWN_COEXIST;
-        if (references(c, e)) return Relation.CONFLICT;
+        boolean reference = references(c, e);
         boolean slotMatch = sameTopic(candidateTopic, existingTopic)
                 || sameHead(c, e);
-        if (!slotMatch) return Relation.UNRESOLVED;
+        if (!reference && !slotMatch) return Relation.UNRESOLVED;
+        if (disjointScopes(c, e)) return Relation.KNOWN_COEXIST;
+        if (!c.change() && !flip) return Relation.KNOWN_COEXIST;
+        if (reference) return Relation.CONFLICT;
         if (differingParameters(c, e)) return Relation.KNOWN_COEXIST;
         if (!compatibleScopes(c, e)) return Relation.UNRESOLVED;
         if (flip) return intersectingValues(c, e) ? Relation.CONFLICT : Relation.UNRESOLVED;
@@ -164,7 +166,8 @@ final class MemoryConflictDetector {
     }
 
     private static boolean sameSignature(MemoryClaims.Claim left, MemoryClaims.Claim right) {
-        return left.slot().equals(right.slot()) && left.params().equals(right.params())
+        return !left.temporary() && !right.temporary()
+                && left.slot().equals(right.slot()) && left.params().equals(right.params())
                 && left.value().equals(right.value()) && left.scope().equals(right.scope())
                 && left.negated() == right.negated();
     }
