@@ -58,8 +58,8 @@ public class ApprovalFacade {
             ToolSchemaValidator.validate(definition.parameters(), arguments);
             if (context.apiKey() != null && !context.apiKey().isEmpty()
                     && arguments.values().stream().anyMatch(value -> value instanceof String text && text.contains(context.apiKey()))) return false;
-            normalize(context.owner(), context.conversationId(), definition.name(), arguments);
-            return true;
+            Map<String, Object> normalized = normalize(context.owner(), context.conversationId(), definition.name(), arguments);
+            return approvals.validArguments(definition, normalized);
         } catch (IllegalArgumentException | java.time.DateTimeException invalid) {
             return false;
         }

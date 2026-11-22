@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -18,12 +19,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
 @EnabledIfEnvironmentVariable(named = "CHOMIII_DB_URL", matches = "jdbc:(postgresql|mysql):.*")
 @SpringBootTest
 @ActiveProfiles("local")
-@Transactional
 class PlanExecutionDatabaseTest {
     @Autowired PlanExecutionService service;
     @Autowired PlanRunner runner;
@@ -34,6 +33,11 @@ class PlanExecutionDatabaseTest {
     String stranger;
     UUID conversation;
     Plan proposal;
+
+    @AfterEach
+    void cleanup() {
+        jdbc.update("delete from browser_sessions where owner_hash in (?, ?)", owner, stranger);
+    }
 
     @BeforeEach
     void setup() {

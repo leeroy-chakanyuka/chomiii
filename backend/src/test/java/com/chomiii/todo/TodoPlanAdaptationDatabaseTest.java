@@ -62,4 +62,33 @@ class TodoPlanAdaptationDatabaseTest {
         assertThat(jdbc.queryForObject("select result_ref from action_approvals where id = ?", String.class, approval.toString()))
                 .isEqualTo(existing.id().toString());
     }
+
+    @Test
+    void oversizedCanonicalArgumentsAreBlockedWithoutStoppingIndependentApproval() {
+        owner = UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
+        UUID conversation = UUID.randomUUID();
+        var now = Timestamp.from(Instant.now());
+        jdbc.update("insert into browser_sessions (owner_hash, created_at) values (?, ?)", owner, now);
+        jdbc.update("insert into conversations (id, owner_hash, title, created_at, updated_at) values (?, ?, ?, ?, ?)",
+                conversation.toString(), owner, "Chat", now, now);
+
+        for (String description : java.util.List.of("a".repeat(3990), "é".repeat(2000))) {
+            var plan = new PlanParser().parse("""
+                    {"goal":"Add tasks","summary":"Add tasks","memoryReferences":[],"constraints":[],"missingInformation":[],"steps":[
+                     {"id":"oversized","title":"Oversized","capability":"todo.create","dependsOn":[],"arguments":{"title":"Large","description":"%s"}},
+                     {"id":"independent","title":"Small","capability":"todo.create","dependsOn":[],"arguments":{"title":"Small %d"}}]}
+                    """.formatted(description, description.length()), Set.of());
+            plans.create(owner, conversation, plan);
+            var result = runner.run(owner, conversation, plan.id());
+            assertThat(result.steps()).extracting(PlanExecution.Step::state).containsExactly(
+                    PlanExecution.State.BLOCKED, PlanExecution.State.AWAITING_APPROVAL);
+            assertThat(result.steps().get(0).pendingApprovalId()).isNull();
+            assertThat(result.steps().get(1).pendingApprovalId()).isNotNull();
+            assertThat(jdbc.queryForObject("select count(*) from action_approvals where owner_hash = ? and plan_id = ?",
+                    Integer.class, owner, plan.id().toString())).isEqualTo(1);
+            var pending = approvals.approve(owner, conversation, result.steps().get(1).pendingApprovalId());
+            assertThat(pending.status()).isEqualTo("completed");
+        }
+        assertThat(todos.list(owner, null, 100)).extracting(PersonalTodo::title).containsExactlyInAnyOrder("Small 3990", "Small 2000");
+    }
 }

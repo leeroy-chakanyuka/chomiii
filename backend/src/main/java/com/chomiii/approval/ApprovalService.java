@@ -49,6 +49,16 @@ public class ApprovalService {
         this.json = json;
     }
 
+    /** Validates with the same normalization, schema, and serialized UTF-8 size rules as persisted approvals. */
+    public boolean validArguments(ToolDefinition tool, Map<String, Object> arguments) {
+        try {
+            canonical(Objects.requireNonNull(tool), arguments);
+            return true;
+        } catch (IllegalArgumentException invalid) {
+            return false;
+        }
+    }
+
     @Transactional
     public Approval create(String owner, UUID conversationId, UUID requestId, ToolDefinition tool,
             Map<String, Object> arguments, Instant expiresAt, UUID planId, UUID stepId) {
