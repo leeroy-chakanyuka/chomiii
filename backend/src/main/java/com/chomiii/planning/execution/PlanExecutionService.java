@@ -224,6 +224,7 @@ public class PlanExecutionService {
         lockConversation(owner, conversationId);
         var plan = findLocked(owner, planId);
         if (!plan.conversationId().equals(conversationId)) throw new IllegalArgumentException("Plan not found");
+        if (plan.state() == State.CANCELLED || plan.state() == State.COMPLETED) return plan;
         return cancel(owner, planId, plan.version());
     }
 

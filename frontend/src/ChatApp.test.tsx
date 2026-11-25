@@ -5,124 +5,6 @@ import type { Approval } from './chatApi'
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
-async function openPlanFixture(plan: Record<string, unknown>, approvals: Record<string, unknown>[] = []) {
-  const summary = { id: 'plan-chat', title: 'Plan chat', createdAt: 'now', updatedAt: 'now' }
-  const fetchedApprovals: string[] = []
-  const calls: { method: string; path: string }[] = []
-  let cancelled = false
-  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const path = String(input)
-    calls.push({ method: init?.method ?? 'GET', path })
-    if (path.endsWith('/health')) return new Response('{"status":"UP","service":"chomiii"}')
-    if (path.endsWith('/chat/providers')) return new Response('[{"id":"gemini","name":"Gemini","defaultModel":"m","models":[{"id":"m","name":"M"}]}]')
-    if (path.endsWith('/conversations') && init?.method === 'POST') return new Response(JSON.stringify({ ...summary, messages: [] }))
-    if (path.endsWith('/conversations')) return new Response(JSON.stringify([summary]))
-    if (path.endsWith('/plan-chat/plans')) return new Response(JSON.stringify([plan]))
-    if (path.endsWith('/plan-chat/approvals')) {
-      fetchedApprovals.push('GET')
-      return new Response(JSON.stringify(cancelled ? approvals.map((item) => ({ ...item, status: 'cancelled' })) : approvals))
-    }
-    if (path.endsWith('/plan-chat/tool-traces')) return new Response('[]')
-    if (path.endsWith('/plan-chat') && init?.method !== 'POST') return new Response(JSON.stringify({ ...summary, messages: [] }))
-    if (path.endsWith('/plans/p1/run')) return new Response(JSON.stringify({ ...plan, state: 'COMPLETED' }))
-    if (path.endsWith('/plans/p1/cancel')) { cancelled = true; return new Response(JSON.stringify({ ...plan, state: 'CANCELLED' })) }
-    if (path.endsWith('/approvals/a1/approve') || path.endsWith('/approvals/a1/reject')) return new Response(JSON.stringify({ ...approvals[0], status: 'CANCELLED' }))
-    throw new Error(`Unexpected request: ${path}`)
-  }))
-  render(<App />)
-  fireEvent.change(await screen.findByLabelText('Gemini API key'), { target: { value: 'key' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Start chatting' }))
-  fireEvent.click(await screen.findByRole('button', { name: 'Plan chat' }))
-  await screen.findByRole('heading', { name: String(plan.goal) })
-  return { calls, fetchedApprovals }
-}
-
-const completedStep = { id: 'done', title: 'Completed task', state: 'COMPLETED', dependsOn: [],
-  observation: { todos: [{ id: 'todo-done', title: 'Already done', status: 'completed' }], truncated: false } }
-const proposedStep = { id: 'next', title: 'Independent task', state: 'PROPOSED', dependsOn: [] }
-const awaitingStep = { id: 'approval-step', title: 'Needs approval', state: 'AWAITING_APPROVAL', dependsOn: [], pendingApprovalId: 'a1' }
-const planFor = (state: string, steps: Record<string, unknown>[]) => ({ id: 'p1', goal: 'Plan goal', summary: 'Plan details', state,
-  version: 1, updatedAt: 'now', steps })
-
-it('offers Continue after partial failure only when a dependency-ready proposed step remains', async () => {
-  const { calls } = await openPlanFixture(planFor('FAILED', [completedStep, { ...proposedStep, dependsOn: ['done'] },
-    { id: 'failed', title: 'Failed task', state: 'FAILED', dependsOn: [] }]))
-  expect(screen.getByRole('status')).toHaveTextContent('Failed after 1 completed step')
-  expect(screen.getByRole('button', { name: 'Continue plan' })).toBeEnabled()
-  expect(screen.getByText('Completed task — completed')).toBeVisible()
-  fireEvent.click(screen.getByRole('button', { name: 'Continue plan' }))
-  await waitFor(() => expect(calls.some((call) => call.method === 'POST' && call.path.endsWith('/plans/p1/run'))).toBe(true))
-})
-
-it('does not offer Continue after failure when no runnable proposed step remains', async () => {
-  await openPlanFixture(planFor('FAILED', [completedStep, { id: 'failed', title: 'Failed task', state: 'FAILED', dependsOn: [] }]))
-  expect(screen.getByRole('status')).toHaveTextContent('Failed after 1 completed step')
-  expect(screen.queryByRole('button', { name: 'Continue plan' })).not.toBeInTheDocument()
-})
-
-it('does not offer Continue after failure while an approval is still pending', async () => {
-  const approval = { id: 'a1', requestId: 'r1', toolName: 'todo.write', preview: 'Create a task',
-    expiresAt: new Date(Date.now() + 300_000).toISOString(), status: 'pending' }
-  await openPlanFixture(planFor('FAILED', [completedStep, awaitingStep, proposedStep]), [approval])
-  expect(screen.queryByRole('button', { name: 'Continue plan' })).not.toBeInTheDocument()
-})
-
-it('does not offer Continue while approval is still pending and allows cancellation to invalidate and refetch its card', async () => {
-  const approval = { id: 'a1', requestId: 'r1', toolName: 'todo.write', preview: 'Create a task',
-    expiresAt: new Date(Date.now() + 300_000).toISOString(), status: 'pending' }
-  const { calls, fetchedApprovals } = await openPlanFixture(planFor('AWAITING_APPROVAL', [completedStep, awaitingStep, proposedStep]), [approval])
-  expect(within(screen.getByRole('region', { name: 'Saved plan' })).getByRole('status')).toHaveTextContent('Waiting for your approval')
-  expect(screen.queryByRole('button', { name: 'Continue plan' })).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: 'Cancel plan' })).toBeEnabled()
-  expect(screen.getByRole('button', { name: 'Approve action' })).toBeVisible()
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel plan' }))
-  await waitFor(() => expect(within(screen.getByRole('region', { name: 'Saved plan' })).getByRole('status')).toHaveTextContent('Cancelled after 1 completed step'))
-  await waitFor(() => expect(fetchedApprovals.length).toBeGreaterThanOrEqual(2))
-  expect(within(screen.getByRole('region', { name: 'Saved plan' })).getByRole('status')).toHaveTextContent('Cancelled after 1 completed step')
-  expect(within(screen.getByRole('region', { name: 'Action approval' })).getByRole('status')).toHaveTextContent('Cancelled')
-  expect(screen.queryByRole('button', { name: 'Approve action' })).not.toBeInTheDocument()
-  expect(calls.some((call) => call.method === 'POST' && call.path.endsWith('/plans/p1/cancel'))).toBe(true)
-})
-
-it('offers Continue to resolve an expired approval when independent work is ready', async () => {
-  const approval = { id: 'a1', requestId: 'r1', toolName: 'todo.write', preview: 'Create a task',
-    expiresAt: '2000-01-01T00:00:00Z', status: 'pending' }
-  await openPlanFixture(planFor('AWAITING_APPROVAL', [awaitingStep, proposedStep]), [approval])
-  expect(within(screen.getByRole('region', { name: 'Action approval' })).getByRole('status')).toHaveTextContent('Approval expired')
-  expect(screen.getByRole('button', { name: 'Continue plan' })).toBeEnabled()
-})
-
-it('an unrelated approval does not block a ready plan', async () => {
-  await openPlanFixture(planFor('PROPOSED', [proposedStep]), [{ id: 'other', requestId: 'r2', toolName: 'todo.create',
-    preview: 'Another action', expiresAt: new Date(Date.now() + 300_000).toISOString(), status: 'pending' }])
-  expect(screen.getByRole('button', { name: 'Continue plan' })).toBeEnabled()
-})
-
-it('recognizes the server-reported expiry after reopening a partially failed plan', async () => {
-  await openPlanFixture(planFor('FAILED', [awaitingStep, proposedStep]), [{ id: 'a1', requestId: 'r1', toolName: 'todo.create',
-    preview: 'Expired action', expiresAt: '2000-01-01T00:00:00Z', status: 'expired' }])
-  expect(screen.getByRole('button', { name: 'Continue plan' })).toBeEnabled()
-})
-
-it.each(['PROPOSED', 'BLOCKED'] as const)('does not offer Continue for an empty %s plan', async (state) => {
-  await openPlanFixture(planFor(state, []))
-  expect(screen.queryByRole('button', { name: 'Continue plan' })).not.toBeInTheDocument()
-})
-
-it('does not offer Continue for an expired approval when no independent work is ready', async () => {
-  const approval = { id: 'a1', requestId: 'r1', toolName: 'todo.write', preview: 'Create a task',
-    expiresAt: '2000-01-01T00:00:00Z', status: 'pending' }
-  await openPlanFixture(planFor('AWAITING_APPROVAL', [awaitingStep]), [approval])
-  expect(screen.queryByRole('button', { name: 'Continue plan' })).not.toBeInTheDocument()
-})
-
-it('labels a running plan in progress and does not offer pause, cancel, or continue', async () => {
-  await openPlanFixture(planFor('RUNNING', [completedStep, { id: 'running', title: 'Current task', state: 'RUNNING', dependsOn: [] }, proposedStep]))
-  expect(screen.getByRole('status')).toHaveTextContent('In progress')
-  expect(screen.getByText(/Steps already in progress cannot be paused/)).toBeVisible()
-  expect(screen.queryByRole('button', { name: /^(Continue|Pause|Cancel) plan$/ })).not.toBeInTheDocument()
-})
-
 it('waits for the matching conversation before applying approvals and drops approvals after open failure', async () => {
   let releaseSecond: ((response: Response) => void) | undefined
   const summaries = ['first', 'second', 'broken'].map((id) => ({ id, title: `${id} conversation`, createdAt: 'now', updatedAt: 'now' }))
@@ -550,7 +432,7 @@ it('shows a conversation while its tool history request is still pending', async
   releaseTrace?.(new Response('[]'))
 })
 
-it('selects a saved plan for revision and submits the revision through the stream', async () => {
+it('sends a normal request and displays only verified results without plan internals', async () => {
   let stream: ReadableStreamDefaultController<Uint8Array> | undefined
   const bodies: Record<string, unknown>[] = []
   const plan = { id: 'plan-1', goal: 'Plan a trip', summary: 'Visit the coast', state: 'PROPOSED', version: 7,
@@ -559,6 +441,8 @@ it('selects a saved plan for revision and submits the revision through the strea
         observation: { todos: [{ id: 'todo-1', title: 'Book a hotel', status: 'pending' }], truncated: true } },
       { id: 'empty-step', title: 'Review notes', state: 'COMPLETED', dependsOn: [],
         observation: { todos: [], truncated: false } },
+      { id: 'unfinished-step', title: 'Not finished', state: 'RUNNING', dependsOn: [],
+        observation: { todos: [{ id: 'stale', title: 'Stale result', status: 'pending' }], truncated: false } },
     ] }
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input)
@@ -580,33 +464,21 @@ it('selects a saved plan for revision and submits the revision through the strea
   fireEvent.change(await screen.findByLabelText('Gemini API key'), { target: { value: 'key' } })
   fireEvent.click(screen.getByRole('button', { name: 'Start chatting' }))
   fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Start trip plan' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Make a plan' }))
+  expect(screen.queryByRole('button', { name: 'Make a plan' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
   await waitFor(() => expect(stream).toBeDefined())
   stream?.enqueue(new TextEncoder().encode('event:complete\ndata:{"messageId":"m1","status":"complete"}\n\n'))
   stream?.close()
-  await screen.findByRole('heading', { name: 'Plan a trip' })
-  expect(screen.getByRole('status')).toHaveTextContent('Ready to start')
+  await waitFor(() => expect(bodies).toHaveLength(1))
+  expect(bodies[0]).toMatchObject({ content: 'Start trip plan' })
+  expect(bodies[0]).not.toHaveProperty('plan')
+  expect(screen.queryByText('Plan a trip')).not.toBeInTheDocument()
   expect(screen.getByText('Book a hotel — pending')).toBeVisible()
-  expect(screen.getByText('Some tasks were omitted.')).toBeVisible()
+  expect(screen.getAllByRole('region', { name: 'Task results' })).toHaveLength(2)
+  expect(screen.getByText('Some results were omitted.')).toBeVisible()
   expect(screen.getByText('No tasks found.')).toBeVisible()
+  expect(screen.queryByText('Stale result')).not.toBeInTheDocument()
+  expect(screen.queryByText('unfinished-step')).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Pause plan' })).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: 'Revise plan' }))
-  expect(screen.getByText(/Revising plan: Plan a trip/)).toBeVisible()
-  fireEvent.click(screen.getByRole('button', { name: 'Clear selection' }))
-  expect(screen.queryByText(/Revising plan:/)).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: 'Revise plan' }))
-  fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Add two days' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
-  await waitFor(() => expect(bodies).toHaveLength(2))
-  expect(bodies[1]).toMatchObject({ content: 'Add two days', plan: true, revisePlanId: 'plan-1', reviseVersion: 7 })
-  expect(screen.getByRole('button', { name: 'Revising this plan' })).toBeDisabled()
-  stream?.enqueue(new TextEncoder().encode('event:complete\ndata:{"messageId":"m","status":"complete"}\n\n'))
-  stream?.close()
-  await waitFor(() => expect(screen.queryByText(/Revising plan:/)).not.toBeInTheDocument())
-  fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'A normal follow-up' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
-  await waitFor(() => expect(bodies).toHaveLength(3))
-  expect(bodies[2]).toMatchObject({ content: 'A normal follow-up' })
-  expect(bodies[2]).not.toHaveProperty('revisePlanId')
-  expect(bodies[2]).not.toHaveProperty('reviseVersion')
+  expect(screen.queryByRole('button', { name: /Revise plan|Continue plan/ })).not.toBeInTheDocument()
 })

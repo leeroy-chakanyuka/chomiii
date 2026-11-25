@@ -26,7 +26,6 @@ import java.util.function.Consumer;
 
 /** Per-turn limits shared by internal tools. Arguments and results are untrusted. */
 public final class ToolTurn implements ChatProvider.Tools {
-    private static final int MAX_CALLS = 2;
     private static final int MAX_RESULT_BYTES = 3_000;
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final ThreadPoolExecutor EXECUTOR = new ThreadPoolExecutor(2, 2, 0, TimeUnit.SECONDS,
@@ -43,11 +42,10 @@ public final class ToolTurn implements ChatProvider.Tools {
     private final ApprovalFacade approvals;
     private final Consumer<Object> approvalObserver;
     private final AtomicBoolean proposed = new AtomicBoolean();
-    private long remainingNanos = TimeUnit.SECONDS.toNanos(4);
+    private final ToolCallBudget budget;
     private final Set<String> searches = new HashSet<>();
     private final AtomicBoolean cancelled = new AtomicBoolean();
     private final AtomicReference<Future<?>> active = new AtomicReference<>();
-    private int calls;
 
     public ToolTurn(ToolRegistry registry, ToolExecutionContext context, boolean bufferText) {
         this(registry, context, bufferText, null, null, null, ignored -> {});
@@ -61,6 +59,13 @@ public final class ToolTurn implements ChatProvider.Tools {
     public ToolTurn(ToolRegistry registry, ToolExecutionContext context, boolean bufferText,
             ToolTraceService traces, String provider, String model, Consumer<ToolTraceDto.Trace> traceObserver,
             ApprovalFacade approvals, Consumer<Object> approvalObserver) {
+        this(registry, context, bufferText, traces, provider, model, traceObserver, approvals, approvalObserver,
+                new ToolCallBudget());
+    }
+
+    public ToolTurn(ToolRegistry registry, ToolExecutionContext context, boolean bufferText,
+            ToolTraceService traces, String provider, String model, Consumer<ToolTraceDto.Trace> traceObserver,
+            ApprovalFacade approvals, Consumer<Object> approvalObserver, ToolCallBudget budget) {
         this.registry = registry;
         this.context = context;
         this.bufferText = bufferText;
@@ -70,6 +75,7 @@ public final class ToolTurn implements ChatProvider.Tools {
         this.traceObserver = traceObserver;
         this.approvals = approvals;
         this.approvalObserver = approvalObserver;
+        this.budget = budget;
     }
 
     public boolean hasProposal() { return proposed.get(); }
@@ -125,7 +131,8 @@ public final class ToolTurn implements ChatProvider.Tools {
     private Map<String, Object> invokeRegistered(String name, Map<String, Object> arguments,
             ToolRegistry.Registered registered, CallTrace call) {
         if (cancelled.get()) return ToolResponse.error(ToolResponse.ErrorCode.CANCELLED, "Tool call cancelled.");
-        if (++calls > MAX_CALLS) return ToolResponse.error(ToolResponse.ErrorCode.CALL_LIMIT, "Tool call limit reached.");
+        var limit = budget.claim();
+        if (limit != null) return ToolResponse.error(limit, "Tool budget exhausted.");
         if (registered == null || arguments == null) {
             return ToolResponse.error(ToolResponse.ErrorCode.NOT_AVAILABLE, "Invalid tool call.");
         }
@@ -136,7 +143,6 @@ public final class ToolTurn implements ChatProvider.Tools {
             return ToolResponse.error(ToolResponse.ErrorCode.NOT_AVAILABLE, "Invalid tool call.");
         }
         InternalTool tool = registered.tool();
-        if (remainingNanos <= 0) return ToolResponse.error(ToolResponse.ErrorCode.TIMEOUT, "Tool time limit reached.");
         long started = System.nanoTime();
         try {
             Map<String, Object> safeArguments = ToolValues.copy(arguments);
@@ -194,7 +200,7 @@ public final class ToolTurn implements ChatProvider.Tools {
             if (cancelled.get()) future.cancel(true);
             InternalTool.Result result;
             try {
-                result = future.get(Math.min(remainingNanos, TimeUnit.MILLISECONDS.toNanos(1_500)), TimeUnit.NANOSECONDS);
+                result = future.get(Math.min(budget.remainingNanos(), TimeUnit.MILLISECONDS.toNanos(1_500)), TimeUnit.NANOSECONDS);
             } catch (TimeoutException failure) {
                 future.cancel(true);
                 return ToolResponse.error(ToolResponse.ErrorCode.TIMEOUT, "Tool timed out.");
@@ -225,7 +231,7 @@ public final class ToolTurn implements ChatProvider.Tools {
         } catch (RuntimeException | JsonProcessingException failure) {
             return ToolResponse.error(ToolResponse.ErrorCode.FAILURE, "Tool unavailable or invalid arguments.");
         } finally {
-            remainingNanos -= System.nanoTime() - started;
+            budget.charge(System.nanoTime() - started);
         }
     }
 

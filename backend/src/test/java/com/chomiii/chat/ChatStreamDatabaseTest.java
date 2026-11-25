@@ -22,6 +22,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -40,6 +41,12 @@ class ChatStreamDatabaseTest {
     @MockitoBean ChatProvider provider;
 
     private final HttpClient client = HttpClient.newHttpClient();
+
+    @BeforeEach
+    void toolAwareProviderDefaultsToTheScriptedTextReply() {
+        when(provider.open(any(), anyString(), any())).thenAnswer(call ->
+                provider.open(call.getArgument(0), call.getArgument(1)));
+    }
 
     @Test
     void streamsAndStoresTwoTurnsWithEarlierRolesAndNoUnrelatedHistory() throws Exception {
@@ -102,7 +109,7 @@ class ChatStreamDatabaseTest {
     }
 
     @Test
-    void persistsPartialFailureAsFailedAndDoesNotSendFailedAssistantToNextTurn() throws Exception {
+    void discardsUnverifiedBufferedTextOnFailureAndDoesNotSendItToTheNextTurn() throws Exception {
         when(provider.id()).thenReturn("gemini");
         List<ChatProvider.ChatInput> sent = new ArrayList<>();
         when(provider.open(any(), anyString())).thenAnswer(invocation -> {
@@ -122,10 +129,10 @@ class ChatStreamDatabaseTest {
         String cookie = session();
         String conversation = conversation(cookie);
         var error = send(cookie, conversation, UUID.randomUUID(), "First question");
-        assertThat(error.body()).contains("event:delta", "event:error", "RATE_LIMITED");
+        assertThat(error.body()).contains("event:error", "RATE_LIMITED").doesNotContain("event:delta", "unfinished");
         JsonNode history = json.readTree(get(cookie, "/api/conversations/" + conversation).body()).path("messages");
         assertThat(history.get(1).path("status").asText()).isEqualTo("failed");
-        assertThat(history.get(1).path("content").asText()).isEqualTo("unfinished");
+        assertThat(history.get(1).path("content").asText()).isEmpty();
         assertThat(send(cookie, conversation, UUID.randomUUID(), "Second question").body())
                 .contains("event:complete");
         assertThat(sent.getLast().messages()).containsExactly(
@@ -134,18 +141,14 @@ class ChatStreamDatabaseTest {
     }
 
     @Test
-    void planningStreamsStructuredProposalAndPersistsReadableResultForTheOwner() throws Exception {
+    void planningAdviceStaysConversationalAndOwnerScopedWithoutAForcedPlan() throws Exception {
         when(provider.id()).thenReturn("gemini");
         when(provider.open(any(), anyString())).thenAnswer(invocation -> {
             ChatProvider.ChatInput input = invocation.getArgument(0);
             return new ChatProvider.Generation() {
                 @Override public void stream(Consumer<String> delta) {
                     delta.accept(input.systemInstruction().contains("memory-extraction") ? "{\"memories\":[]}"
-                            : """
-                            {"goal":"Prepare for the appointment","summary":"Make a checklist.","memoryReferences":[],
-                             "constraints":[],"missingInformation":[],"steps":[{"id":"s1","title":"Prepare a checklist",
-                             "capability":"user.prepare","dependsOn":[]}]}
-                            """);
+                            : "Prepare a checklist of the documents to take and questions to ask.");
                 }
                 @Override public void close() {}
             };
@@ -156,15 +159,68 @@ class ChatStreamDatabaseTest {
         assertThat(send(other, conversation, UUID.randomUUID(), "Please plan my appointment.").statusCode()).isEqualTo(404);
         var response = send(owner, conversation, UUID.randomUUID(), "Please plan my appointment.");
         assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(response.body()).contains("event:plan", "Prepare for the appointment", "\"executed\":false",
-                "event:delta", "nothing has been done", "event:complete");
+        assertThat(response.body()).contains("Prepare a checklist", "event:delta", "event:complete")
+                .doesNotContain("event:plan", "Proposed plan");
         JsonNode messages = json.readTree(get(owner, "/api/conversations/" + conversation).body()).path("messages");
         assertThat(messages.get(1).path("status").asText()).isEqualTo("complete");
-        assertThat(messages.get(1).path("content").asText()).contains("Proposed plan", "Prepare a checklist");
+        assertThat(messages.get(1).path("content").asText()).contains("Prepare a checklist");
+        assertThat(json.readTree(get(owner, "/api/conversations/" + conversation + "/plans").body())).isEmpty();
     }
 
     @Test
-    void deliversFirstChunkBeforeGenerationFinishesAndCanStopIt() throws Exception {
+    void ordinarySendStagesThenRunsToApprovalAndEachApprovalContinuesWithoutRunRequests() throws Exception {
+        when(provider.id()).thenReturn("gemini");
+        String owner = session();
+        String other = session();
+        String conversation = conversation(owner);
+        var opens = new java.util.concurrent.atomic.AtomicInteger();
+        when(provider.open(any(), anyString(), any())).thenAnswer(call -> {
+            ChatProvider.Tools tools = call.getArgument(2);
+            opens.incrementAndGet();
+            return new ChatProvider.Generation() {
+                @Override public void stream(Consumer<String> delta) {
+                    assertThat(tools.invoke("plan.stage", java.util.Map.of("steps", List.of(
+                            java.util.Map.of("list", java.util.Map.of()),
+                            java.util.Map.of("create", java.util.Map.of("title", "Milk")),
+                            java.util.Map.of("create", java.util.Map.of("title", "Bread")),
+                            java.util.Map.of("list", java.util.Map.of()))))).doesNotContainKey("error");
+                    assertThat(jdbc.queryForObject("select count(*) from plan_executions where conversation_id = ?", Integer.class, conversation)).isZero();
+                    assertThat(jdbc.queryForObject("select count(*) from action_approvals where conversation_id = ?", Integer.class, conversation)).isZero();
+                    delta.accept("I already created both tasks. Here is the entire internal plan...");
+                }
+                @Override public void close() { tools.close(); }
+            };
+        });
+        var response = send(owner, conversation, UUID.randomUUID(), "Check my tasks, then add Milk and Bread, and show the results.");
+        assertThat(response.body()).contains("event:approval", "event:complete", "prepared the to-do for your approval")
+                .doesNotContain("I already created", "internal plan", "event:plan");
+        assertThat(opens).hasValue(1);
+        assertThat(jdbc.queryForObject("select count(*) from personal_todos where source_conversation_id = ?", Integer.class, conversation)).isZero();
+        JsonNode plan = json.readTree(get(owner, "/api/conversations/" + conversation + "/plans").body()).get(0);
+        assertThat(plan.path("state").asText()).isEqualTo("AWAITING_APPROVAL");
+        assertThat(plan.path("steps").get(0).path("state").asText()).isEqualTo("COMPLETED");
+        String first = plan.path("steps").get(1).path("pendingApprovalId").asText();
+        assertThat(approve(other, conversation, first).statusCode()).isEqualTo(404);
+        assertThat(approve(owner, conversation, first).statusCode()).isEqualTo(200);
+        plan = json.readTree(get(owner, "/api/conversations/" + conversation + "/plans").body()).get(0);
+        assertThat(plan.path("steps").get(2).path("state").asText()).isEqualTo("AWAITING_APPROVAL");
+        String second = plan.path("steps").get(2).path("pendingApprovalId").asText();
+        assertThat(approve(owner, conversation, second).statusCode()).isEqualTo(200);
+        assertThat(approve(owner, conversation, second).statusCode()).isEqualTo(200);
+        plan = json.readTree(get(owner, "/api/conversations/" + conversation + "/plans").body()).get(0);
+        assertThat(plan.path("state").asText()).isEqualTo("COMPLETED");
+        assertThat(plan.path("steps").get(3).path("observation").path("todos")).hasSize(2);
+        assertThat(jdbc.queryForObject("select count(*) from personal_todos where source_conversation_id = ?", Integer.class, conversation)).isEqualTo(2);
+        assertThat(json.readTree(get(other, "/api/conversations/" + conversation + "/plans").body())).isEmpty();
+    }
+
+    private HttpResponse<String> approve(String owner, String conversation, String approval) throws Exception {
+        return client.send(request("/api/conversations/" + conversation + "/approvals/" + approval + "/approve", owner)
+                .POST(HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    @Test
+    void signalsStartBeforeGenerationFinishesAndStopDiscardsUnverifiedText() throws Exception {
         when(provider.id()).thenReturn("gemini");
         CountDownLatch release = new CountDownLatch(1);
         CountDownLatch stopped = new CountDownLatch(1);
@@ -197,8 +253,8 @@ class ChatStreamDatabaseTest {
             String line;
             do {
                 line = reader.readLine();
-            } while (line != null && !line.contains("early"));
-            assertThat(line).contains("early");
+            } while (line != null && !line.contains("event:start"));
+            assertThat(line).contains("event:start");
             assertThat(release.getCount()).isEqualTo(1);
             assertThat(send(cookie, conversation, requestId, "Hello").statusCode()).isEqualTo(409);
             var cancelled = client.send(request("/api/conversations/" + conversation + "/messages/"
@@ -206,7 +262,7 @@ class ChatStreamDatabaseTest {
                     HttpResponse.BodyHandlers.ofString());
             assertThat(cancelled.statusCode()).isEqualTo(202);
             assertThat(stopped.await(5, TimeUnit.SECONDS)).isTrue();
-            assertThat(reader.lines().toList().toString()).contains("event:error", "INTERRUPTED");
+            assertThat(reader.lines().toList().toString()).contains("event:error", "INTERRUPTED").doesNotContain("early", " late");
         } finally {
             release.countDown();
         }

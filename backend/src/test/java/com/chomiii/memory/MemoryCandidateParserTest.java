@@ -85,6 +85,17 @@ class MemoryCandidateParserTest {
     }
 
     @Test
+    void groundsRoutineQuotesAcrossTypographyButNeverChangesTimes() {
+        String text = "I’m at choir practice from 18:15–19:45 every Tuesday.";
+        String output = """
+                {"memories":[{"content":"I practice choir from 18:15 to 19:45 every Tuesday.","kind":"fact",
+                "confidence":0.96,"evidence":"I'm at choir practice from 18:15-19:45"}]}
+                """;
+        assertThat(MemoryCandidateParser.parse(output, text, json)).hasSize(1);
+        assertThat(MemoryCandidateParser.parse(output, text.replace("18:15", "18:45"), json)).isEmpty();
+    }
+
+    @Test
     void refusesOversizedMalformedOrTooManySuggestions() {
         String message = "My usual groceries are oats and milk.";
         assertThat(MemoryCandidateParser.parse("{garbage", message, json)).isEmpty();

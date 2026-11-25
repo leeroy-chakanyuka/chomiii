@@ -23,8 +23,8 @@ flowchart LR
 ```
 
 Chomiii has a **small, versioned general-purpose runtime identity**. It does
-not yet include accounts, executable tools, autonomous action loops, or background
-tasks. Anonymous conversations belong to one browser cookie. They do not sync
+not yet include accounts, external scheduling, or background tasks. It can read and
+update local to-dos, with explicit approval before every write. Anonymous conversations belong to one browser cookie. They do not sync
 between devices, and losing the cookie loses access to them. See
 [docs/roadmap.md](docs/roadmap.md) for later milestones.
 
@@ -55,12 +55,13 @@ chat messages or copies already supplied to a model provider.
 Read [M2 research](docs/m2-research.md), [design and limitations](docs/m2-design.md)
 and [verification](docs/verification.md) before treating M2 as complete.
 
-## M3.1 review: planning in chat
+## Planning in chat
 
-Planning requests can produce a structured proposal in the current chat. The
-composer also has a **Make a plan** option. Steps describe proposed work; no
-calendar, email, shopping, reminder, or task action runs. The local router and
-model output need further quality evaluation. See the
+Use **Send** for advice and actions. Chomi can stage a bounded plan internally
+when several local to-do steps depend on each other. You see its reply, any
+questions, an approval before a change, and results from the tools. For example,
+ask it to add a to-do and then list open to-dos. Reopen the same conversation
+to see the saved receipt. Calendar, email and shopping are not connected. See the
 [memory and planning flow](docs/memory-planning-flow.md),
 [planning design](docs/m3.1-design.md), and [results and limitations](docs/m3.1-evaluation.md).
 

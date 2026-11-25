@@ -100,6 +100,33 @@ class PlanObservationDatabaseTest {
         assertThat(ambiguous.steps().get(1).pendingApprovalId()).isNull();
     }
 
+    @Test void cancellingAnAutomaticSegmentRollsBackItsObservationAndStopsBeforeApproval() {
+        setup();
+        var cancelled = new java.util.concurrent.atomic.AtomicBoolean();
+        doAnswer(call -> {
+            var result = call.callRealMethod();
+            cancelled.set(true);
+            return result;
+        }).when(listTool).execute(any(), any());
+        var proposal = new PlanParser().parse("""
+                {"goal":"Check tasks","summary":"Check then add","memoryReferences":[],"constraints":[],"missingInformation":[],"steps":[
+                 {"id":"read","title":"Read tasks","capability":"todo.list","dependsOn":[],"arguments":{}},
+                 {"id":"write","title":"Add milk","capability":"todo.create","dependsOn":["read"],"arguments":{"title":"Milk"}}]}
+                """, Set.of());
+        plans.create(owner, conversation, proposal);
+        var stopped = runner.run(owner, conversation, proposal.id(), cancelled::get);
+        assertThat(stopped.state()).isEqualTo(PlanExecution.State.CANCELLED);
+        assertThat(stopped.steps()).allSatisfy(step -> {
+            assertThat(step.state()).isEqualTo(PlanExecution.State.CANCELLED);
+            assertThat(step.observation()).isNull();
+            assertThat(step.pendingApprovalId()).isNull();
+        });
+        assertThat(todos.list(owner, null, 100)).isEmpty();
+        assertThat(approvals.list(owner, conversation)).isEmpty();
+        assertThat(traces.list(conversation, owner)).isEmpty();
+        assertThat(runner.cancel(owner, conversation, proposal.id()).state()).isEqualTo(PlanExecution.State.CANCELLED);
+    }
+
     @Test void exactLimitIsCompleteAndCanResolve() {
         setup();
         add("Milk");

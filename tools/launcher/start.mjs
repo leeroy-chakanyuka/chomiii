@@ -57,8 +57,8 @@ async function isInitialized() {
   catch (error) { if (error.code === 'ENOENT') return false; throw error }
 }
 
-async function waitFor(url, child, name) {
-  for (let attempt = 0; attempt < 120; attempt++) {
+async function waitFor(url, child, name, attempts = 120) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
     if (child.startError) throw new Error(`${name} could not start: ${child.startError.message}`)
     if (child.exitCode !== null) throw new Error(`${name} stopped with exit code ${child.exitCode}.`)
     try {
@@ -112,10 +112,10 @@ try {
   delete env.GOOGLE_API_KEY
   const windows = process.platform === 'win32'
   api = windows
-    ? spawn('cmd.exe', ['/d', '/c', 'mvnw.cmd', 'spring-boot:run'], { cwd: backend, env, stdio: 'inherit' })
-    : spawn('./mvnw', ['spring-boot:run'], { cwd: backend, env, stdio: 'inherit' })
+    ? spawn('cmd.exe', ['/d', '/c', 'mvnw.cmd', '-Dmaven.test.skip=true', 'spring-boot:run'], { cwd: backend, env, stdio: 'inherit' })
+    : spawn('./mvnw', ['-Dmaven.test.skip=true', 'spring-boot:run'], { cwd: backend, env, stdio: 'inherit' })
   api.on('error', error => { api.startError = error })
-  await waitFor(`http://127.0.0.1:${apiPort}/api/health`, api, 'Backend')
+  await waitFor(`http://127.0.0.1:${apiPort}/api/health`, api, 'Backend', 360)
   ui = spawn(process.execPath, [path.join(frontend, 'node_modules', 'vite', 'bin', 'vite.js'),
     '--host', '127.0.0.1', '--port', String(uiPort), '--strictPort'],
   { cwd: frontend, env: { ...process.env, BACKEND_URL: `http://127.0.0.1:${apiPort}` }, stdio: 'inherit' })

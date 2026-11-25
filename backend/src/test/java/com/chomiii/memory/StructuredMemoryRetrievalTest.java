@@ -15,6 +15,13 @@ class StructuredMemoryRetrievalTest {
     }
 
     @Test
+    void routineQuestionFindsASavedClockWindowWithoutRepeatingTheActivityName() {
+        var rehearsal = memory("I practice cello between 18:15 and 19:45.");
+        assertThat(MemoryRetrieval.select(List.of(rehearsal, memory("I collect posters")),
+                "Help me move my daily routine", "schedules", 5)).containsExactly(rehearsal);
+    }
+
+    @Test
     void dinnerRequestCanRecallAParaphrasedFoodPreference() {
         var repository = mock(MemoryRepository.class);
         var service = new MemoryService(repository);

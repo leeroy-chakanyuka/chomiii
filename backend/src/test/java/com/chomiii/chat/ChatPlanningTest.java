@@ -22,24 +22,18 @@ import org.junit.jupiter.api.Test;
 
 class ChatPlanningTest {
     @Test
-    void naturalPlanningRequestPersistsOnlyAValidatedProposal() throws Exception {
-        String proposal = """
-                {"goal":"Resolve the meeting conflict","summary":"Prepare a proposal.","memoryReferences":[],
-                 "constraints":[],"missingInformation":[],"steps":[{"id":"s1","title":"Find the meeting",
-                 "capability":"calendar.search","dependsOn":[]}]}
-                """;
-        var result = run("Please help me plan my meeting tomorrow.", proposal);
+    void naturalPlanningAdviceIsAnOrdinaryConversationalTurn() throws Exception {
+        var result = run("Please help me plan my meeting tomorrow.", "Start with the meeting's purpose, then list the decisions you need.");
         assertThat(result.status()).isEqualTo("complete");
-        assertThat(result.content()).contains("Proposed plan", "nothing has been done", "service not connected")
-                .doesNotContain("\"capability\"");
-        assertThat(result.input().systemInstruction()).contains("proposal").doesNotContain("my meeting tomorrow");
+        assertThat(result.content()).isEqualTo("Start with the meeting's purpose, then list the decisions you need.");
+        assertThat(result.input().systemInstruction()).doesNotContain("Return JSON only", "my meeting tomorrow");
     }
 
     @Test
-    void malformedProposalFailsWithoutPersistingTheModelText() throws Exception {
-        var result = run("Please help me plan my meeting tomorrow.", "I already sent the email.");
-        assertThat(result.status()).isEqualTo("failed");
-        assertThat(result.content()).isEmpty();
+    void malformedLegacyProposalFallsBackWithoutPersistingFalseClaims() throws Exception {
+        var result = run("Please help me plan my meeting tomorrow.", "I already sent the email.", true);
+        assertThat(result.status()).isEqualTo("complete");
+        assertThat(result.content()).isNotBlank().doesNotContain("I already sent", "{", "Proposed plan");
     }
 
     @Test
@@ -103,6 +97,10 @@ class ChatPlanningTest {
     }
 
     private Result run(String request, String answer) throws Exception {
+        return run(request, answer, null);
+    }
+
+    private Result run(String request, String answer, Boolean plan) throws Exception {
         ChatTurnStore store = mock(ChatTurnStore.class);
         when(store.begin(any(), anyString(), any(), anyString()))
                 .thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
@@ -138,7 +136,7 @@ class ChatPlanningTest {
             var chat = new ChatStreamService(store, mock(ConversationRepository.class), memories,
                     mock(MemoryLearningService.class), new ProviderCatalog(List.of("model")), List.of(provider), executor);
             chat.start(UUID.randomUUID(), "owner", new ChatStreamController.MessageRequest(
-                    UUID.randomUUID(), "gemini", "model", request), "key");
+                    UUID.randomUUID(), "gemini", "model", request, plan), "key");
             assertThat(finished.await(10, TimeUnit.SECONDS)).isTrue();
         }
         return new Result(input.get(), content.get(), status.get());

@@ -11,6 +11,8 @@ import java.util.UUID;
 import java.util.Map;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CancellationException;
+import java.util.function.BooleanSupplier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
@@ -40,6 +42,10 @@ public class PlanRunner {
     }
 
     public PlanExecution run(String owner, UUID conversationId, UUID planId) {
+        return run(owner, conversationId, planId, () -> false);
+    }
+
+    public PlanExecution run(String owner, UUID conversationId, UUID planId, BooleanSupplier cancelled) {
         var context = new ToolExecutionContext(owner, conversationId, UUID.randomUUID(), null, false, ignored -> {});
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
         var tx = new TransactionTemplate(transactions);
@@ -50,7 +56,14 @@ public class PlanRunner {
             if (last != null && remaining <= 0) break;
             tx.setTimeout(Math.max(1, (int) Math.ceilDiv(remaining, TimeUnit.SECONDS.toNanos(1))));
             try {
-                last = tx.execute(status -> advance(context, planId));
+                last = tx.execute(status -> {
+                    if (cancelled.getAsBoolean()) throw new CancellationException();
+                    var result = advance(context, planId);
+                    if (cancelled.getAsBoolean()) throw new CancellationException();
+                    return result;
+                });
+            } catch (CancellationException stopped) {
+                return cancel(owner, conversationId, planId);
             } catch (FailedRead failure) {
                 // A transactional tool may have poisoned its transaction. Re-lock after rollback,
                 // and never overwrite a concurrent retry, cancellation, or revision.
@@ -58,7 +71,12 @@ public class PlanRunner {
             }
             if (!last.more()) break;
         }
+        if (cancelled.getAsBoolean()) return cancel(owner, conversationId, planId);
         return last.plan();
+    }
+
+    public PlanExecution cancel(String owner, UUID conversationId, UUID planId) {
+        return plans.cancelForConversation(owner, conversationId, planId);
     }
 
     private record Advance(PlanExecution plan, boolean more) {}

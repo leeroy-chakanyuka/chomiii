@@ -110,6 +110,18 @@ public class ChatTurnStore {
         finish(conversation, owner, requestId, assistant, content, "complete");
     }
 
+    @Transactional
+    public void updatePlanReply(UUID conversation, String owner, UUID requestId, UUID assistant, String content) {
+        if (jdbc.query("select id from conversations where id = ? and owner_hash = ? for update",
+                (row, index) -> row.getString(1), conversation.toString(), owner).isEmpty()) {
+            throw new ConversationNotFoundException();
+        }
+        int updated = jdbc.update("update messages set content = ? where id = ? and conversation_id = ? and request_id = ? "
+                        + "and role = 'assistant' and status = 'complete'",
+                content, assistant.toString(), conversation.toString(), requestId.toString());
+        if (updated != 1) throw new IllegalStateException("The completed turn is unavailable");
+    }
+
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void interruptOrphanedGenerations() {

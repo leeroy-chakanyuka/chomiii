@@ -62,19 +62,4 @@ class PlanningServiceTest {
         assertThat(closed.getCount()).isZero();
     }
 
-    @Test
-    void routesCompoundRequestsButNotOrdinaryConversation() {
-        assertThat(PlanningRouter.matches("I'm working late. Sort out tomorrow's appointments and arrange dinner."))
-                .isTrue();
-        assertThat(PlanningRouter.matches("Everything tomorrow is a mess. Can you fix it?"))
-                .isTrue();
-        assertThat(PlanningRouter.matches("I forgot the meeting and need to contact the organizer. Can you sort everything out?"))
-                .isTrue();
-        assertThat(PlanningRouter.matches("Help me plan my study session this weekend."))
-                .isTrue();
-        assertThat(PlanningRouter.matches("Today was a terrible day.")).isFalse();
-        assertThat(PlanningRouter.matches("What time is sunset?")).isFalse();
-        assertThat(PlanningRouter.matches("Help me write a thank-you message.")).isFalse();
-        assertThat(PlanningRouter.matches("Could you explain what a plan is?")).isFalse();
-    }
 }

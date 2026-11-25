@@ -399,8 +399,7 @@ export function useChat() {
       setStreamed('')
       setHistory(refreshed)
       if (selectedIdRef.current === conversationId) {
-        void refreshPlans(conversationId)
-        void retryApprovals()
+        await Promise.all([refreshPlans(conversationId), retryApprovals(), retryToolActivity()])
       }
     } catch (cause) {
       setError(errorText(cause).includes('aborted') || (cause instanceof DOMException && cause.name === 'AbortError')
@@ -412,8 +411,7 @@ export function useChat() {
           setStreamed('')
           setHistory(await conversations())
           if (selectedIdRef.current === conversationId) {
-            void refreshPlans(conversationId)
-            void retryApprovals()
+            await Promise.all([refreshPlans(conversationId), retryApprovals(), retryToolActivity()])
           }
         } catch { /* Keep the visible message and show the original error. */ }
       } else {

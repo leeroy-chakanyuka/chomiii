@@ -21,7 +21,7 @@ public record ToolDefinition(String name, String description, Map<String, Object
         if (capability == null || !capability.matches("[A-Za-z][A-Za-z0-9_.-]{0,63}")) {
             throw new IllegalArgumentException("Invalid tool capability");
         }
-        parameters = ToolValues.copy(Objects.requireNonNull(parameters));
+        parameters = ToolValues.copySchema(Objects.requireNonNull(parameters));
         Objects.requireNonNull(effect);
     }
 }

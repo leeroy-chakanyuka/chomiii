@@ -108,7 +108,7 @@ class PersonaExamPlanDatabaseTest {
         var messages = conversations.messages(conversation, owner);
         assertThat(messages).hasSize(2);
         assertThat(messages.get(1).status()).isEqualTo("complete");
-        assertThat(messages.get(1).content()).contains("Proposed plan", "nothing has been done");
+        assertThat(messages.get(1).content()).contains("No to-do changes have been made").doesNotContain("Proposed plan");
         assertThat(conversations.messages(conversation, other)).isEmpty();
         assertThat(plans.list(owner, conversation)).hasSize(1);
         var plan = plans.list(owner, conversation).getFirst();
