@@ -1,0 +1,45 @@
+{
+  "commit": "7b72dd2353c81ab166af942e946732e4bba10503",
+  "date": "2026-11-26",
+  "model": "gemini-3.5-flash-lite",
+  "prompt": "2+2, single-digit answer; fresh conversation per app request",
+  "machine": "Windows 11 Home Single Language; Intel Celeron N4020, 2 cores / 2 logical processors; approximately 4 GB RAM; Node 22.16.0; Java 21.0.7; embedded PostgreSQL 17.11.0-beta.19",
+  "load": "CPU snapshots before measurement 93%, 99%, and 100%; free physical memory approximately 0.46-0.49 GB. No continuous load recording.",
+  "method": "Isolated fresh local PostgreSQL and launcher, development Vite and Spring Boot. Browser first, then alternating API and direct requests. One warmup and three attempted measured requests per path. Nearest-rank percentiles; p95 is the maximum for three samples. No responses or credentials retained.",
+  "browser": {
+    "warmups": 1,
+    "measured_successes": 3,
+    "failures": 0,
+    "first_visible_ms": {"samples": [1583.6, 2376.1, 2081.4], "p50": 2081.4, "p95": 2376.1, "min": 1583.6, "max": 2376.1},
+    "complete_ms": {"samples": [1509.2, 2309.3, 2019.0], "p50": 2019.0, "p95": 2309.3, "min": 1509.2, "max": 2309.3}
+  },
+  "app_api": {
+    "warmups": 1,
+    "measured_successes": 2,
+    "measured_failures": 1,
+    "failure": "Third measured request timed out after 90 seconds; harness classified UNEXPECTED; server reported interrupted/cancelled.",
+    "samples_ms": [{"create": 16.6, "first_text": 1894.5, "complete": 1898.5}, {"create": 18.9, "first_text": 9794.6, "complete": 9799.0}],
+    "summary_note": "Only two successful measurements; percentiles are unrepresentative and exclude the timeout.",
+    "first_text_ms": {"p50": 1894.5, "p95": 9794.6},
+    "complete_ms": {"p50": 1898.5, "p95": 9799.0}
+  },
+  "direct": {
+    "warmups": 1,
+    "measured_successes": 3,
+    "failures": 0,
+    "samples_ms": [{"first_text": 5719.8, "complete": 5723.2}, {"first_text": 1363.0, "complete": 1363.7}, {"first_text": 2829.6, "complete": 2830.3}],
+    "first_text_ms": {"p50": 2829.6, "p95": 5719.8},
+    "complete_ms": {"p50": 2830.3, "p95": 5723.2},
+    "comparison_warning": "Direct system instruction is not identical to the current application context; not a controlled comparison."
+  },
+  "backend_stages_ms": {
+    "fields": ["client_init", "request_open", "provider_first_text", "store", "context", "queue", "first_delta", "first_sse", "finish", "outcome"],
+    "browser_warmup": [2459, 7503, 10186, 20, 148, 64, 10602, 32, 18, "complete"],
+    "browser_measured": [[6, 1388, 1397, 12, 11, 5, 1447, 6, 4, "complete"], [4, 2177, 2182, 20, 24, 1, 2250, 6, 3, "complete"], [2, 1922, 1936, 10, 6, 4, 1975, 5, 2, "complete"]],
+    "api_warmup": [3, 1425, 1429, 7, 8, 42, 1511, 7, 4, "complete"],
+    "api_measured": [[3, 1842, 1846, 6, 3, 8, 1871, 10, 7, "complete"], [3, 9754, 9759, 5, 3, 1, 9773, 9, 7, "complete"], [3, null, null, 7, 4, 8, null, null, null, "interrupted; provider cancelled at 90013 ms"]]
+  },
+  "calls": {"browser_generation_attempts": 4, "app_api_generation_attempts": 4, "direct_generation_attempts": 4, "total_generation_attempts": 12, "completed": 11, "interrupted": 1, "token_usage": null, "note": "Provider-side billing/retries not observed; the arithmetic prompt does not match the automatic personal-memory extraction eligibility check."},
+  "preflight": "A separate isolated startup using a Windows short path produced a Vite 403; browser setup timed out and subsequent API session was refused. No generation timing events were logged and no model calls were initiated by that preflight. Retried with the full path and a fresh database.",
+  "historical_browser": {"file": "browser-after.json", "p50_ms": 15141.3, "p95_ms": 17434.2, "count": 5, "comparison": "Different run and version, not contemporaneously controlled; no speedup claim."}
+}
