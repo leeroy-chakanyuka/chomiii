@@ -39,7 +39,7 @@ class ChatPlanningTest {
     @Test
     void refusesAnotherOwnersConversationBeforeRetrievingMemory() {
         var store = mock(ChatTurnStore.class);
-        when(store.begin(any(), anyString(), any(), anyString())).thenThrow(new ConversationNotFoundException());
+        when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class))).thenThrow(new ConversationNotFoundException());
         var memories = mock(MemoryService.class);
         var provider = mock(ChatProvider.class);
         when(provider.id()).thenReturn("gemini");
@@ -59,7 +59,7 @@ class ChatPlanningTest {
         UUID conversation = UUID.randomUUID();
         UUID request = UUID.randomUUID();
         var store = mock(ChatTurnStore.class);
-        when(store.begin(any(), anyString(), any(), anyString()))
+        when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class)))
                 .thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
         var entered = new CountDownLatch(1);
         var closed = new CountDownLatch(1);
@@ -102,7 +102,7 @@ class ChatPlanningTest {
 
     private Result run(String request, String answer, Boolean plan) throws Exception {
         ChatTurnStore store = mock(ChatTurnStore.class);
-        when(store.begin(any(), anyString(), any(), anyString()))
+        when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class)))
                 .thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
         var input = new AtomicReference<ChatProvider.ChatInput>();
         var content = new AtomicReference<String>();

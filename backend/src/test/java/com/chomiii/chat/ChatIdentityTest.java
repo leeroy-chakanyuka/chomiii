@@ -23,7 +23,7 @@ class ChatIdentityTest {
     @Test
     void passesAConsistentChomiiiIdentitySeparatelyFromUserText() throws Exception {
         ChatTurnStore store = mock(ChatTurnStore.class);
-        when(store.begin(any(), anyString(), any(), anyString()))
+        when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class)))
                 .thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
         var captured = new AtomicReference<ChatProvider.ChatInput>();
         var received = new CountDownLatch(1);

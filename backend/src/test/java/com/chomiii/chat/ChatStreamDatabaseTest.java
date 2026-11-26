@@ -3,6 +3,7 @@ package com.chomiii.chat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 import com.chomiii.provider.ChatProvider;
@@ -174,7 +175,8 @@ class ChatStreamDatabaseTest {
         String other = session();
         String conversation = conversation(owner);
         var opens = new java.util.concurrent.atomic.AtomicInteger();
-        when(provider.open(any(), anyString(), any())).thenAnswer(call -> {
+        // doAnswer: a plain when() would execute the default stub while registering this override.
+        doAnswer(call -> {
             ChatProvider.Tools tools = call.getArgument(2);
             opens.incrementAndGet();
             return new ChatProvider.Generation() {
@@ -190,7 +192,7 @@ class ChatStreamDatabaseTest {
                 }
                 @Override public void close() { tools.close(); }
             };
-        });
+        }).when(provider).open(any(), anyString(), any());
         var response = send(owner, conversation, UUID.randomUUID(), "Check my tasks, then add Milk and Bread, and show the results.");
         assertThat(response.body()).contains("event:approval", "event:complete", "prepared the to-do for your approval")
                 .doesNotContain("I already created", "internal plan", "event:plan");

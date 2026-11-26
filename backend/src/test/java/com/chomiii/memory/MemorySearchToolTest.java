@@ -32,7 +32,7 @@ class MemorySearchToolTest {
         assertThat(turn.invoke("memory.search", Map.of("query", "  DINNER  ", "limit", 5.0)))
                 .containsEntry("error", "Repeated tool call.");
         assertThat(turn.invoke("memory.search", Map.of("query", "other")))
-                .containsEntry("error", "Tool call limit reached.");
+                .containsEntry("error", "Tool budget exhausted.");
         assertThat(delivered).containsExactly(fact.id());
         verify(memories).search("owner-a", "dinner", null, 5);
         verify(memories, never()).search(org.mockito.ArgumentMatchers.eq("owner-b"),

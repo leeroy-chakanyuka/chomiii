@@ -31,7 +31,7 @@ class ChatMemorySearchTest {
     @Test
     void modelCanSearchAndFinishTheOriginalTurn() throws Exception {
         var store = mock(ChatTurnStore.class);
-        when(store.begin(any(), anyString(), any(), anyString()))
+        when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class)))
                 .thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
         var memories = mock(MemoryService.class);
         when(memories.forChat(anyString(), anyString())).thenReturn("");
@@ -73,7 +73,7 @@ class ChatMemorySearchTest {
     @Test
     void disablingRecallDoesNotSupplyAFunction() throws Exception {
         var store = mock(ChatTurnStore.class);
-        when(store.begin(any(), anyString(), any(), anyString()))
+        when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class)))
                 .thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
         var memories = mock(MemoryService.class);
         var opened = new CountDownLatch(1);
@@ -106,7 +106,7 @@ class ChatMemorySearchTest {
     @Test
     void toolCanBeDisabledWhileAutomaticRecallRemainsEnabled() throws Exception {
         var store = mock(ChatTurnStore.class);
-        when(store.begin(any(), anyString(), any(), anyString()))
+        when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class)))
                 .thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
         var memories = mock(MemoryService.class);
         when(memories.forChat("owner", "Hello")).thenReturn("Saved profile: I live in Harare.");
@@ -141,7 +141,7 @@ class ChatMemorySearchTest {
     @Test
     void planningCanCiteMemoryReturnedByTheTool() throws Exception {
         var store = mock(ChatTurnStore.class);
-        when(store.begin(any(), anyString(), any(), anyString()))
+        when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class)))
                 .thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
         var memories = mock(MemoryService.class);
         when(memories.forChat(anyString(), anyString())).thenReturn("");
@@ -187,7 +187,7 @@ class ChatMemorySearchTest {
     @Test
     void aRegisteredReadToolWorksWithoutProviderSpecificExecutionCode() throws Exception {
         var store = mock(ChatTurnStore.class);
-        when(store.begin(any(), anyString(), any(), anyString()))
+        when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class)))
                 .thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
         var invoked = new CountDownLatch(1);
         InternalTool tool = new InternalTool() {
@@ -230,7 +230,7 @@ class ChatMemorySearchTest {
         UUID conversation = UUID.randomUUID();
         UUID request = UUID.randomUUID();
         var store = mock(ChatTurnStore.class);
-        when(store.begin(any(), anyString(), any(), anyString()))
+        when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class)))
                 .thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
         var conversations = mock(ConversationRepository.class);
         when(conversations.find(conversation, "owner"))

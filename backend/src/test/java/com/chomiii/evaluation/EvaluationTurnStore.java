@@ -22,6 +22,15 @@ final class EvaluationTurnStore extends ChatTurnStore {
         return delegate.begin(conversation, owner, request, content);
     }
 
+    @Override public Pending begin(UUID conversation, String owner, UUID request, String content, Long revision) {
+        return delegate.begin(conversation, owner, request, content, revision);
+    }
+
+    @Override public java.util.List<com.chomiii.memory.MemoryLearningService.PriorUserMessage> learningHistory(
+            String owner, UUID conversation, UUID request, Long revision) {
+        return delegate.learningHistory(owner, conversation, request, revision);
+    }
+
     @Override public void finish(UUID conversation, String owner, UUID request, UUID assistant,
             String content, String status) {
         delegate.finish(conversation, owner, request, assistant, content, status);

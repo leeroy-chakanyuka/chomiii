@@ -155,6 +155,34 @@ class TodoDatabaseTest {
         assertThat(service.create(a, UUID.randomUUID(), planned).id()).isNotEqualTo(existing.id());
     }
 
+    @Test
+    void agendaContextIncludesOnlyBoundedOpenOwnedTodosWithLocalTimes() {
+        String a = owner();
+        String b = owner();
+        Instant now = Instant.parse("2030-01-01T00:00:00Z");
+        var dueNow = todo(a, "Boundary task", now, "UTC");
+        todo(a, "Harare appointment", Instant.parse("2030-01-02T10:30:00Z"), "Africa/Harare");
+        todo(a, "Old task", now.minusSeconds(1), "UTC");
+        var completed = todo(a, "Completed task", now.plusSeconds(60), "UTC");
+        service.complete(a, completed.id());
+        todo(b, "Foreign task", now.plusSeconds(60), "UTC");
+        Instant horizon = now.plusSeconds(30L * 24 * 60 * 60);
+        todo(a, "Horizon boundary", horizon, "UTC");
+        todo(a, "Beyond horizon", horizon.plusSeconds(1), "UTC");
+
+        String context = service.agendaContext(a, now);
+
+        assertThat(context).contains("Boundary task — due 2030-01-01 00:00 UTC [UTC]")
+                .contains("Harare appointment — due 2030-01-02 12:30 CAT [Africa/Harare]")
+                .contains("Horizon boundary — due 2030-01-31 00:00 UTC [UTC]")
+                .doesNotContain("Old task", "Completed task", "Foreign task", "Beyond horizon");
+        assertThat(dueNow.dueAt()).isEqualTo(now);
+    }
+
+    private PersonalTodo todo(String owner, String title, Instant due, String zone) {
+        return service.create(owner, UUID.randomUUID(), new TodoService.CreateTodo(title, null, due, zone, null, null));
+    }
+
     private UUID conversation(String owner) {
         UUID id = UUID.randomUUID();
         var now = Timestamp.from(Instant.now());

@@ -52,6 +52,12 @@ public class TodoRepository {
                 owner, status == TodoService.Status.OPEN ? "open" : "completed", limit);
     }
 
+    List<PersonalTodo> upcoming(String owner, Instant now, Instant through, int limit) {
+        return jdbc.query("select " + FIELDS + " from personal_todos where owner_hash = ? and status = 'open' "
+                        + "and due_at_micros >= ? and due_at_micros <= ? order by due_at_micros, id limit ?",
+                (row, index) -> fromRow(row), owner, epochMicros(now), epochMicros(through), limit);
+    }
+
     Optional<PersonalTodo> find(String owner, UUID id) {
         return jdbc.query("select " + FIELDS + " from personal_todos where owner_hash = ? and id = ? for update",
                 (row, index) -> fromRow(row), owner, id.toString()).stream().findFirst();

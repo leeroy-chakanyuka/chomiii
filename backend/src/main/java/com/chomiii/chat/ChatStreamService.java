@@ -64,6 +64,10 @@ public class ChatStreamService {
     private final ToolTraceService toolTraces;
     private final ApprovalFacade approvals;
     private final PlanRunner planRunner;
+    private AgendaContext agenda;
+
+    @Autowired
+    void setAgenda(AgendaContext agenda) { this.agenda = agenda; }
     private final Semaphore slots = new Semaphore(8);
     private final ConcurrentHashMap<UUID, Active> active = new ConcurrentHashMap<>();
 
@@ -171,7 +175,7 @@ public class ChatStreamService {
         final Long memoryRevision = turnRevision(memories, owner);
         ChatTurnStore.Pending pending;
         try {
-            pending = store.begin(conversation, owner, request.requestId(), request.content().strip());
+            pending = store.begin(conversation, owner, request.requestId(), request.content().strip(), memoryRevision);
         } catch (RuntimeException exception) {
             slots.release();
             throw exception;
@@ -195,6 +199,10 @@ public class ChatStreamService {
                 } catch (RuntimeException unavailable) {
                     // Optional semantic retrieval cannot prevent a normal reply.
                 }
+            }
+            if (agenda != null) {
+                String extra = agenda.forTurn(owner, memoryRevision, request.timeZone(), request.content(), useMemory);
+                if (!extra.isEmpty()) memoryContext = extra + "\n" + memoryContext;
             }
             if (plan) {
                 input = revision == null
@@ -228,7 +236,7 @@ public class ChatStreamService {
             executor.execute(() -> run(request.requestId(), pending.assistantId(), owner, conversation,
                     provider, input, key, generation, emitter, memoryRevision, requestStartedNanos,
                     storeReadyNanos, contextReadyNanos, plan, planningMemories, useMemory,
-                    request.revisePlanId(), request.reviseVersion()));
+                    request.revisePlanId(), request.reviseVersion(), request.timeZone()));
         } catch (RuntimeException exception) {
             active.remove(request.requestId(), generation);
             slots.release();
@@ -262,7 +270,8 @@ public class ChatStreamService {
     private void run(UUID requestId, UUID assistantId, String owner, UUID conversation, ChatProvider provider,
             ChatProvider.ChatInput input, String key, Active generation, SseEmitter emitter, Long memoryRevision,
             long requestStartedNanos, long storeReadyNanos, long contextReadyNanos,
-            boolean planning, List<PersonalMemory> planningMemories, boolean useMemory, UUID previousId, Long previousVersion) {
+            boolean planning, List<PersonalMemory> planningMemories, boolean useMemory, UUID previousId, Long previousVersion,
+            String timeZone) {
         long workerStartedNanos = System.nanoTime();
         StringBuilder response = new StringBuilder();
         boolean[] bufferingForApproval = {false};
@@ -356,6 +365,8 @@ public class ChatStreamService {
             else if (proposedPlan != null) store.finishWithPlan(conversation, owner, requestId, assistantId, response.toString(), proposedPlan);
             else store.finish(conversation, owner, requestId, assistantId, response.toString(), "complete");
             committed = true;
+            if (agenda != null && useMemory) agenda.capture(owner, conversation, requestId, memoryRevision,
+                    timeZone, input.messages().getLast().text());
             finishMs = elapsedMillis(finishStartedNanos, System.nanoTime());
             if (proposedPlan != null && planRunner != null) {
                 String result;
@@ -392,6 +403,8 @@ public class ChatStreamService {
             }
             send(emitter, "complete", Map.of("messageId", assistantId.toString(), "status", "complete"));
         } catch (RuntimeException exception) {
+            if (!(exception instanceof ProviderFailure)) log.error("chat_stream_failure provider={} model={}",
+                    provider.id(), input.model(), exception);
             if (generation.finished.get() && !committed) {
                 return;
             }
@@ -457,8 +470,14 @@ public class ChatStreamService {
                 // the revision captured at turn start, so a queued extraction cannot
                 // recreate content the user corrected or deleted in the meantime.
                 try {
-                    learning.schedule(owner, conversation, memoryRevision,
-                            input.messages().getLast().text(), provider, input.model(), key);
+                    String text = input.messages().getLast().text();
+                    if (MemoryLearningService.isContextualConfirmation(text)) {
+                        var history = store.learningHistory(owner, conversation, requestId, memoryRevision);
+                        learning.scheduleWithHistory(owner, conversation, memoryRevision, text,
+                                history, provider, input.model(), key);
+                    } else {
+                        learning.schedule(owner, conversation, memoryRevision, text, provider, input.model(), key);
+                    }
                 } catch (RuntimeException ignored) {
                     log.debug("memory_learning scheduling unavailable");
                 }

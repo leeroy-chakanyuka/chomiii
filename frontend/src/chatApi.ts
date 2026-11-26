@@ -267,7 +267,8 @@ export async function sendMessage(input: {
     headers: { 'Content-Type': 'application/json', 'X-Gemini-Api-Key': input.apiKey,
       ...(input.useMemory === false ? { 'X-Chomiii-Use-Memory': 'false' } : {}) },
     body: JSON.stringify({ requestId: input.requestId, provider: input.provider, model: input.model,
-      content: input.content, ...(input.plan || input.revisePlan ? { plan: true } : {}),
+      content: input.content, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      ...(input.plan || input.revisePlan ? { plan: true } : {}),
       ...(input.revisePlan ?? {}) }),
   })
   if (!response.ok) throw await problem(response)

@@ -2,6 +2,7 @@ package com.chomiii.todo;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
@@ -12,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TodoService {
     public static final int MAX_LIST_RESULTS = 100;
+    public static final int MAX_CONTEXT_TODOS = 10;
+    private static final java.time.Duration CONTEXT_HORIZON = java.time.Duration.ofDays(30);
     public enum Status { OPEN, COMPLETED }
     private final TodoRepository repository;
 
@@ -82,6 +85,22 @@ public class TodoService {
             throw new IllegalArgumentException("Invalid todo list limit");
         }
         return repository.list(owner, status, limit);
+    }
+
+    /** Returns bounded agenda context for a scheduling turn; entries are local to-dos, not bookings. */
+    @Transactional(readOnly = true)
+    public String agendaContext(String owner, Instant now) {
+        Objects.requireNonNull(now, "now");
+        List<PersonalTodo> todos = repository.upcoming(owner, now, now.plus(CONTEXT_HORIZON), MAX_CONTEXT_TODOS);
+        if (todos.isEmpty()) return "";
+        StringBuilder context = new StringBuilder("Local to-dos (not booked calendar events):\n");
+        for (PersonalTodo todo : todos) {
+            ZoneId zone = ZoneId.of(todo.timezone() == null ? "UTC" : todo.timezone());
+            context.append("- ").append(todo.title()).append(" — due ")
+                    .append(DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm z' ['VV']'").format(todo.dueAt().atZone(zone)))
+                    .append('\n');
+        }
+        return context.toString().stripTrailing();
     }
 
     @Transactional

@@ -194,7 +194,7 @@ class ChatInternalPlanningTest {
         volatile String status;
 
         Harness(BiConsumer<ChatProvider.Tools, Consumer<String>> behavior) {
-            when(store.begin(any(), anyString(), any(), anyString())).thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
+            when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class))).thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
             doAnswer(call -> {
                 content = call.getArgument(4);
                 status = call.getArgument(5);

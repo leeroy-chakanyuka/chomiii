@@ -12,6 +12,7 @@ import com.chomiii.provider.ChatProvider;
 import com.chomiii.provider.ProviderFailure;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -24,6 +25,150 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 
 class MemoryLearningServiceTest {
+    @Test
+    void recognizesConfirmationsWithSmartApostrophes() {
+        assertThat(MemoryLearningService.isContextualConfirmation("I’m committing to it")).isTrue();
+        assertThat(MemoryLearningService.isContextualConfirmation("Yes, that’s my routine")).isTrue();
+    }
+
+    @Test
+    void rejectsNegatedProposalsWithSmartApostrophes() throws Exception {
+        MemoryService memories = mock(MemoryService.class);
+        ChatProvider provider = mock(ChatProvider.class);
+        UUID conversation = UUID.randomUUID();
+        try (var worker = Executors.newSingleThreadExecutor(); var timer = newTimer()) {
+            var service = new MemoryLearningService(memories, new ObjectMapper(), worker, timer);
+            var prior = new MemoryLearningService.PriorUserMessage(conversation, 5L,
+                    "I’m thinking of painting every Friday, but don’t want to start.");
+            service.schedule("owner", conversation, 5L, "I'm committing to it", prior, provider, "model", "key");
+            worker.submit(() -> {}).get(10, TimeUnit.SECONDS);
+            org.mockito.Mockito.verify(provider, org.mockito.Mockito.never()).open(any(), any());
+        }
+    }
+
+    @Test
+    void confirmationCanReferPastOneBackgroundTurnButNotAlternativeOrNegation() throws Exception {
+        MemoryService memories = mock(MemoryService.class);
+        AtomicInteger calls = new AtomicInteger();
+        ChatProvider provider = new ChatProvider() {
+            @Override public String id() { return "test"; }
+            @Override public Generation open(ChatInput input, String key) {
+                calls.incrementAndGet();
+                return new Generation() {
+                    @Override public void stream(Consumer<String> delta) {
+                        delta.accept("{\"memories\":[{\"content\":\"I paint everyday\",\"kind\":\"fact\","
+                                + "\"confidence\":0.95,\"evidence\":\"painting everyday\"}]}");
+                    }
+                    @Override public void close() {}
+                };
+            }
+        };
+        UUID conversation = UUID.randomUUID();
+        var proposal = new MemoryLearningService.PriorUserMessage(conversation, 5L,
+                "I'm thinking about painting everyday.");
+        var background = new MemoryLearningService.PriorUserMessage(conversation, 5L,
+                "I practiced before rehearsals stopped.");
+        var unrelated = new MemoryLearningService.PriorUserMessage(conversation, 5L,
+                "My favorite color is blue.");
+        var alternative = new MemoryLearningService.PriorUserMessage(conversation, 5L,
+                "I'm thinking about drawing every weekend.");
+        try (var worker = Executors.newSingleThreadExecutor(); var timer = newTimer()) {
+            var service = new MemoryLearningService(memories, new ObjectMapper(), worker, timer);
+            service.scheduleWithHistory("owner", conversation, 5L, "committing to it, remember",
+                    List.of(background, proposal, unrelated), provider, "model", "key");
+            service.scheduleWithHistory("owner", conversation, 5L, "yes, that is my routine",
+                    List.of(proposal), provider, "model", "key");
+            service.scheduleWithHistory("owner", conversation, 5L, "yes, that is my routine",
+                    List.of(alternative, proposal), provider, "model", "key");
+            service.scheduleWithHistory("owner", conversation, 5L, "yes, that is my routine",
+                    List.of(new MemoryLearningService.PriorUserMessage(conversation, 5L,
+                            "Actually, not that routine."), proposal), provider, "model", "key");
+            service.scheduleWithHistory("owner", conversation, 5L, "no, I'm not committing to it",
+                    List.of(proposal), provider, "model", "key");
+            worker.submit(() -> {}).get(10, TimeUnit.SECONDS);
+            assertThat(calls.get()).isEqualTo(2);
+            verify(memories, org.mockito.Mockito.times(2)).learn("owner", conversation, 5L,
+                    "I paint everyday", "conversation_fact", 0.95, null);
+        }
+    }
+
+    @Test
+    void couldOrWouldDoNotSuppressAnOtherwiseOrdinaryMessage() throws Exception {
+        MemoryService memories = mock(MemoryService.class);
+        ChatProvider provider = mock(ChatProvider.class);
+        try (var worker = Executors.newSingleThreadExecutor(); var timer = newTimer()) {
+            var service = new MemoryLearningService(memories, new ObjectMapper(), worker, timer);
+            service.schedule("owner", UUID.randomUUID(), 5L,
+                    "I usually paint on Fridays, but I could paint on Sundays too.", provider, "model", "key");
+            worker.submit(() -> {}).get(10, TimeUnit.SECONDS);
+            verify(provider).open(any(), any());
+        }
+    }
+
+    @Test
+    void learnsAConfirmedRoutineOnlyFromSameRevisionPriorUserMessage() throws Exception {
+        MemoryService memories = mock(MemoryService.class);
+        AtomicReference<ChatProvider.ChatInput> confirmation = new AtomicReference<>();
+        AtomicInteger opens = new AtomicInteger();
+        ChatProvider provider = new ChatProvider() {
+            @Override public String id() { return "test"; }
+            @Override public Generation open(ChatInput input, String key) {
+                opens.incrementAndGet();
+                boolean confirmed = input.messages().size() > 1;
+                if (confirmed) confirmation.set(input);
+                String output = confirmed
+                        ? "{\"memories\":[{\"content\":\"I will paint every Friday evening\","
+                                + "\"kind\":\"fact\",\"confidence\":0.95,"
+                                + "\"evidence\":\"painting every Friday evening\"}]}"
+                        : "{\"memories\":[{\"content\":\"I might paint every Friday evening\","
+                                + "\"kind\":\"inference\",\"confidence\":0.75,"
+                                + "\"evidence\":\"painting every Friday evening\"}]}";
+                return new Generation() {
+                    @Override public void stream(Consumer<String> delta) {
+                        delta.accept(output);
+                    }
+                    @Override public void close() {}
+                };
+            }
+        };
+        UUID conversation = UUID.randomUUID();
+        String proposal = "I'm thinking of painting every Friday evening.";
+        try (var worker = Executors.newSingleThreadExecutor(); var timer = newTimer()) {
+            var service = new MemoryLearningService(memories, new ObjectMapper(), worker, timer);
+            service.schedule("owner", conversation, 5L, proposal, provider, "model", "key");
+            service.schedule("owner", conversation, 5L, "I'm committing to it",
+                    new MemoryLearningService.PriorUserMessage(conversation, 5L, proposal), provider, "model", "key");
+            worker.submit(() -> {}).get(10, TimeUnit.SECONDS);
+            assertThat(confirmation.get().messages()).hasSize(2);
+            verify(memories).learn("owner", conversation, 5L, "I might paint every Friday evening",
+                    "inferred", 0.75, null);
+            verify(memories).learn("owner", conversation, 5L, "I will paint every Friday evening",
+                    "conversation_fact", 0.95, null);
+            assertThat(opens.get()).isEqualTo(2);
+        }
+    }
+
+    @Test
+    void rejectsAmbiguousOrStaleContextWithoutCallingProvider() throws Exception {
+        MemoryService memories = mock(MemoryService.class);
+        ChatProvider provider = mock(ChatProvider.class);
+        UUID conversation = UUID.randomUUID();
+        try (var worker = Executors.newSingleThreadExecutor(); var timer = newTimer()) {
+            var service = new MemoryLearningService(memories, new ObjectMapper(), worker, timer);
+            String proposal = "I'm thinking of painting every Friday evening.";
+            service.schedule("owner", conversation, 5L, "I'm committing to it", null, provider, "model", "key");
+            service.schedule("owner", conversation, 5L, "I'm committing to it",
+                    new MemoryLearningService.PriorUserMessage(conversation, 4L, proposal), provider, "model", "key");
+            service.schedule("owner", conversation, 5L, "I'm committing to it",
+                    new MemoryLearningService.PriorUserMessage(UUID.randomUUID(), 5L, proposal), provider, "model", "key");
+            service.schedule("owner", conversation, 5L, "I'm committing to it",
+                    new MemoryLearningService.PriorUserMessage(conversation, 5L,
+                            "I'm thinking of painting every Friday or Saturday evening."), provider, "model", "key");
+            worker.submit(() -> {}).get(10, TimeUnit.SECONDS);
+            org.mockito.Mockito.verify(provider, org.mockito.Mockito.never()).open(any(), any());
+        }
+    }
+
     @Test
     void learnsAfterSchedulingWithoutBlockingTheCaller() throws Exception {
         MemoryService memories = mock(MemoryService.class);
