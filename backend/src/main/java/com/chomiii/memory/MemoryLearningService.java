@@ -37,9 +37,14 @@ public class MemoryLearningService {
             An uncertain inference MUST have kind "inference" and confidence 0.70-0.85.
             Do not infer a lasting preference from a one-time situation.
             Every item MUST contain an exact quote of 8+ characters from this message
-            as evidence. If uncertain, return an empty memories array.
+            as evidence. An item may add "topic": a short general subject label of
+            one to three words (for example "commute", "residence", "workplace",
+            "programming language", "meal preference", "project"); use the same
+            wording for statements about the same subject and omit it when unsure.
+            If uncertain, return an empty memories array.
             Output ONLY JSON: {"memories":[{"content":"brief accurate first-person memory",
-            "kind":"fact or inference","confidence":0.95,"evidence":"exact user quote"}]}
+            "kind":"fact or inference","confidence":0.95,"evidence":"exact user quote",
+            "topic":"optional subject label"}]}
             """;
 
     private final MemoryService memories;
@@ -114,7 +119,7 @@ public class MemoryLearningService {
                     MemoryCandidateParser.parse(result.toString(), userText, json)) {
                 if (expired(deadline)) return;
                 memories.learn(owner, conversation, revision, candidate.content(),
-                        candidate.source(), candidate.confidence());
+                        candidate.source(), candidate.confidence(), candidate.topic());
             }
         } catch (RuntimeException unavailable) {
             log.debug("memory_learning skipped due to {}", unavailable.getClass().getSimpleName());

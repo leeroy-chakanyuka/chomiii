@@ -11,6 +11,15 @@ class MemoryEvaluationRunnerTest {
     private final FixtureLoader fixtures = new FixtureLoader();
 
     @Test
+    void olderReportsWithoutTokenUsageStillLoad() throws Exception {
+        var result = new ObjectMapper().readValue("""
+                {"fixtureId":"old","mode":"offline","turns":[],"memories":[],"retrievals":[],
+                 "lifecycle":[],"extractionScore":null,"score":null,"limitations":[]}
+                """, MemoryEvaluationRunner.Result.class);
+        assertThat(result.providerUsage()).isEmpty();
+    }
+
+    @Test
     void observesScriptedExtractionValidationPersistenceAndRecall() throws Exception {
         var fixture = fixtures.load(Path.of("..", "evals", "fixtures", "m2", "explicit-facts", "appointments.json"));
         var result = new MemoryEvaluationRunner().runOffline(fixture);

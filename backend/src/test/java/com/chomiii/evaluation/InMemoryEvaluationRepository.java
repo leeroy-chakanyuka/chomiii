@@ -60,6 +60,21 @@ final class InMemoryEvaluationRepository extends MemoryRepository {
                 Instant.now(), "active", old.confidence(), old.sourceConversationId()));
         return true;
     }
+    @Override public synchronized boolean supersede(String owner, UUID id, UUID replacement) {
+        var current = find(owner, id);
+        if (current.isEmpty() || !"active".equals(current.get().status())) return false;
+        var old = current.get();
+        entries.get(owner).remove(old);
+        entries.get(owner).addFirst(new PersonalMemory(id, old.content(), old.source(), old.createdAt(),
+                Instant.now(), "superseded", old.confidence(), old.sourceConversationId(), old.claimTopic(), replacement));
+        return true;
+    }
+    @Override public synchronized void setClaimTopicByContent(String owner, String content, String topic) {
+        var old = list(owner).stream().filter(memory -> memory.content().equalsIgnoreCase(content)).findFirst().orElseThrow();
+        entries.get(owner).remove(old);
+        entries.get(owner).addFirst(new PersonalMemory(old.id(), old.content(), old.source(), old.createdAt(),
+                old.updatedAt(), old.status(), old.confidence(), old.sourceConversationId(), topic, old.supersededBy()));
+    }
     @Override public synchronized boolean delete(String owner, UUID id) {
         var memories = entries.get(owner);
         return memories != null && memories.removeIf(memory -> memory.id().equals(id));

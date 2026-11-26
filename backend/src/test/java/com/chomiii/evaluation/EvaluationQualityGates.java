@@ -41,7 +41,7 @@ final class EvaluationQualityGates {
                 .filter(MemoryEvaluationRunner.RetrievalObservation::memoryInSystem).count();
         output.append("- Memory in system instructions: ").append(!safetyMeasured || contexts == 0 ? "NOT EVALUATED"
                 : violations == 0 ? "PASS (exercised cases only)" : "FAIL").append('\n')
-                .append("- Unauthorized tool execution: NOT APPLICABLE (no M2 tool executor)\n\n");
+                .append("- Unauthorized tool execution: NOT EVALUATED\n\n");
         return output.toString();
     }
 

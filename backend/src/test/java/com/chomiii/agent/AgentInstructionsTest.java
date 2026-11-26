@@ -12,7 +12,7 @@ class AgentInstructionsTest {
     @Test
     void loadsShortGeneralPurposeIdentityWithoutSkillRouting() {
         var identity = new AgentInstructions();
-        assertThat(identity.systemPrompt()).contains("Chomiii", "warm", "no tools");
+        assertThat(identity.systemPrompt()).contains("Chomiii", "warm", "no live search");
         assertThat(identity.systemPrompt()).doesNotContain("debugging", "Activated skill", "/skill");
         assertThat(identity.systemPrompt().length()).isLessThanOrEqualTo(2_000);
         assertThat(identity.systemPrompt()).isEqualTo(identity.systemPrompt());

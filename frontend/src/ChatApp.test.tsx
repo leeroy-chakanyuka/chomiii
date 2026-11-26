@@ -61,6 +61,10 @@ it('shows a message immediately, updates from real stream frames, and loads the 
   fireEvent.click(screen.getByRole('button', { name: 'Send' }))
   expect(within(screen.getByRole('region', { name: 'Chat' })).getByText('My language is Java')).toBeInTheDocument()
   await waitFor(() => expect(stream).toBeDefined())
+  stream?.enqueue(new TextEncoder().encode('event:tool\ndata:{"invocationId":"tool-1","requestId":"r","toolName":"memory.search","status":"running"}\n\n'))
+  await screen.findByText('Searching memories…')
+  stream?.enqueue(new TextEncoder().encode('event:tool\ndata:{"invocationId":"tool-1","requestId":"r","toolName":"memory.search","status":"succeeded"}\n\n'))
+  await screen.findByText('Memory search completed')
   stream?.enqueue(new TextEncoder().encode('event:delta\ndata:{"text":"Hello"}\n\n'))
   await screen.findByText('Hello')
   expect(screen.queryByText('Hello world')).not.toBeInTheDocument()
@@ -94,6 +98,10 @@ it('switches conversations, starts a new chat, stops a stream, and removes the k
         { status: 201 })
     }
     if (path.endsWith('/conversations')) return new Response(JSON.stringify(summaries))
+    if (path.endsWith('/conversations/old-1/tool-traces')) return new Response(JSON.stringify([
+      { invocationId: 'tool-1', requestId: 'request-1', toolName: 'memory.search', status: 'succeeded' },
+    ]))
+    if (path.endsWith('/conversations/old-2/tool-traces')) return new Response('[]')
     if (path.endsWith('/conversations/old-1')) return new Response(JSON.stringify({ ...summaries[0],
       messages: [{ id: 'm1', role: 'user', content: 'From first chat', status: 'complete', createdAt: 'now' }] }))
     if (path.endsWith('/conversations/old-2')) return new Response(JSON.stringify({ ...summaries[1],
@@ -128,9 +136,11 @@ it('switches conversations, starts a new chat, stops a stream, and removes the k
   fireEvent.click(screen.getByRole('button', { name: 'Start chatting' }))
   fireEvent.click(await screen.findByRole('button', { name: 'First saved chat' }))
   await screen.findByText('From first chat')
+  expect(screen.getByText('Memory search completed')).toBeVisible()
   fireEvent.click(screen.getByRole('button', { name: 'Second saved chat' }))
   await screen.findByText('From second chat')
   expect(screen.queryByText('From first chat')).not.toBeInTheDocument()
+  expect(screen.queryByText('Memory search completed')).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: /New chat/ }))
   expect(screen.getByText('What’s on your mind?')).toBeInTheDocument()
   fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Help me' } })
@@ -195,4 +205,84 @@ it('starts provider streaming without waiting for a conversation-list refresh', 
     streamController?.enqueue(new TextEncoder().encode('event:complete\ndata:{"messageId":"m","status":"complete"}\n\n'))
     streamController?.close()
   }
+})
+
+it('shows missing tool activity, retries it, and does not leak it after switching chats', async () => {
+  let failOldTrace = true
+  let releaseOldTrace: ((response: Response) => void) | undefined
+  const conversations = [
+    { id: 'old', title: 'Old chat', createdAt: 'now', updatedAt: 'now' },
+    { id: 'new', title: 'New chat', createdAt: 'now', updatedAt: 'now' },
+  ]
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.endsWith('/health')) return new Response('{"status":"UP","service":"chomiii"}')
+    if (url.endsWith('/chat/providers')) return new Response(JSON.stringify([
+      { id: 'gemini', name: 'Gemini', defaultModel: 'gemini-3.5-flash-lite',
+        models: [{ id: 'gemini-3.5-flash-lite', name: 'Gemini Flash-Lite' }] },
+    ]))
+    if (url.endsWith('/conversations')) return new Response(JSON.stringify(conversations))
+    if (url.endsWith('/conversations/old/tool-traces')) {
+      if (failOldTrace) { failOldTrace = false; return new Response('unavailable', { status: 503 }) }
+      return new Promise<Response>((resolve) => { releaseOldTrace = resolve })
+    }
+    if (url.endsWith('/conversations/new/tool-traces')) return new Response('[]')
+    if (url.endsWith('/conversations/old')) return new Response(JSON.stringify({ ...conversations[0], messages: [
+      { id: 'old-message', role: 'user', content: 'Readable old chat', status: 'complete', createdAt: 'now' },
+    ] }))
+    if (url.endsWith('/conversations/new')) return new Response(JSON.stringify({ ...conversations[1], messages: [
+      { id: 'new-message', role: 'user', content: 'Readable new chat', status: 'complete', createdAt: 'now' },
+    ] }))
+    throw new Error(`Unexpected request: ${url}`)
+  }))
+
+  render(<App />)
+  fireEvent.change(await screen.findByLabelText('Gemini API key'), { target: { value: 'private-test-key' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Start chatting' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Old chat' }))
+  await screen.findByText('Readable old chat')
+  expect(await screen.findByRole('status')).toHaveTextContent('Tool activity could not be loaded.')
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+  await waitFor(() => expect(releaseOldTrace).toBeDefined())
+  fireEvent.click(screen.getByRole('button', { name: 'New chat' }))
+  await screen.findByText('Readable new chat')
+  expect(screen.queryByText('Tool activity could not be loaded.')).not.toBeInTheDocument()
+  releaseOldTrace?.(new Response(JSON.stringify([
+    { invocationId: 'old-tool', requestId: 'r', toolName: 'memory.search', status: 'succeeded' },
+  ])))
+  await waitFor(() => expect(screen.queryByText('Tool activity could not be loaded.')).not.toBeInTheDocument())
+  expect(screen.queryByText('Memory search completed')).not.toBeInTheDocument()
+})
+
+it('shows a conversation while its tool history request is still pending', async () => {
+  let traceRequested = false
+  let releaseTrace: ((response: Response) => void) | undefined
+  const saved = { id: 'saved', title: 'Saved chat', createdAt: 'now', updatedAt: 'now' }
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.endsWith('/health')) return new Response('{"status":"UP","service":"chomiii"}')
+    if (url.endsWith('/chat/providers')) return new Response(JSON.stringify([
+      { id: 'gemini', name: 'Gemini', defaultModel: 'gemini-3.5-flash-lite',
+        models: [{ id: 'gemini-3.5-flash-lite', name: 'Gemini Flash-Lite' }] },
+    ]))
+    if (url.endsWith('/conversations')) return new Response(JSON.stringify([saved]))
+    if (url.endsWith('/conversations/saved/tool-traces')) {
+      traceRequested = true
+      return new Promise<Response>((resolve) => { releaseTrace = resolve })
+    }
+    if (url.endsWith('/conversations/saved')) return new Response(JSON.stringify({ ...saved, messages: [
+      { id: 'saved-message', role: 'user', content: 'I can read this now', status: 'complete', createdAt: 'now' },
+    ] }))
+    throw new Error(`Unexpected request: ${url}`)
+  }))
+
+  render(<App />)
+  fireEvent.change(await screen.findByLabelText('Gemini API key'), { target: { value: 'private-test-key' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Start chatting' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Saved chat' }))
+  expect(await screen.findByText('I can read this now')).toBeInTheDocument()
+  expect(traceRequested).toBe(true)
+  expect(releaseTrace).toBeDefined()
+  expect(screen.queryByText('Tool activity could not be loaded.')).not.toBeInTheDocument()
+  releaseTrace?.(new Response('[]'))
 })

@@ -44,7 +44,12 @@ final class MemoryEvaluationRunner {
     record LifecycleObservation(String operation, String memoryId, String outcome) {}
     record Result(String fixtureId, String mode, List<TurnObservation> turns, List<StoredMemory> memories,
             List<RetrievalObservation> retrievals, List<LifecycleObservation> lifecycle,
-            MemoryScorer.Score extractionScore, MemoryScorer.Score score, List<String> limitations) {}
+            MemoryScorer.Score extractionScore, MemoryScorer.Score score, List<String> limitations,
+            List<ChatProvider.TokenUsage> providerUsage) {
+        Result {
+            providerUsage = providerUsage == null ? List.of() : List.copyOf(providerUsage);
+        }
+    }
     record PlanningMemory(Result observation, List<PersonalMemory> selected, long retrievalMillis) {}
 
     Result runOffline(EvaluationFixture fixture) throws Exception {
@@ -110,6 +115,7 @@ final class MemoryEvaluationRunner {
         var extracted = new ArrayList<MemoryScorer.Actual>();
         var retrievals = new ArrayList<RetrievalObservation>();
         List<PersonalMemory> actual;
+        List<ChatProvider.TokenUsage> usage;
 
         try (var chatWorker = Executors.newSingleThreadExecutor();
                 var learningWorker = new EvaluationLearningService.CountingExecutor();
@@ -119,7 +125,8 @@ final class MemoryEvaluationRunner {
             var learning = new EvaluationLearningService(memories, json, learningWorker, timer);
             var store = new EvaluationTurnStore(turnStore);
             var chat = new ChatStreamService(store, conversations, memories, learning,
-                    new ProviderCatalog(List.of(model)), List.of(provider), chatWorker);
+                    new ProviderCatalog(List.of(model)), List.of(provider), chatWorker,
+                    !Boolean.getBoolean("eval.disableTool"));
             for (var turn : fixture.turns()) {
                 if (!"user".equals(turn.role())) continue;
                 var request = new ChatStreamController.MessageRequest(UUID.randomUUID(), "gemini", model, turn.content(), false);
@@ -250,8 +257,7 @@ final class MemoryEvaluationRunner {
                 long duration = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
                 var available = memories.list(owner);
                 var beforeFollowUp = available.stream().map(PersonalMemory::id).collect(java.util.stream.Collectors.toSet());
-                List<String> selected = available.stream().filter(memory -> context.contains("- "
-                        + memory.content().replaceAll("\\s+", " ").strip() + " (source: "))
+                List<String> selected = available.stream().filter(memory -> context.contains(memory.id().toString()))
                         .map(memory -> memory.id().toString()).toList();
                 UUID followConversation = UUID.randomUUID();
                 conversations.create(followConversation, owner, java.time.Instant.now());
@@ -297,6 +303,8 @@ final class MemoryEvaluationRunner {
                         followUpWrites, answerTruncated, failure));
             }
             actual = memories.list(owner);
+            usage = provider.calls().stream().filter(EvaluationProvider.Call::providerInvoked)
+                    .map(EvaluationProvider.Call::usage).filter(java.util.Objects::nonNull).toList();
         }
         var stored = actual.stream().map(MemoryEvaluationRunner::storedMemory).toList();
         var score = new MemoryScorer().score(fixture, scoringMemories(stored, observations));
@@ -305,10 +313,10 @@ final class MemoryEvaluationRunner {
         if (liveProvider == null) limitations.add("Scripted output is not a model-quality measurement.");
         if ("offline-scripted".equals(mode)) limitations.add("The offline store does not verify JDBC or database transactions.");
         limitations.add("Candidate rejection and skipped-write reasons are not exposed by the application.");
-        limitations.add("Token usage and first visible browser text are not measured.");
+        limitations.add("First visible browser text is not measured; missing provider token fields remain unmeasured.");
         limitations.add("Follow-up answers require independent or human grading.");
         return new Result(fixture.id(), mode, observations, stored, List.copyOf(retrievals), lifecycle,
-                extractionScore, score, List.copyOf(limitations));
+                extractionScore, score, List.copyOf(limitations), usage);
     }
 
     private static boolean confirmCurrentRevisionCanWrite(MemoryService memories, String owner, UUID conversation,
