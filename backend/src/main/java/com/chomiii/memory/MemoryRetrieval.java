@@ -87,7 +87,8 @@ final class MemoryRetrieval {
                 "software", "interview", "employer", "meeting", "meetings", "shift", "shifts")) topics.add(Topic.WORK);
         if (contains(words, "schedule", "calendar", "busy", "available", "availability", "meeting", "meetings", "deadline", "appointment", "appointments",
                 "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "weekday",
-                "weekend", "morning", "mornings", "evening", "evenings", "week", "interview")) topics.add(Topic.SCHEDULES);
+                "weekend", "morning", "mornings", "evening", "evenings", "week", "interview", "routine", "routines", "daily")
+                || CLOCK_WINDOW.matcher(text).find()) topics.add(Topic.SCHEDULES);
         if (contains(words, "school", "university", "college", "study", "studying", "exam", "course", "degree")) topics.add(Topic.EDUCATION);
         if (contains(words, "live", "lives", "city", "town", "location", "commute", "commuting", "address", "suburb", "transport", "bus", "train")) topics.add(Topic.LOCATION);
         if (contains(words, "project", "projects", "startup", "app", "website", "building", "prototype", "repository", "backend", "frontend")) topics.add(Topic.PROJECTS);
@@ -97,6 +98,9 @@ final class MemoryRetrieval {
     private static boolean contains(Set<String> words, String... candidates) {
         return Arrays.stream(candidates).anyMatch(words::contains);
     }
+
+    private static final java.util.regex.Pattern CLOCK_WINDOW = java.util.regex.Pattern.compile(
+            "(?i)\\b(?:[01]?\\d|2[0-3]):[0-5]\\d\\s*(?:[-–‑]|to|and)\\s*(?:[01]?\\d|2[0-3]):[0-5]\\d\\b");
 
     private static Topic parseTopic(String topic) {
         try {

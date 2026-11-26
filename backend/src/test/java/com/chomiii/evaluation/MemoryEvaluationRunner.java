@@ -431,7 +431,7 @@ final class MemoryEvaluationRunner {
         var store = mock(ChatTurnStore.class);
         Map<UUID, List<ContextWindow.Turn>> history = new HashMap<>();
         Map<UUID, String> pending = new HashMap<>();
-        when(store.begin(any(), anyString(), any(), anyString())).thenAnswer(call -> {
+        when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class))).thenAnswer(call -> {
             UUID conversation = call.getArgument(0);
             UUID request = call.getArgument(2);
             pending.put(request, call.getArgument(3));

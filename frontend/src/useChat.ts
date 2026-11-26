@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  conversations, conversationToolTraces, createConversation, deleteConversation, openConversation, providers,
+  conversations, conversationToolTraces, conversationApprovals, conversationPlans, runPlan, cancelPlan, decideApproval, createConversation, deleteConversation, openConversation, providers,
   sendMessage, stopMessage,
-  type ChatMessage, type ConversationSummary, type Provider, type ToolTrace,
+  type Approval, type ChatMessage, type ConversationSummary, type Provider, type ToolTrace, type SavedPlan,
 } from './chatApi'
 import { forgetRememberedKey, loadRememberedKey, rememberKey } from './rememberKey'
 
@@ -29,6 +29,13 @@ export function useChat() {
   const [streamed, setStreamed] = useState('')
   const [toolActivity, setToolActivity] = useState<ToolTrace[]>([])
   const [toolActivityError, setToolActivityError] = useState(false)
+  const [approvals, setApprovals] = useState<Approval[]>([])
+  const [approvalsError, setApprovalsError] = useState(false)
+  const [approvalBusy, setApprovalBusy] = useState<string | null>(null)
+  const [plans, setPlans] = useState<SavedPlan[]>([])
+  const [plansError, setPlansError] = useState(false)
+  const [planBusy, setPlanBusy] = useState<string | null>(null)
+  const [revisingPlan, setRevisingPlan] = useState<SavedPlan | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const sending = useRef(false)
@@ -41,6 +48,31 @@ export function useChat() {
   const selectedIdRef = useRef<string | null>(null)
   const traceRequest = useRef(0)
   const traceActivityVersion = useRef(0)
+  const approvalRequest = useRef(0)
+  const approvalRevision = useRef(new Map<string, number>())
+  const approvalMutation = useRef(new Map<string, number>())
+  const approvalBusyToken = useRef(0)
+  const approvalScope = useRef(new Map<string, string>())
+  const planRequest = useRef(0)
+  const planBusyToken = useRef(0)
+
+  async function refreshPlans(id: string) {
+    const request = ++planRequest.current
+    try {
+      const items = await conversationPlans(id)
+      if (request !== planRequest.current || selectedIdRef.current !== id) return
+      setPlans(items); setPlansError(false)
+    } catch {
+      if (request === planRequest.current && selectedIdRef.current === id) setPlansError(true)
+    }
+  }
+
+  function updateApproval(conversationId: string, value: Approval) {
+    approvalRevision.current.set(value.id, (approvalRevision.current.get(value.id) ?? 0) + 1)
+    approvalMutation.current.set(value.id, (approvalMutation.current.get(value.id) ?? 0) + 1)
+    approvalScope.current.set(value.id, conversationId)
+    setApprovals((previous) => [...previous.filter((item) => item.id !== value.id), value])
+  }
 
   function selectConversation(id: string | null) {
     selectedIdRef.current = id
@@ -134,6 +166,13 @@ export function useChat() {
     if (sending.current) return
     ++traceRequest.current
     ++traceActivityVersion.current
+    ++approvalRequest.current
+    ++planRequest.current
+    ++planBusyToken.current
+    setPlans([]); setPlansError(false); setPlanBusy(null)
+    setRevisingPlan(null)
+    ++approvalBusyToken.current
+    setApprovals([]); setApprovalsError(false); setApprovalBusy(null)
     selectConversation(null)
     setMessages([])
     setToolActivity([])
@@ -147,6 +186,9 @@ export function useChat() {
     if (sending.current) return
     setError('')
     const request = ++traceRequest.current
+    const approvalsRequest = ++approvalRequest.current
+    const plansRequest = ++planRequest.current
+    ++approvalBusyToken.current
     const activityVersion = traceActivityVersion.current
     const traceResult: Promise<{ traces: ToolTrace[]; failed: boolean }> = conversationToolTraces(id).then(
       (traces) => ({ traces, failed: false }),
@@ -154,12 +196,38 @@ export function useChat() {
     )
     setToolActivity([])
     setToolActivityError(false)
+    setApprovals([]); setApprovalsError(false); setApprovalBusy(null)
+    setPlans([]); setPlansError(false); setPlanBusy(null)
+    setRevisingPlan(null)
+    const plansResult = conversationPlans(id).then((items) => ({ items, failed: false as const }),
+      () => ({ items: [] as SavedPlan[], failed: true as const }))
+    const approvalVersions = new Map(approvalRevision.current)
+    const approvalsResult = conversationApprovals(id).then(
+      (items) => ({ items, failed: false as const }),
+      () => ({ items: [] as Approval[], failed: true as const }),
+    )
     try {
       const conversation = await openConversation(id)
       if (request !== traceRequest.current) return
       selectConversation(conversation.id)
       setMessages(conversation.messages)
       setStreamed('')
+      void plansResult.then(({ items, failed }) => {
+        if (plansRequest !== planRequest.current || selectedIdRef.current !== conversation.id) return
+        setPlans(items); setPlansError(failed)
+      })
+      void approvalsResult.then(({ items, failed }) => {
+        if (approvalsRequest !== approvalRequest.current || selectedIdRef.current !== conversation.id) return
+        if (failed) { setApprovalsError(true); return }
+        setApprovals((previous) => {
+          const newer = previous.filter((item) => approvalScope.current.get(item.id) === conversation.id
+            && (approvalRevision.current.get(item.id) ?? 0)
+            !== (approvalVersions.get(item.id) ?? 0))
+          for (const item of items) approvalScope.current.set(item.id, conversation.id)
+          return [...items.filter((item) => !newer.some((current) => current.id === item.id)), ...newer]
+        })
+        setApprovalsError(false)
+      })
       void traceResult.then((result) => {
         if (request !== traceRequest.current || traceActivityVersion.current !== activityVersion
           || selectedIdRef.current !== conversation.id) return
@@ -167,6 +235,66 @@ export function useChat() {
         setToolActivityError(result.failed)
       })
     } catch (cause) { if (request === traceRequest.current) setError(errorText(cause)) }
+  }
+
+  async function retryApprovals() {
+    const id = selectedIdRef.current
+    if (!id) return
+    const request = ++approvalRequest.current
+    const versions = new Map(approvalRevision.current)
+    try {
+      const items = await conversationApprovals(id)
+      if (request !== approvalRequest.current || selectedIdRef.current !== id) return
+      setApprovals((previous) => {
+        const newer = previous.filter((item) => approvalScope.current.get(item.id) === id
+          && (approvalRevision.current.get(item.id) ?? 0) !== (versions.get(item.id) ?? 0))
+        for (const item of items) approvalScope.current.set(item.id, id)
+        return [...items.filter((item) => !newer.some((current) => current.id === item.id)), ...newer]
+      })
+      setApprovalsError(false)
+    } catch { if (request === approvalRequest.current && selectedIdRef.current === id) setApprovalsError(true) }
+  }
+
+  async function actOnPlan(id: string, planId: string, action: 'run' | 'cancel') {
+    if (selectedIdRef.current !== id || planBusy) return
+    const token = ++planBusyToken.current
+    setPlanBusy(planId)
+    try {
+      const result = action === 'run' ? await runPlan(id, planId) : await cancelPlan(id, planId)
+      if (selectedIdRef.current !== id || token !== planBusyToken.current) return
+      setPlans((previous) => previous.map((plan) => plan.id === planId ? result : plan))
+      void retryApprovals()
+    } catch (cause) {
+      if (selectedIdRef.current === id && token === planBusyToken.current) setError(errorText(cause))
+    } finally {
+      if (token === planBusyToken.current) setPlanBusy(null)
+    }
+  }
+
+  async function decide(conversationId: string, item: Approval, decision: 'approve' | 'reject') {
+    if (selectedIdRef.current !== conversationId || item.status !== 'pending' || approvalBusy) return
+    const mutation = (approvalMutation.current.get(item.id) ?? 0) + 1
+    approvalMutation.current.set(item.id, mutation)
+    const request = approvalRequest.current
+    const busyToken = ++approvalBusyToken.current
+    setApprovalBusy(item.id)
+    try {
+      const result = await decideApproval(conversationId, item.id, decision)
+      if (selectedIdRef.current !== conversationId || request !== approvalRequest.current
+        || approvalMutation.current.get(item.id) !== mutation) return
+      setApprovalBusy(null)
+      updateApproval(conversationId, result)
+      void retryApprovals()
+      void refreshPlans(conversationId)
+    } catch (cause) {
+      if (selectedIdRef.current === conversationId && request === approvalRequest.current
+        && approvalMutation.current.get(item.id) === mutation) {
+        setError(errorText(cause))
+        void retryApprovals()
+      }
+    } finally {
+      if (approvalBusyToken.current === busyToken) setApprovalBusy(null)
+    }
   }
 
   async function retryToolActivity() {
@@ -203,6 +331,9 @@ export function useChat() {
     if (!key.trim()) { setError('Enter a Gemini API key.'); setConnected(false); return }
 
     sending.current = true
+    ++approvalRequest.current
+    ++approvalBusyToken.current
+    setApprovalBusy(null)
     ++traceRequest.current
     ++traceActivityVersion.current
     startedAt.current = performance.now()
@@ -232,21 +363,29 @@ export function useChat() {
           createdAt: created.createdAt, updatedAt: created.updatedAt }, ...previous])
       }
       const abort = new AbortController()
+      const streamConversationId = conversationId
       running.current = { conversationId, requestId, abort }
-      await sendMessage({ conversationId, requestId, content, provider, model, apiKey: key,
-        signal: abort.signal, useMemory, plan, onEvent(event) {
+      await sendMessage({ conversationId: streamConversationId, requestId, content, provider, model, apiKey: key,
+        signal: abort.signal, useMemory, plan: plan || revisingPlan !== null,
+        ...(revisingPlan ? { revisePlan: { revisePlanId: revisingPlan.id, reviseVersion: revisingPlan.version } } : {}), onEvent(event) {
           if (event.kind === 'delta') setStreamed((previous) => previous + event.text)
           if (event.kind === 'tool') {
             ++traceActivityVersion.current
             setToolActivity((previous) => {
               const existing = previous.find((trace) => trace.invocationId === event.trace.invocationId)
               if (existing && existing.status !== 'requested' && existing.status !== 'running'
+                && existing.status !== 'awaiting_approval'
+                && (event.trace.status === 'requested' || event.trace.status === 'running'
+                  || event.trace.status === 'awaiting_approval')) return previous
+              if (existing?.status === 'awaiting_approval'
                 && (event.trace.status === 'requested' || event.trace.status === 'running')) return previous
               const remaining = previous.filter((trace) => trace.invocationId !== event.trace.invocationId)
               return [...remaining, event.trace]
             })
           }
+          if (event.kind === 'approval' && selectedIdRef.current === streamConversationId) updateApproval(streamConversationId, event.approval)
           if (event.kind === 'error') streamError = event.message
+          if (event.kind === 'complete') setRevisingPlan(null)
           if ((event.kind === 'complete' || event.kind === 'error') && startedAt.current !== null
             && typeof performance.measure === 'function') {
             performance.measure('chomiii:response-complete', { start: startedAt.current, end: performance.now() })
@@ -259,6 +398,9 @@ export function useChat() {
       setMessages(loaded.messages)
       setStreamed('')
       setHistory(refreshed)
+      if (selectedIdRef.current === conversationId) {
+        await Promise.all([refreshPlans(conversationId), retryApprovals(), retryToolActivity()])
+      }
     } catch (cause) {
       setError(errorText(cause).includes('aborted') || (cause instanceof DOMException && cause.name === 'AbortError')
         ? 'Generation stopped.' : errorText(cause))
@@ -268,6 +410,9 @@ export function useChat() {
           setMessages(loaded.messages)
           setStreamed('')
           setHistory(await conversations())
+          if (selectedIdRef.current === conversationId) {
+            await Promise.all([refreshPlans(conversationId), retryApprovals(), retryToolActivity()])
+          }
         } catch { /* Keep the visible message and show the original error. */ }
       } else {
         setInput(content)
@@ -280,6 +425,8 @@ export function useChat() {
       setBusy(false)
     }
   }
+
+  function revisePlan(plan: SavedPlan | null) { setRevisingPlan(plan) }
 
   async function stop() {
     const current = running.current
@@ -297,7 +444,10 @@ export function useChat() {
 
   return {
     catalog, history, loading, connected, connecting, key, setKey, remember, setRemember, provider, setProvider, model, setModel,
-    selectedId, messages, input, setInput, streamed, toolActivity, toolActivityError, busy, error, useMemory, setUseMemory,
-    connect, changeKey, removeKey, newChat, switchChat, retryToolActivity, removeChat, submit, stop,
+    selectedId, messages, input, setInput, streamed, toolActivity, toolActivityError, approvals, approvalsError, approvalBusy, plans, plansError, planBusy, revisingPlan, busy, error, useMemory, setUseMemory,
+    connect, changeKey, removeKey, newChat, switchChat, retryToolActivity, retryApprovals,
+    approve: (id: string, item: Approval) => decide(id, item, 'approve'),
+    reject: (id: string, item: Approval) => decide(id, item, 'reject'), runPlan: (id: string, planId: string) => actOnPlan(id, planId, 'run'),
+    cancelPlan: (id: string, planId: string) => actOnPlan(id, planId, 'cancel'), retryPlans: () => selectedIdRef.current && refreshPlans(selectedIdRef.current), revisePlan, removeChat, submit, stop,
   }
 }

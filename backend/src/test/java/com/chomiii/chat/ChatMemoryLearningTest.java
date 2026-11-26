@@ -80,6 +80,35 @@ class ChatMemoryLearningTest {
     }
 
     @Test
+    void completedConfirmationUsesRevisionStampedUserHistory() throws Exception {
+        UUID conversation = conversation();
+        UUID requestId = UUID.randomUUID();
+        ChatTurnStore store = turnStore();
+        when(store.learningHistory(OWNER, conversation, requestId, 7L)).thenReturn(List.of(
+                new MemoryLearningService.PriorUserMessage(conversation, 7L, "I practiced before rehearsals stopped."),
+                new MemoryLearningService.PriorUserMessage(conversation, 7L, "I'm thinking about painting everyday.")));
+        CatalogProvider provider = new CatalogProvider(input -> {
+            if (input.systemInstruction().contains("memory-extraction")) {
+                assertThat(input.messages()).hasSize(3);
+                return new ChatProvider.Generation() {
+                    @Override public void stream(Consumer<String> delta) {
+                        delta.accept("{\"memories\":[{\"content\":\"I paint everyday\",\"kind\":\"fact\","
+                                + "\"confidence\":0.95,\"evidence\":\"painting everyday\"}]}");
+                    }
+                    @Override public void close() {}
+                };
+            }
+            return chatGeneration(delta -> delta.accept("Okay."));
+        });
+        chat = chat(store, provider);
+        chat.start(conversation, OWNER, new ChatStreamController.MessageRequest(requestId, "gemini",
+                "gemini-3.5-flash-lite", "committing to it, remember"), "test-key");
+        assertThat(learned.await(10, TimeUnit.SECONDS)).isTrue();
+        verify(store).begin(conversation, OWNER, requestId, "committing to it, remember", 7L);
+        verify(store).learningHistory(OWNER, conversation, requestId, 7L);
+    }
+
+    @Test
     void learningUsesTheRevisionCapturedAtTurnStartEvenIfTheUserMutatesMemoriesWhileStreaming()
             throws Exception {
         chat = chat(turnStore(), blockingChatProvider());
@@ -100,7 +129,7 @@ class ChatMemoryLearningTest {
         // A concurrent deletion or clear commits while store.begin is persisting
         // the user's message, before this turn's revision baseline could be read.
         ChatTurnStore store = mock(ChatTurnStore.class);
-        when(store.begin(any(), anyString(), any(), anyString())).thenAnswer(invocation -> {
+        when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class))).thenAnswer(invocation -> {
             revision.set(8L);
             return new ChatTurnStore.Pending(UUID.randomUUID(), List.of());
         });
@@ -210,7 +239,7 @@ class ChatMemoryLearningTest {
 
     private ChatTurnStore turnStore() {
         ChatTurnStore store = mock(ChatTurnStore.class);
-        when(store.begin(any(), anyString(), any(), anyString()))
+        when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class)))
                 .thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
         return store;
     }

@@ -28,7 +28,7 @@ class MemoryContextIntegrationTest {
         ChatTurnStore store = mock(ChatTurnStore.class);
         UUID conversation = UUID.randomUUID();
         String userText = "My usual groceries are oats and milk.";
-        when(store.begin(any(), anyString(), any(), anyString()))
+        when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class)))
                 .thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
         MemoryService memories = mock(MemoryService.class);
         when(memories.forChat(anyString(), anyString())).thenReturn("");
@@ -77,7 +77,7 @@ class MemoryContextIntegrationTest {
     @Test
     void explicitOptOutDoesNotQueryOrSendPersonalMemory() throws Exception {
         ChatTurnStore store = mock(ChatTurnStore.class);
-        when(store.begin(any(), anyString(), any(), anyString()))
+        when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class)))
                 .thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
         MemoryService memories = mock(MemoryService.class);
         var seen = new AtomicReference<ChatProvider.ChatInput>();
@@ -111,7 +111,7 @@ class MemoryContextIntegrationTest {
     @Test
     void insertsApprovedMemoryAsUserContextNotTrustedSystemText() throws Exception {
         ChatTurnStore store = mock(ChatTurnStore.class);
-        when(store.begin(any(), anyString(), any(), anyString()))
+        when(store.begin(any(), anyString(), any(), anyString(), org.mockito.ArgumentMatchers.nullable(Long.class)))
                 .thenReturn(new ChatTurnStore.Pending(UUID.randomUUID(), List.of()));
         MemoryService memories = mock(MemoryService.class);
         when(memories.forChat(anyString(), anyString()))

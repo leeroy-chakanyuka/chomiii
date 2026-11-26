@@ -4,12 +4,14 @@ import { useChat } from './useChat'
 import { MarkdownReply } from './MarkdownReply'
 import { MemoryPanel } from './MemoryPanel'
 import type { ToolTrace } from './chatApi'
+import { ApprovalCard } from './ApprovalCard'
 
 function toolActivityText(trace: ToolTrace): string {
   if (trace.toolName === 'memory.search') {
     switch (trace.status) {
       case 'requested': return 'Preparing memory search…'
       case 'running': return 'Searching memories…'
+      case 'awaiting_approval': return 'Waiting for your approval…'
       case 'succeeded': return 'Memory search completed'
       case 'denied': return 'Memory search was not allowed'
       case 'failed': return 'Memory search failed'
@@ -20,6 +22,7 @@ function toolActivityText(trace: ToolTrace): string {
   switch (trace.status) {
     case 'requested': return 'Preparing a tool…'
     case 'running': return 'Using a tool…'
+    case 'awaiting_approval': return 'Waiting for your approval…'
     case 'succeeded': return 'Tool completed'
     case 'denied': return 'Tool was not allowed'
     case 'failed': return 'Tool failed'
@@ -34,6 +37,7 @@ export default function App() {
   const chat = useChat()
   const scrollArea = useRef<HTMLDivElement>(null)
   const followOutput = useRef(true)
+  const [expiryTick, refreshApprovalExpiry] = useState(0)
 
   useEffect(() => {
     let current = true
@@ -46,6 +50,17 @@ export default function App() {
       scrollArea.current.scrollTop = scrollArea.current.scrollHeight
     }
   }, [chat.messages, chat.streamed, chat.toolActivity])
+
+  useEffect(() => {
+    const nextExpiry = chat.approvals
+      .filter((approval) => approval.status === 'pending')
+      .map((approval) => new Date(approval.expiresAt).getTime())
+      .filter((expiry) => Number.isFinite(expiry) && expiry > Date.now())
+      .sort((left, right) => left - right)[0]
+    if (nextExpiry === undefined) return
+    const timer = setTimeout(() => refreshApprovalExpiry((value) => value + 1), Math.min(nextExpiry - Date.now() + 1, 2_147_000_000))
+    return () => clearTimeout(timer)
+  }, [chat.approvals, expiryTick])
 
   const selectedProvider = chat.catalog.find((item) => item.id === chat.provider)
 
@@ -136,12 +151,49 @@ export default function App() {
                   ? <small className="message-note">{message.status === 'failed' ? 'Response failed' : 'Response stopped'}</small> : null}
               </article>)}
               {chat.toolActivity.length > 0 && <div className="tool-activity" aria-live="polite">
-                {chat.toolActivity.map(trace => <p key={trace.invocationId}>{toolActivityText(trace)}</p>)}
+                <p>{toolActivityText(chat.toolActivity[chat.toolActivity.length - 1])}</p>
               </div>}
               {chat.toolActivityError && <div className="tool-activity-error" role="status">
                 <span>Tool activity could not be loaded.</span>
                 <button type="button" className="text-button" onClick={() => void chat.retryToolActivity()}>Retry</button>
               </div>}
+              {chat.approvalsError && <div className="tool-activity-error" role="status">
+                <span>Approvals could not be loaded.</span>
+                <button type="button" className="text-button" onClick={() => void chat.retryApprovals()}>Retry approvals</button>
+              </div>}
+              {chat.approvals.map((approval) => <ApprovalCard key={approval.id} preview={approval.preview}
+                expiresAt={approval.expiresAt} status={chat.approvalBusy === approval.id ? 'submitting' : approval.status}
+                confirmedResult={approval.result} error={approval.error}
+                onApprove={() => { if (chat.selectedId) return chat.approve(chat.selectedId, approval) }}
+                onReject={() => { if (chat.selectedId) return chat.reject(chat.selectedId, approval) }} />)}
+              {chat.plansError && <div className="tool-activity-error" role="status">
+                <span>Saved plans could not be loaded.</span>
+                <button type="button" className="text-button" onClick={() => void chat.retryPlans()}>Retry plans</button>
+              </div>}
+              {chat.plans.flatMap((plan) => plan.steps.filter((step) => step.state === 'COMPLETED' && step.observation)
+                .flatMap((step) => step.observation ? [<section className="approval-card" aria-label="Task results" key={`${plan.id}-${step.id}`}>
+                  <h2>Results</h2>
+                  {step.observation.todos.length === 0 ? <p>No tasks found.</p> : <ul>{step.observation.todos.map((todo) =>
+                    <li key={todo.id}>{todo.title} — {todo.status}</li>)}</ul>}
+                  {step.observation.truncated && <p>Some results were omitted.</p>}
+                </section>] : []))}
+              {chat.plans.map((plan) => {
+                const waiting = plan.steps.filter((step) => step.state === 'AWAITING_APPROVAL')
+                const expired = waiting.length > 0 && waiting.every((step) => chat.approvals.some((approval) =>
+                  approval.id === step.pendingApprovalId && (approval.status === 'expired' ||
+                    (approval.status === 'pending' && Date.parse(approval.expiresAt) <= Date.now()))))
+                const actionable = expired || ((plan.state === 'FAILED' || plan.state === 'BLOCKED' || plan.state === 'PROPOSED')
+                  && waiting.length === 0 && plan.steps.some((step) => step.state === 'PROPOSED'
+                    && step.dependsOn.every((id) => plan.steps.some((dependency) => dependency.id === id
+                      && dependency.state === 'COMPLETED'))))
+                return actionable ? <p className="message-note" role="status" key={`retry-${plan.id}`}>
+                  Some work stopped before it finished. <button type="button" className="text-button"
+                    disabled={chat.busy || chat.planBusy !== null}
+                    onClick={() => chat.selectedId && void chat.runPlan(chat.selectedId, plan.id)}>
+                    {chat.planBusy === plan.id ? 'Retrying…' : 'Retry remaining work'}
+                  </button>
+                </p> : null
+              })}
               {chat.busy && <article className="message assistant pending" aria-live="polite">
                 <span className="speaker">Chomi</span>
                 {chat.streamed ? <MarkdownReply content={chat.streamed} /> : <p>Thinking…</p>}
@@ -163,8 +215,6 @@ export default function App() {
               {chat.busy ? <button type="button" className="stop-button" onClick={() => void chat.stop()}>
                 Stop generation
               </button> : <>
-                <button type="button" className="text-button" disabled={!chat.input.trim()}
-                  onClick={() => void chat.submit(true)}>Make a plan</button>
                 <button type="submit" className="primary-button" disabled={!chat.input.trim()}>Send</button>
               </>}
             </form>

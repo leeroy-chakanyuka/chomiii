@@ -11,6 +11,24 @@ import org.junit.jupiter.api.Test;
 
 class ToolAuthorizationTest {
     @Test
+    void todoWritesAreExposedButCannotExecuteWithoutApprovalInfrastructure() {
+        var called = new AtomicBoolean();
+        var write = tool("todo.create", "todo.write", ToolDefinition.Effect.WRITE, called);
+        var turn = new ToolTurn(new ToolRegistry(List.of(write)), context("owner-a", UUID.randomUUID(), UUID.randomUUID()), false);
+        assertThat(turn.definitions()).extracting(ToolDefinition::name).containsExactly("todo.create");
+        assertThat(turn.invoke("todo.create", Map.of())).containsEntry("errorCode", "NOT_AVAILABLE");
+        assertThat(called).isFalse();
+    }
+
+    @Test
+    void actionIdAloneCannotAuthorizeAWrite() {
+        var policy = new ReadOnlyToolAuthorization();
+        var definition = tool("todo.complete", "todo.write", ToolDefinition.Effect.WRITE, new AtomicBoolean()).definition();
+        var context = new ToolExecutionContext("owner-a", UUID.randomUUID(), UUID.randomUUID(), null, true,
+                ignored -> {}, UUID.randomUUID());
+        assertThat(policy.authorize(context, definition, Map.of())).isEqualTo(ToolAuthorization.Decision.DENY);
+    }
+    @Test
     void unapprovedWritesAreNeitherAdvertisedNorExecuted() {
         var called = new AtomicBoolean();
         var write = tool("calendar.update", "calendar.write", ToolDefinition.Effect.WRITE, called);

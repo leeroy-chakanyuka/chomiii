@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,6 +63,24 @@ public class ToolTraceService {
         if (!repository.markAuthorized(invocationId, owner, approvalId)) {
             throw new IllegalStateException("Tool trace left its requested state before authorization");
         }
+    }
+
+    @Transactional
+    public ToolTraceDto.Trace markAwaitingApproval(String owner, UUID traceId, UUID conversationId, UUID requestId,
+            String toolName, String capability, String effect, UUID approvalId) {
+        requireOwner(owner);
+        java.util.Objects.requireNonNull(approvalId);
+        if (!repository.markAwaitingApproval(traceId, owner, conversationId, requestId, toolName, capability, effect, approvalId)) {
+            throw new IllegalStateException("Tool trace is not awaiting a decision");
+        }
+        return toDto(stored(owner, traceId));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<UUID> pendingForApproval(String owner, UUID conversationId, UUID approvalId) {
+        requireOwner(owner);
+        return repository.pendingForApproval(owner, java.util.Objects.requireNonNull(conversationId),
+                java.util.Objects.requireNonNull(approvalId));
     }
 
     @Transactional
@@ -142,7 +161,8 @@ public class ToolTraceService {
     private ToolTraceDto.Trace toDto(ToolTraceRow row) {
         return new ToolTraceDto.Trace(row.id(), row.conversationId(), row.requestId(), row.planId(), row.stepId(),
                 row.toolName(), row.capability(), row.effect(), row.provider(), row.model(),
-                row.authorization(), row.approvalId(), row.status(), row.errorCode(),
+                row.authorization(), row.approvalId(), "requested".equals(row.status()) && row.approvalId() != null
+                        && row.authorization() == null ? "awaiting_approval" : row.status(), row.errorCode(),
                 row.retryOfId(), row.idempotencyKey(), row.argumentSummary(), row.resultSummary(),
                 row.requestedAt(), row.startedAt(), row.finishedAt(), row.durationMs());
     }

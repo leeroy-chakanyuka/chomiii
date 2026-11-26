@@ -126,16 +126,17 @@ reasoning remain normal model abilities, not compulsory `/skill` commands.
 
 ## M3 — First real actions
 
-From chat to useful, permissioned everyday actions: a minimal agent runtime
-fully testable with a fake model. Start with a small ordinary task such as
-creating a reminder or managing a personal to-do—not a coding tool.
+**Implemented on the M3.3/M3.4 review branch.** People can list personal to-dos in
+chat and approve individual proposals to create or complete them. Java verifies
+the owner, granted action, exact arguments, and expiry before each write. The
+write and approval consumption commit together; retries return the saved result.
 
-- **Tool registry and tool calls**: a small set of typed, everyday tools with documented schemas.
-- **Bounded loop**: planner loop capped in steps, wall-clock **timeout**, and a deterministic stop.
-- **Permissions and approval**: every tool behind a server-side least-privilege check; consequential external actions require explicit user approval.
-- **Trace**: each run traced (steps, tool calls, approvals) so behavior is auditable.
-- **Acceptance:** deterministic fake-LLM tests for the whole loop; no tool executes without its permission check; timeout and bounded-turn behavior covered by tests; traces inspectable.
-- **Consumer scenario:** prepare and authorize a simple reminder/task action end-to-end. Compound email/calendar/grocery workflows are an integration-era goal, not the first M3 slice.
+Saved plans can be reopened, run, cancelled, or revised in chat. The bounded
+runner pauses for approval and continues from the latest saved state. A later
+step can use a verified task-list result; ambiguous matches block that step.
+Tool traces record outcomes without copying private arguments or results.
+The [fictional exam-prep demonstration](m3.2-tool-foundation.md#fictional-exam-prep-demonstration)
+exercises the flow with a scripted provider and a disposable database.
 
 ### M3 subphases — actions and adaptive plans
 - **M3.1 Planning:** validate structured proposals and clarify genuinely missing information.

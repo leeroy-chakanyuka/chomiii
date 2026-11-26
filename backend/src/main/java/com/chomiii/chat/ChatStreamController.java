@@ -28,7 +28,15 @@ public class ChatStreamController {
     }
 
     public record MessageRequest(@NotNull UUID requestId, @NotBlank String provider,
-            @NotBlank String model, @NotBlank @Size(max = 8000) String content, Boolean plan) {
+            @NotBlank String model, @NotBlank @Size(max = 8000) String content, Boolean plan,
+            UUID revisePlanId, Long reviseVersion, @Size(max = 64) String timeZone) {
+        public MessageRequest(UUID requestId, String provider, String model, String content, Boolean plan,
+                UUID revisePlanId, Long reviseVersion) {
+            this(requestId, provider, model, content, plan, revisePlanId, reviseVersion, null);
+        }
+        public MessageRequest(UUID requestId, String provider, String model, String content, Boolean plan) {
+            this(requestId, provider, model, content, plan, null, null);
+        }
         public MessageRequest(UUID requestId, String provider, String model, String content) {
             this(requestId, provider, model, content, null);
         }

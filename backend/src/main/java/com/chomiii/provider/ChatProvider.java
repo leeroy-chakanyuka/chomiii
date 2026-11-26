@@ -19,6 +19,8 @@ public interface ChatProvider {
         List<ToolDefinition> definitions();
         Map<String, Object> invoke(String name, Map<String, Object> arguments);
         default boolean bufferTextUntilFinal() { return false; }
+        /** End generation without another model request when the server owns the final reply. */
+        default boolean finishAfterToolSuccess(String name) { return false; }
         default void beforeContinuation(long inputBytes) { }
         @Override default void close() { }
     }

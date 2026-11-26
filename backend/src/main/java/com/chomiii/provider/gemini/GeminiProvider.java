@@ -207,6 +207,11 @@ public class GeminiProvider implements ChatProvider {
                         String name = call.name().orElse("");
                         Map<String, Object> result = tools.invoke(name, call.args().orElse(Map.of()));
                         if (cancelled.get()) throw failure(ProviderFailure.Code.CANCELLED);
+                        if (!result.containsKey("error") && !result.containsKey("errorCode")
+                                && tools.finishAfterToolSuccess(name)) {
+                            if (calls.size() != 1) throw failure(ProviderFailure.Code.INVALID_REQUEST);
+                            return;
+                        }
                         var functionResponse = FunctionResponse.builder().name(name).response(result);
                         call.id().ifPresent(functionResponse::id);
                         results.add(Part.builder().functionResponse(functionResponse.build()).build());

@@ -39,7 +39,7 @@ public final class MemoryCandidateParser {
             List<Candidate> found = new ArrayList<>();
             for (JsonNode item : items) {
                 String content = item.path("content").asText("").strip();
-                String evidence = item.path("evidence").asText("").strip();
+                String evidence = quoteText(item.path("evidence").asText(""));
                 String kind = item.path("kind").asText("");
                 JsonNode confidenceNode = item.path("confidence");
                 if (!confidenceNode.isNumber()) continue;
@@ -47,8 +47,7 @@ public final class MemoryCandidateParser {
                 if (!Double.isFinite(confidence) || confidence < 0.70 || confidence > 1.0
                         || content.length() < 8 || content.length() > 500
                         || evidence.length() < 8
-                        || !userMessage.toLowerCase(Locale.ROOT)
-                                .contains(evidence.toLowerCase(Locale.ROOT))
+                        || !quoteText(userMessage).contains(evidence)
                         || SENSITIVE.matcher(content).find()) continue;
                 if (!"fact".equals(kind) && !"inference".equals(kind)) continue;
                 found.add(new Candidate(content,
@@ -59,6 +58,13 @@ public final class MemoryCandidateParser {
         } catch (Exception invalid) {
             return List.of();
         }
+    }
+
+    // Chats and generated JSON can render the same quotation with different typography.
+    // Keep every word, digit and negation; do not use fuzzy or semantic evidence matching.
+    private static String quoteText(String text) {
+        return text.toLowerCase(Locale.ROOT).replace('’', '\'').replace('‘', '\'')
+                .replace('–', '-').replace('‑', '-').replaceAll("(?U)\\s+", " ").strip();
     }
 
     /**

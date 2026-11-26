@@ -5,6 +5,7 @@ export type ChatEvent =
   | { kind: 'delta'; text: string }
   | { kind: 'plan'; plan: Record<string, unknown> }
   | { kind: 'tool'; trace: ToolTrace }
+  | { kind: 'approval'; approval: Approval }
   | { kind: 'complete'; messageId: string; status: 'complete' }
   | { kind: 'error'; code: string; message: string; status: 'failed' | 'interrupted' }
 
@@ -23,7 +24,27 @@ export interface ToolTrace {
   invocationId: string
   requestId: string
   toolName: string
-  status: 'requested' | 'running' | 'succeeded' | 'denied' | 'failed' | 'cancelled' | 'timeout'
+  status: 'requested' | 'running' | 'awaiting_approval' | 'succeeded' | 'denied' | 'failed' | 'cancelled' | 'timeout'
+}
+export type ApprovalStatus = 'pending' | 'approved' | 'completed' | 'rejected' | 'failed' | 'expired' | 'cancelled'
+export interface Approval {
+  id: string; requestId: string; toolName: string; preview: string; expiresAt: string
+  status: ApprovalStatus; result?: string; error?: string
+}
+export type PlanState = 'PROPOSED' | 'AWAITING_APPROVAL' | 'RUNNING' | 'BLOCKED' | 'COMPLETED' | 'FAILED' | 'CANCELLED'
+export interface TodoObservation { todos: { id: string; title: string; status: string }[]; truncated: boolean }
+export interface PlanStep { id: string; title: string; state: string; dependsOn: string[]; pendingApprovalId?: string; observation?: TodoObservation }
+export interface SavedPlan { id: string; goal: string; summary: string; state: PlanState; version: number; steps: PlanStep[]; updatedAt: string }
+
+function approval(value: unknown): Approval {
+  if (!object(value)) throw new Error('The server returned an invalid approval.')
+  const status = value.status
+  if (status !== 'pending' && status !== 'approved' && status !== 'completed' && status !== 'rejected'
+    && status !== 'failed' && status !== 'expired' && status !== 'cancelled') throw new Error('The server returned an invalid approval.')
+  return { id: text(value.id), requestId: text(value.requestId), toolName: text(value.toolName),
+    preview: text(value.preview), expiresAt: text(value.expiresAt), status,
+    ...(value.result == null ? {} : { result: text(value.result) }),
+    ...(value.error == null ? {} : { error: text(value.error) }) }
 }
 
 function object(value: unknown): value is Record<string, unknown> {
@@ -55,7 +76,7 @@ function message(value: unknown): ChatMessage {
 function toolTrace(value: unknown): ToolTrace {
   if (!object(value)) throw new Error('The server returned an invalid tool activity.')
   const status = value.status
-  if (status !== 'requested' && status !== 'running' && status !== 'succeeded' && status !== 'denied'
+  if (status !== 'requested' && status !== 'running' && status !== 'awaiting_approval' && status !== 'succeeded' && status !== 'denied'
     && status !== 'failed' && status !== 'cancelled' && status !== 'timeout') {
     throw new Error('The server returned an invalid tool activity.')
   }
@@ -79,6 +100,7 @@ function parseEvent(frame: string): ChatEvent | undefined {
     case 'delta': return { kind: 'delta', text: text(payload.text) }
     case 'plan': return { kind: 'plan', plan: payload }
     case 'tool': return { kind: 'tool', trace: toolTrace(payload) }
+    case 'approval': return { kind: 'approval', approval: approval(payload) }
     case 'complete':
       if (payload.status !== 'complete') throw new Error('The chat stream was invalid.')
       return { kind: 'complete', messageId: text(payload.messageId), status: 'complete' }
@@ -168,6 +190,54 @@ export async function conversationToolTraces(id: string): Promise<ToolTrace[]> {
   return value.map(toolTrace)
 }
 
+export async function conversationApprovals(id: string): Promise<Approval[]> {
+  const value = await jsonRequest(`/conversations/${encodeURIComponent(id)}/approvals`)
+  if (!Array.isArray(value)) throw new Error('Could not load approvals.')
+  return value.map(approval)
+}
+
+export async function decideApproval(conversationId: string, approvalId: string, decision: 'approve' | 'reject'): Promise<Approval> {
+  return approval(await jsonRequest(`/conversations/${encodeURIComponent(conversationId)}/approvals/${encodeURIComponent(approvalId)}/${decision}`, { method: 'POST' }))
+}
+
+function savedPlan(value: unknown): SavedPlan {
+  const invalid = () => new Error('The server returned an invalid plan.')
+  if (!object(value) || !Array.isArray(value.steps)) throw invalid()
+  const states: PlanState[] = ['PROPOSED', 'AWAITING_APPROVAL', 'RUNNING', 'BLOCKED', 'COMPLETED', 'FAILED', 'CANCELLED']
+  if (!states.includes(value.state as PlanState) || typeof value.version !== 'number' || !Number.isInteger(value.version)) throw invalid()
+  const steps = value.steps.map((step): PlanStep => {
+    if (!object(step) || !Array.isArray(step.dependsOn) || !step.dependsOn.every((id) => typeof id === 'string')) throw invalid()
+    let observation: TodoObservation | undefined
+    if (step.observation != null) {
+      if (!object(step.observation) || !Array.isArray(step.observation.todos) || typeof step.observation.truncated !== 'boolean') throw invalid()
+      const todos = step.observation.todos.map((todo) => {
+        if (!object(todo)) throw invalid()
+        return { id: text(todo.id), title: text(todo.title), status: text(todo.status) }
+      })
+      observation = { todos, truncated: step.observation.truncated }
+    }
+    return { id: text(step.id), title: text(step.title), state: text(step.state), dependsOn: step.dependsOn as string[],
+      ...(step.pendingApprovalId != null ? { pendingApprovalId: text(step.pendingApprovalId) } : {}),
+      ...(observation ? { observation } : {}) }
+  })
+  return { id: text(value.id), goal: text(value.goal), summary: text(value.summary), state: value.state as PlanState,
+    version: value.version, steps, updatedAt: text(value.updatedAt) }
+}
+
+export async function conversationPlans(id: string): Promise<SavedPlan[]> {
+  const value = await jsonRequest(`/conversations/${encodeURIComponent(id)}/plans`)
+  if (!Array.isArray(value)) throw new Error('Could not load plans.')
+  return value.map(savedPlan)
+}
+
+export async function runPlan(conversationId: string, planId: string): Promise<SavedPlan> {
+  return savedPlan(await jsonRequest(`/conversations/${encodeURIComponent(conversationId)}/plans/${encodeURIComponent(planId)}/run`, { method: 'POST' }))
+}
+
+export async function cancelPlan(conversationId: string, planId: string): Promise<SavedPlan> {
+  return savedPlan(await jsonRequest(`/conversations/${encodeURIComponent(conversationId)}/plans/${encodeURIComponent(planId)}/cancel`, { method: 'POST' }))
+}
+
 function parseConversation(value: unknown): Conversation {
   if (!object(value) || !Array.isArray(value.messages)) throw new Error('Could not load the conversation.')
   return { ...summary(value), messages: value.messages.map(message) }
@@ -189,6 +259,7 @@ export async function sendMessage(input: {
   signal: AbortSignal
   useMemory?: boolean
   plan?: boolean
+  revisePlan?: { revisePlanId: string; reviseVersion: number }
   onEvent: (event: ChatEvent) => void
 }): Promise<void> {
   const response = await fetch(url(`/conversations/${encodeURIComponent(input.conversationId)}/messages/stream`), {
@@ -196,7 +267,9 @@ export async function sendMessage(input: {
     headers: { 'Content-Type': 'application/json', 'X-Gemini-Api-Key': input.apiKey,
       ...(input.useMemory === false ? { 'X-Chomiii-Use-Memory': 'false' } : {}) },
     body: JSON.stringify({ requestId: input.requestId, provider: input.provider, model: input.model,
-      content: input.content, ...(input.plan ? { plan: true } : {}) }),
+      content: input.content, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      ...(input.plan || input.revisePlan ? { plan: true } : {}),
+      ...(input.revisePlan ?? {}) }),
   })
   if (!response.ok) throw await problem(response)
   if (!response.body) throw new Error('The chat stream is unavailable.')

@@ -17,9 +17,21 @@ public final class ToolExecutionContext {
     private final String apiKey;
     private final boolean memoryRecallEnabled;
     private final Consumer<Observation> observer;
+    private final UUID actionId;
+    private final UUID planId;
 
     public ToolExecutionContext(String owner, UUID conversationId, UUID requestId, String apiKey,
             boolean memoryRecallEnabled, Consumer<Observation> observer) {
+        this(owner, conversationId, requestId, apiKey, memoryRecallEnabled, observer, null);
+    }
+
+    public ToolExecutionContext(String owner, UUID conversationId, UUID requestId, String apiKey,
+            boolean memoryRecallEnabled, Consumer<Observation> observer, UUID actionId) {
+        this(owner, conversationId, requestId, apiKey, memoryRecallEnabled, observer, actionId, null);
+    }
+
+    public ToolExecutionContext(String owner, UUID conversationId, UUID requestId, String apiKey,
+            boolean memoryRecallEnabled, Consumer<Observation> observer, UUID actionId, UUID planId) {
         if (owner == null || owner.isBlank()) throw new IllegalArgumentException("Owner is required");
         this.owner = owner;
         this.conversationId = Objects.requireNonNull(conversationId);
@@ -27,11 +39,15 @@ public final class ToolExecutionContext {
         this.apiKey = apiKey;
         this.memoryRecallEnabled = memoryRecallEnabled;
         this.observer = Objects.requireNonNull(observer);
+        this.actionId = actionId;
+        this.planId = planId;
     }
 
     public String owner() { return owner; }
     public UUID conversationId() { return conversationId; }
     public UUID requestId() { return requestId; }
+    public UUID actionId() { return actionId; }
+    public UUID planId() { return planId; }
     public String apiKey() { return apiKey; }
     public boolean memoryRecallEnabled() { return memoryRecallEnabled; }
     public void delivered(Observation observation) { observer.accept(observation); }
